@@ -1,0 +1,23 @@
+# macOS and Xcode
+.DS_Store
+DerivedData/
+build/
+*.xcuserstate
+xcuserdata/
+*.ipa
+*.dSYM/
+*.xcarchive/
+
+# Local secrets and pairing material
+.env
+.env.*
+!.env.example
+*.p12
+*.mobileprovision
+*.provisionprofile
+*.key
+*.pem
+
+# Raw benchmarks/captures: publish sanitized summaries explicitly
+benchmarks/local/
+captures/

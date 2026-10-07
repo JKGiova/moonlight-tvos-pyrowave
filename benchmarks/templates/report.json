@@ -1,0 +1,105 @@
+{
+  "schema_version": 1,
+  "status": "not-measured-template",
+  "device": {
+    "model": null,
+    "soc": null,
+    "tvos": null,
+    "physical_device": true
+  },
+  "build": {
+    "app_commit": null,
+    "codec_commit": null,
+    "shader_revision": null,
+    "precision": null
+  },
+  "profile": {
+    "width": null,
+    "height": null,
+    "fps": null,
+    "chroma": null,
+    "bit_depth": null,
+    "transfer_function": null
+  },
+  "run": {
+    "mode": null,
+    "workload": null,
+    "warmup_frames": null,
+    "sample_count": null,
+    "duration_seconds": null,
+    "measurement_method": null,
+    "codec_order": null,
+    "thermal_observations": null
+  },
+  "timings_ms": {
+    "parse_cpu": {
+      "p50": null,
+      "p95": null,
+      "p99": null
+    },
+    "upload_cpu": {
+      "p50": null,
+      "p95": null,
+      "p99": null
+    },
+    "gpu_decode": {
+      "p50": null,
+      "p95": null,
+      "p99": null
+    },
+    "gpu_color_conversion": {
+      "p50": null,
+      "p95": null,
+      "p99": null
+    },
+    "gpu_queue_wait": {
+      "p50": null,
+      "p95": null,
+      "p99": null
+    },
+    "client_ready": {
+      "p50": null,
+      "p95": null,
+      "p99": null
+    },
+    "present_wait": {
+      "p50": null,
+      "p95": null,
+      "p99": null
+    },
+    "startup": null
+  },
+  "throughput": {
+    "decode_only_fps": null,
+    "live_fps": null
+  },
+  "queues": {
+    "maximum_gpu_in_flight": null,
+    "maximum_pending": null
+  },
+  "drops": {
+    "network": null,
+    "parser": null,
+    "gpu_overload": null,
+    "presentation": null
+  },
+  "network": {
+    "route": null,
+    "useful_mbps": null,
+    "configured_video_mbps": null,
+    "udp_validated": false
+  },
+  "comparison": {
+    "baseline_codec": null,
+    "client_ready_comparable": false,
+    "baseline_ready_p95_ms": null
+  },
+  "qualification": {
+    "correctness_passed": false,
+    "profile_qualified": false,
+    "auto_admissible": false,
+    "rejection_reasons": [
+      "not_measured"
+    ]
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "status": "specification-only-not-runtime",
+  "default_mode": "auto",
+  "preferred_codec": "pyrowave",
+  "manual_choices": [
+    "auto",
+    "pyrowave",
+    "hevc",
+    "h264",
+    "av1"
+  ],
+  "selection": {
+    "require_verified_backend": true,
+    "require_host_profile_support": true,
+    "require_matching_bitstream_identity": true,
+    "require_exact_requested_profile": true,
+    "require_matching_physical_device_benchmark": true,
+    "require_udp_network_validation": true,
+    "decode_gpu_p95_max_frame_budget_fraction": 0.5,
+    "decode_gpu_p99_max_frame_budget_fraction": 0.75,
+    "client_ready_p95_max_frame_budget_fraction": 0.75,
+    "client_ready_p99_max_frame_budget_fraction": 1,
+    "pyrowave_max_ready_p95_regression_ms": 0.5,
+    "minimum_decode_only_throughput_multiple": 1.2,
+    "maximum_network_utilization": 0.8,
+    "maximum_gpu_frames_in_flight": 2,
+    "maximum_pending_frames": 1,
+    "fallback_ranking": "measured-client-ready-p95-then-p99",
+    "unmeasured_pyrowave": "calibrate-before-admission-or-use-supported-hardware-codec",
+    "fallback_reconnect": true,
+    "lock_codec_for_session": true,
+    "switch_cooldown_sessions": 1
+  },
+  "experimental_aspirational_targets": {
+    "gpu_decode_p95_ms": {
+      "1920x1080@60": 2,
+      "3840x2160@60": 4
+    },
+    "note": "Unmeasured optimization goals, not eligibility thresholds or compatibility claims."
+  }
+}

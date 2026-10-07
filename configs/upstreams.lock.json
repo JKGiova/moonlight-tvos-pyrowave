@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "status": "reviewed-references-only",
+  "reviewed_at": "2026-10-06",
+  "sources": [
+    {
+      "name": "moonlight-ios",
+      "repository": "https://github.com/moonlight-stream/moonlight-ios",
+      "commit": "02dc9780496eeeac6d01c8bbdccb8b6fe71ef28a",
+      "purpose": "application baseline",
+      "license": "GPL-3.0-or-later"
+    },
+    {
+      "name": "moonlight-common-c-baseline",
+      "repository": "https://github.com/moonlight-stream/moonlight-common-c",
+      "commit": "f900dd4767759c7b9d0e93bcea666b55c69ea62f",
+      "purpose": "protocol baseline",
+      "license": "GPL-3.0-or-later"
+    },
+    {
+      "name": "nonary-moonlight-qt",
+      "repository": "https://github.com/Nonary/moonlight-qt",
+      "commit": "1ad5848bd2190ab9dd9eea00d4730740d530ec29",
+      "tag": "v6.1.0-vrr18",
+      "purpose": "framing and integration reference",
+      "license": "GPL-3.0-or-later"
+    },
+    {
+      "name": "nonary-moonlight-common-c",
+      "repository": "https://github.com/Nonary/moonlight-common-c",
+      "commit": "d6a11bc685b41037b352a96f29d08276fe5359ba",
+      "purpose": "selective protocol patch donor",
+      "license": "GPL-3.0-or-later"
+    },
+    {
+      "name": "pyrowave-metal",
+      "repository": "https://github.com/Themaister/pyrowave",
+      "commit": "186f0393b77f7755953b5ecde994bb1cec2e4155",
+      "purpose": "native Metal codec matching Nonary bitstream identity",
+      "license": "MIT"
+    },
+    {
+      "name": "artemis-android-pyrowave",
+      "repository": "https://github.com/joemossjr16/artemis-android-pyrowave",
+      "commit": "387d3a5ce1e3df8d4a4d29eec5b81a7b904926a5",
+      "purpose": "mobile compute/fragment reference; different frame container",
+      "license": "GPL-3.0-or-later"
+    }
+  ],
+  "host_reference": {
+    "repository": "https://github.com/Nonary/Vibepollo",
+    "tag": "2.0.0",
+    "required_bitstream_id": "186f0393"
+  }
+}
