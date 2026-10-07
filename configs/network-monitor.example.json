@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "status": "specification-only-not-runtime",
   "enabled": true,
   "refresh_interval_seconds": 5,
@@ -12,7 +12,7 @@
     "stale_rtt_after_seconds": 15,
     "unreachable_after_consecutive_supported_failures": 3,
     "valid_rtt_window_samples": 12,
-    "idle_transport": "source-verified-existing-host-service",
+    "idle_transport": "paired-pinned-https-serverinfo-where-supported",
     "icmp_required": false
   },
   "bandwidth": {
@@ -21,12 +21,28 @@
     "distinguish_goodput_from_available_capacity": true,
     "saturating_test_every_refresh": false,
     "capacity_test": "pre-session-or-explicit-user-request-supported-host-endpoint",
-    "maximum_capacity_test_seconds_per_direction": 2,
-    "maximum_capacity_test_bytes_per_direction": 67108864,
+    "maximum_capacity_test_seconds_per_direction": 8,
+    "maximum_capacity_test_bytes_per_direction": 134217728,
     "maximum_lightweight_probe_bytes_per_interval_global": 131072,
     "available_capacity_stale_after_seconds": 30,
     "missing_supported_endpoint": "show-unknown; no-fabricated-capacity",
-    "require_same_route_udp_validation_for_auto": true
+    "require_same_route_udp_validation_for_auto": true,
+    "maximum_capacity_request_seconds": 2,
+    "apply_twenty_percent_headroom_once": true,
+    "vibeshine_adapter": {
+      "reference_commit": "0689b2e021d6106612a7ed72a34dacc714b7a133",
+      "endpoint": "/pyrowave-bandwidth-probe",
+      "method": "GET",
+      "requires_pairing_and_pinned_https": true,
+      "payload_bytes_per_request": 33554432,
+      "warmup_requests": 1,
+      "measured_requests": 3,
+      "selection": "slowest-completed-transfer",
+      "server_maximum_requests_per_client_per_minute": 8,
+      "honor_http_429": true,
+      "direction": "host-to-client",
+      "udp_quality_guaranteed": false
+    }
   },
   "measurement_identity": [
     "host",

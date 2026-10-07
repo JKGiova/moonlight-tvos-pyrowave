@@ -17,3 +17,5 @@
 Each valid profile uses flat, gradient, text, detail stress and representative captured content. See ../docs/decoding-performance.md for methodology and acceptance gates.
 
 Run applicable cases on A2169, A2737 and A2843. B01/B02/B03 begin with SDR 8-bit 4:2:0; B03 passing is required before claiming 4K60 PyroWave for that model. B06 uses Wi-Fi on all models and Ethernet additionally on A2169/A2843. Each admitted profile requires its own sustained/thermal run; failures remain explicit and use a verified fallback. See [device-support.md](../docs/device-support.md).
+
+B12: opt-in debug auto-connect to the paired Vibeshine PC, chosen test app, requested codec/profile, bounded timeout, explicit failure/fallback result, stop/relaunch and preserved host/session identity. Test a busy host, absent pairing, mismatched bitstream and unavailable runner without silently starting a different app or stealing a session.

@@ -13,6 +13,7 @@ Scaffold for a Moonlight tvOS client with low-latency PyroWave GPU decoding and 
 - Make PyroWave available as a manual codec and a preferred candidate in Auto mode.
 - Measure decode latency separately from throughput and display latency.
 - Refresh host RTT and network telemetry every 5 seconds, showing measured throughput separately from estimated available bandwidth and stale/unknown values.
+- Use the user-selected PC running Vibeshine as the primary live test host, with opt-in debug reconnection after initial pairing.
 - Keep H.264/HEVC available; admit AV1 only on clients with a verified backend.
 
 The encoder runs on the host PC. The client chooses the codec/profile, negotiates it with the host, and selects its local decoder.
@@ -26,6 +27,7 @@ The encoder runs on the host PC. The client chooses the codec/profile, negotiate
 | [Implementation plan](docs/PLAN.md) | Milestones and source integration points |
 | [Decode performance](docs/decoding-performance.md) | Metrics, optimization priorities and benchmark protocol |
 | [Automatic codec selection](docs/codec-selection.md) | PyroWave-first selection and fallback contract |
+| [Vibeshine test workflow](docs/vibeshine-testing.md) | Reconnect the physical Apple TV to the same PC for repeatable tests |
 | [Host network monitor](docs/host-network-monitor.md) | Five-second refresh, RTT, bandwidth estimation and Auto input |
 | [Network specification](configs/network-monitor.example.json) | Probe cadence, budgets and freshness policy; not runtime settings |
 | [Architecture](docs/architecture.md) | Proposed component ownership |

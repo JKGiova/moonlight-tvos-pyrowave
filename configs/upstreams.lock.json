@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "status": "reviewed-references-only",
-  "reviewed_at": "2026-10-06",
+  "reviewed_at": "2026-10-07",
   "sources": [
     {
       "name": "moonlight-ios",
@@ -48,8 +48,22 @@
     }
   ],
   "host_reference": {
-    "repository": "https://github.com/Nonary/Vibepollo",
+    "name": "vibeshine",
+    "repository": "https://github.com/Nonary/vibeshine",
     "tag": "2.0.0",
-    "required_bitstream_id": "186f0393"
-  }
+    "commit": "0689b2e021d6106612a7ed72a34dacc714b7a133",
+    "purpose": "primary user-selected Windows test host; upstream reference, installed version not verified",
+    "required_bitstream_id": "186f0393",
+    "release_notes": "https://github.com/Nonary/vibeshine/releases/tag/2.0.0",
+    "protocol_document": "docs/pyrowave-protocol.md",
+    "capacity_probe_source": "src/nvhttp.cpp"
+  },
+  "alternate_host_references": [
+    {
+      "repository": "https://github.com/Nonary/Vibepollo",
+      "tag": "2.0.0",
+      "required_bitstream_id": "186f0393",
+      "purpose": "secondary interoperability reference, not the user-selected test host"
+    }
+  ]
 }

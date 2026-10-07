@@ -34,7 +34,11 @@
     "duration_seconds": null,
     "measurement_method": null,
     "codec_order": null,
-    "thermal_observations": null
+    "thermal_observations": null,
+    "requested_codec": null,
+    "negotiated_codec": null,
+    "fallback_occurred": null,
+    "concurrent_host_workload": null
   },
   "timings_ms": {
     "parse_cpu": {
@@ -118,5 +122,16 @@
     "rejection_reasons": [
       "not_measured"
     ]
+  },
+  "host": {
+    "software": null,
+    "version": null,
+    "source_commit": null,
+    "installed_binary_digest": null,
+    "gpu": null,
+    "capture_method": null,
+    "test_content_id": null,
+    "encode_p95_ms": null,
+    "encode_measurement_method": null
   }
 }

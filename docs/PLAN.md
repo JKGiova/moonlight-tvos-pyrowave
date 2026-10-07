@@ -95,6 +95,16 @@ Le misure H.264/HEVC devono essere confrontabili: il percorso AVSampleBufferDisp
 
 Il codec resta fisso durante la sessione. Il fallback effettua una nuova negoziazione; cooldown e cache dell'errore evitano reconnessioni ripetute. Prima versione Auto SDR 4:2:0; con richiesta HDR/4:4:4 non qualificata, scegliere un candidato del profilo corretto senza abbassarlo silenziosamente.
 
+## Ambiente di test — PC Vibeshine e Apple TV
+
+Il PC dell’utente con Vibeshine diventa l’host primario. Fissiamo come riferimento Vibeshine 2.0.0 (`0689b2e0`), che documenta PyroWave `186f0393`; la versione effettivamente installata verrà verificata durante il setup, senza presumere che coincida.
+
+Ciclo pianificato: modifica sorgenti → build/firma con Mac/Xcode → installazione e avvio sulla Apple TV fisica → connessione al PC già associato → avvio dell’app di test scelta → misure e report. Si può scrivere codice e coordinare test dal PC, ma il client tvOS e le misure GPU girano sulla Apple TV. Servirà un runner raggiungibile dal Mac e dal dispositivo: il repository/cloud da solo non si collega automaticamente alla LAN dell’utente.
+
+Prevedere un profilo locale di test con identità host, app ID, profilo video e durata; pairing PIN iniziale manuale, poi riuso dell’identità salvata dal client. Autoconnessione esplicita solo per i run di sviluppo, timeout e tentativi limitati; nessun cambio automatico delle preferenze normali e nessuna sessione esistente interrotta. Confrontare PyroWave/HEVC/H.264 a parità di contenuto e condizioni, separando encode host, rete e decode client. La [specifica dei test Vibeshine](vibeshine-testing.md) descrive il setup e gli esiti; non è ancora uno script operativo.
+
+Per la banda, Vibeshine offre già HTTPS autenticato `/pyrowave-bandwidth-probe` da 32 MiB e i metadati `/serverinfo`. Riutilizzarli per la calibrazione prima del run, rispettando quota e budget; non fare download da 32 MiB ogni 5 secondi durante il gioco. Vedere [monitor host](host-network-monitor.md).
+
 ## Verifica e distribuzione future
 
 - Parser: record troncati, overflow, geometria, indice blocco, padding e perdita header.

@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "status": "specification-only-not-runtime",
+  "purpose": "opt-in-development-test-run",
+  "host": {
+    "software": "vibeshine",
+    "endpoint": null,
+    "paired_host_identity": null,
+    "installed_version": null,
+    "app_id": null
+  },
+  "client": {
+    "physical_device_identifier": null,
+    "pairing": "reuse-client-keystore-after-manual-pin-pairing",
+    "auto_connect_for_this_run": true
+  },
+  "profile": {
+    "width": 1920,
+    "height": 1080,
+    "fps": 60,
+    "chroma": "4:2:0",
+    "bit_depth": 8,
+    "transfer_function": "sdr"
+  },
+  "test": {
+    "codec_modes": [
+      "h264",
+      "hevc",
+      "pyrowave",
+      "auto"
+    ],
+    "warmup_frames": null,
+    "measurement_frames": 10000,
+    "soak_seconds": 1800,
+    "randomize_codec_order": true,
+    "maximum_start_attempts": 1,
+    "start_timeout_seconds": 30,
+    "stop_at_end": true,
+    "force_take_over_existing_session": false,
+    "raw_output_directory": "benchmarks/local/"
+  },
+  "note": "Copy to benchmarks/local/test-host.json and fill locally; no pairing keys, private host addresses or measured outcomes in this public template."
+}

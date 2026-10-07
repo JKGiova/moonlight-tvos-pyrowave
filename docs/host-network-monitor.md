@@ -22,17 +22,19 @@ During an active connection, prefer the pinned common-c `LiGetEstimatedRttInfo` 
 
 For idle hosts, schedule one lightweight request per refresh to an existing, source-verified host service supported by that host. Reuse paired/trusted transport and established port discovery; do not assume a new UDP echo service or require raw ICMP privileges. Label a service response measurement as such because it includes service processing/transport setup. Reuse connections where supported and report cold connection setup separately. Unsupported probes are not proof that an otherwise usable host is offline.
 
-The exact idle request and capacity-test protocol are source-verification tasks, not invented APIs. Capability-detect them; standard Moonlight-compatible hosts remain usable when an optional probe is unsupported.
+For the primary Vibeshine 2.0.0 reference, paired HTTPS `/serverinfo` is the planned idle service request. Timing it measures service response, not an ICMP echo RTT. Capability-detect and verify the installed host; standard Moonlight-compatible hosts remain usable when optional probe metadata is absent. The capacity endpoint below is verified in the pinned host source; the client adapter still needs implementation and physical validation.
 
 ## Bandwidth evidence and traffic budget
 
 Refresh telemetry every five seconds without running a saturating speed test every tick. During a stream, count unique validated payload at receive/reassembly boundaries before decode drops, with wire-byte/loss/FEC counters separately; if accounting is not observable, label the measured boundary and do not fabricate goodput. This measures delivered traffic and congestion symptoms, not spare capacity.
 
-A capacity estimate requires host cooperation or an existing verified bounded transfer endpoint. Plan a pre-session test or a user-requested network test, default maximum **2 seconds / 64 MiB per direction**, with cancellation. These are provisional traffic limits, not a promised measurement accuracy. Show transfer duration, actual bytes, loss and whether a byte/time cap limited inference. A TCP/service transfer cannot by itself qualify UDP streaming: combine sufficient useful-rate evidence with same-route live UDP validation. An endpoint with a server-side rate limit is not a measurement of the unconstrained network.
+Vibeshine 2.0.0 provides paired, pinned HTTPS GET `/pyrowave-bandwidth-probe`, sending exactly **32 MiB**, advertised as `PyroWaveBandwidthProbeBytes` in `/serverinfo`. Its source permits at most **8 requests per paired client per minute** and closes the connection after each response. Plan one warm-up followed by three completed measurements, taking the slowest transfer rate, as documented upstream. Budget the whole calibration at **8 seconds / 128 MiB**, with at most **2 seconds per request**, sequential requests and cancellation. The final connection may need fresh TLS setup: report handshake/setup separately from payload timing. An incomplete/timed-out transfer is not a valid completed measurement. Track local quota use, honor HTTP 429 and avoid queued or automatic repeated tests. These are provisional client traffic limits, not a promised measurement accuracy. Show transfer duration, actual bytes, loss and whether a byte/time cap limited inference. A TCP/service transfer cannot by itself qualify UDP streaming: combine sufficient useful-rate evidence with same-route live UDP validation. An endpoint with a server-side rate limit is not a measurement of the unconstrained network.
 
 While streaming, prefer passive counters and existing control statistics. Any optional supported lightweight probe is bounded to **128 KiB per five-second interval globally**, with no overlapping transfers and immediate suspension on congestion/decoder pressure. This low traffic budget is not enough to measure arbitrary high path capacity: report estimate unknown/stale when evidence cannot be refreshed. Do not silently launch the large test, increase the video bitrate, or sacrifice frames to keep a number looking fresh.
 
-If the host lacks a suitable capacity-test endpoint, the UI still shows RTT and current goodput, and explicitly reports available bandwidth unknown. Choosing whether to add a host-side extension is a later implementation decision; no host code is included here.
+Store measured raw useful throughput and apply the existing 20% Auto headroom exactly once; do not reserve it once in calibration and a second time in the selector. `PyroWaveHostLinkMbps` is the host’s local wired link speed, not end-to-end throughput; zero means an unknown/non-wired route, not measured zero capacity. The bulk result remains an estimate, never a UDP guarantee. No upload endpoint is inferred from this download endpoint.
+
+If the installed host lacks a suitable capacity-test endpoint, the UI still shows RTT and current goodput, and explicitly reports available bandwidth unknown. Choosing whether to add a host-side extension is a later implementation decision; no host code is included here.
 
 ## Scheduling and sample lifecycle
 
@@ -55,6 +57,9 @@ B11 covers active ENet available/unavailable, idle service supported/unsupported
 
 ## Sources and related specifications
 
+- [Pinned Vibeshine protocol and probe](https://github.com/Nonary/vibeshine/blob/0689b2e021d6106612a7ed72a34dacc714b7a133/docs/pyrowave-protocol.md)
+- [Pinned Vibeshine handler, payload size and per-client quota](https://github.com/Nonary/vibeshine/blob/0689b2e021d6106612a7ed72a34dacc714b7a133/src/nvhttp.cpp)
+- [Local test workflow](vibeshine-testing.md)
 - [Pinned common-c RTT API](https://github.com/moonlight-stream/moonlight-common-c/blob/f900dd4767759c7b9d0e93bcea666b55c69ea62f/src/Limelight.h)
 - [RFC 5136: network capacity, available capacity and usage](https://www.rfc-editor.org/rfc/rfc5136)
 - [Auto selection](codec-selection.md), [decode performance](decoding-performance.md), [device support](device-support.md)
