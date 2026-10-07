@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "kind": "build-and-functional-check-record",
+  "date": "2026-10-07",
+  "commit": "4f4a947c2515e0abb5250ff955e30e6dbed44272",
+  "ci_run_url": "https://github.com/JKGiova/moonlight-tvos-pyrowave/actions/runs/37622987361",
+  "conclusion": "success",
+  "checks": {
+    "portable": {
+      "status": "passed",
+      "asan_ubsan": true,
+      "framing_directed_checks": 71,
+      "malformed_fuzz_inputs": 10000,
+      "real_codec_cpu_profiles": 12,
+      "python_tests": 7,
+      "cmake_ctest_tests": 2,
+      "ffmpeg_video_encode_decode": [
+        "h264",
+        "hevc"
+      ]
+    },
+    "metal": {
+      "status": "compiled",
+      "probe": {
+        "device_available": true,
+        "native_backend_supported": false
+      },
+      "gpu_roundtrip": "skipped-upstream-support-gate"
+    },
+    "tvos_baseline": {
+      "status": "compiled",
+      "target": "Moonlight TV",
+      "architecture": "arm64",
+      "signed": false,
+      "xcode": "26.6",
+      "sdk": "tvOS 26.5"
+    }
+  },
+  "apple_tv_benchmark": false,
+  "auto_qualified": false,
+  "gpu_decode_ms": null,
+  "physical_device_testing": "pending",
+  "tvos_27_runtime_testing": "pending",
+  "pyrowave_app_integration": "pending"
+}
