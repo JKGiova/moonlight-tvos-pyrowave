@@ -3,8 +3,10 @@
 These folders contain design notes only; they are not buildable modules.
 
 - tvos/: standard app integration
-- metal/: native PyroWave decoder and A12 work
+- metal/: native and portable PyroWave Metal paths for the full device matrix
 - protocol/: Nonary interoperability
 - selection/: client Auto/manual decision policy
 
 Actual app source will be placed at upstream-compatible paths after import, as described in ../docs/upstream-import.md.
+
+- network/: five-second host RTT and throughput monitoring, bounded capacity qualification

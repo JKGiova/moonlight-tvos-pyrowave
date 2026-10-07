@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "status": "specification-only-not-runtime",
+  "checked_at": "2026-10-07",
+  "scope": "all-apple-tv-models-compatible-with-latest-stable-tvos",
+  "latest_stable_tvos": {
+    "version": "27",
+    "released_at": "2026-09-14",
+    "source": "https://support.apple.com/it-it/100100"
+  },
+  "compatibility_source": "https://support.apple.com/it-it/guide/tv/atvbac878c90/27/tvos/27",
+  "model_source": "https://support.apple.com/en-gb/101605",
+  "single_tvos_app": true,
+  "minimum_deployment_target": null,
+  "models": [
+    {
+      "model_number": "A2169",
+      "name": "Apple TV 4K (2nd generation)",
+      "soc": "A12",
+      "expected_metal_gpu_family": "Apple5",
+      "planned_pyrowave_backend": "portable-apple5-planned",
+      "network_routes": [
+        "wifi",
+        "ethernet"
+      ],
+      "application_qualification": "not-tested",
+      "pyrowave_qualification": "not-tested",
+      "auto_admissible": false
+    },
+    {
+      "model_number": "A2737",
+      "name": "Apple TV 4K (3rd generation) Wi-Fi",
+      "soc": "A15",
+      "expected_metal_gpu_family": "Apple8",
+      "planned_pyrowave_backend": "native-apple7-or-later-candidate",
+      "network_routes": [
+        "wifi"
+      ],
+      "application_qualification": "not-tested",
+      "pyrowave_qualification": "not-tested",
+      "auto_admissible": false
+    },
+    {
+      "model_number": "A2843",
+      "name": "Apple TV 4K (3rd generation) Wi-Fi + Ethernet",
+      "soc": "A15",
+      "expected_metal_gpu_family": "Apple8",
+      "planned_pyrowave_backend": "native-apple7-or-later-candidate",
+      "network_routes": [
+        "wifi",
+        "ethernet"
+      ],
+      "application_qualification": "not-tested",
+      "pyrowave_qualification": "not-tested",
+      "auto_admissible": false
+    }
+  ],
+  "outside_initial_scope": [
+    {
+      "model_number": "A1625",
+      "name": "Apple TV HD",
+      "reason": "not-compatible-with-tvos-27"
+    },
+    {
+      "model_number": "A1842",
+      "name": "Apple TV 4K (1st generation)",
+      "reason": "not-compatible-with-tvos-27"
+    }
+  ],
+  "qualification_policy": "physical-model-backend-os-build-profile; no cross-model inheritance",
+  "maintenance_policy": "review-stable-major-and-hardware-launch; no-automatic-removal-of-released-support"
+}

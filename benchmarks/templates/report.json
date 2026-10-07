@@ -1,17 +1,22 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "status": "not-measured-template",
   "device": {
     "model": null,
     "soc": null,
     "tvos": null,
-    "physical_device": true
+    "physical_device": true,
+    "model_number": null,
+    "hardware_identifier": null,
+    "metal_gpu_families": null,
+    "tvos_build": null
   },
   "build": {
     "app_commit": null,
     "codec_commit": null,
     "shader_revision": null,
-    "precision": null
+    "precision": null,
+    "metal_backend": null
   },
   "profile": {
     "width": null,
@@ -87,7 +92,19 @@
     "route": null,
     "useful_mbps": null,
     "configured_video_mbps": null,
-    "udp_validated": false
+    "udp_validated": false,
+    "direction": null,
+    "transport": null,
+    "measurement_method": null,
+    "measurement_age_seconds": null,
+    "available_capacity_mbps": null,
+    "available_capacity_confidence": null,
+    "rtt_ms": null,
+    "rtt_source": null,
+    "rtt_source_age_seconds": null,
+    "monitor_enabled": null,
+    "probe_bytes": null,
+    "probe_timeout_count": null
   },
   "comparison": {
     "baseline_codec": null,

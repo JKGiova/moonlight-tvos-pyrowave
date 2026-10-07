@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "status": "specification-only-not-runtime",
   "default_mode": "auto",
   "preferred_codec": "pyrowave",
@@ -30,7 +30,12 @@
     "unmeasured_pyrowave": "calibrate-before-admission-or-use-supported-hardware-codec",
     "fallback_reconnect": true,
     "lock_codec_for_session": true,
-    "switch_cooldown_sessions": 1
+    "switch_cooldown_sessions": 1,
+    "require_runtime_pipeline_capability_probe": true,
+    "qualification_scope": "model-backend-tvos-build-profile",
+    "allow_cross_model_benchmark_qualification": false,
+    "require_fresh_route_capacity_evidence": true,
+    "maximum_capacity_evidence_age_seconds": 30
   },
   "experimental_aspirational_targets": {
     "gpu_decode_p95_ms": {
@@ -38,5 +43,11 @@
       "3840x2160@60": 4
     },
     "note": "Unmeasured optimization goals, not eligibility thresholds or compatibility claims."
-  }
+  },
+  "device_scope": {
+    "manifest": "devices.json",
+    "manifest_is_runtime_allowlist": false,
+    "single_tvos_app": true
+  },
+  "network_monitor_specification": "network-monitor.example.json"
 }

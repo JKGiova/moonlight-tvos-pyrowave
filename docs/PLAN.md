@@ -1,16 +1,22 @@
-# Piano v2 — Decode veloce e Auto con preferenza PyroWave
+# Piano v3 — Tutte le Apple TV con tvOS attuale, decode veloce e Auto
 
-Stato: scaffold e specifica, 6 ottobre 2026. Nessun decoder o selettore è implementato. Questo piano aggiorna la precedente proposta a selezione solo manuale: PyroWave sarà una scelta manuale e il candidato preferito in modalità Auto dopo la qualificazione.
+Stato: scaffold e specifica, 7 ottobre 2026. Nessun decoder, selettore o monitor rete è implementato. PyroWave sarà una scelta manuale e il candidato preferito in modalità Auto dopo la qualificazione; copertura di tutti i modelli compatibili con tvOS stabile e monitoraggio host ogni 5 secondi.
 
 ## Obiettivo
 
 Integrare nel client Moonlight standard per tvOS il protocollo Nonary e il decoder Metal PyroWave, concentrandosi sul tempo di decoding e sulla latenza fino al frame pronto. L'encoder è sul PC host: il client negozia codec/profilo e sceglie il proprio decoder. Non implementiamo un encoder sulla Apple TV.
 
-Il supporto A12 non è acquisito: il backend Metal ispezionato richiede Apple7, mentre A12 è Apple5. Il percorso portabile deve sostituire le operazioni SIMD non supportate. L'identità iniziale del bitstream è `186f0393`; sorgenti fissate in [upstreams.lock.json](../configs/upstreams.lock.json).
+Il supporto PyroWave non è ancora qualificato su nessun modello. Per A12: il backend Metal ispezionato richiede Apple7, mentre A12 è Apple5. Il percorso portabile deve sostituire le operazioni SIMD non supportate. L'identità iniziale del bitstream è `186f0393`; sorgenti fissate in [upstreams.lock.json](../configs/upstreams.lock.json).
+
+## Copertura dispositivi
+
+Il target comprende tutte le Apple TV compatibili con l’ultima versione stabile di tvOS. Al 7 ottobre 2026, tvOS 27 include Apple TV 4K 2ª gen A2169 (A12), 3ª gen Wi-Fi A2737 e 3ª gen Wi-Fi + Ethernet A2843 (A15). La [matrice dispositivi](device-support.md) contiene fonti Apple, confini e controlli di rilascio; il [manifest](../configs/devices.json) è solo una specifica.
+
+Una sola app tvOS: percorso portabile Apple5 per A12 e percorso nativo Apple7+ candidato per A15/Apple8. Il backend viene scelto dalle capability effettive e dalla creazione dei pipeline, poi qualificato per modello, build OS e profilo. La compatibilità con tvOS non prova la velocità del decoder. Deployment target minimo e toolchain saranno decisi in D0; il criterio sui modelli non impone automaticamente di alzare il minimo OS.
 
 ## Priorità
 
-1. Correttezza del decoder fisico A12.
+1. Correttezza del decoder su dispositivi fisici A12 e A15, con copertura di tutti i modelli in matrice.
 2. Bassa latenza misurata: parsing, upload, dequantizzazione, iDWT, conversione e scheduling.
 3. Throughput sostenuto con margine, nessuna crescita delle code.
 4. Selezione Auto che preferisce PyroWave quando è idoneo e non peggiora la pipeline client rispetto al decoder hardware.
@@ -22,13 +28,14 @@ Il supporto A12 non è acquisito: il backend Metal ispezionato richiede Apple7, 
 | Fase | Risultato | Criterio di uscita |
 | --- | --- | --- |
 | S0 — Scaffold | Documenti, manifest, template e confini dei componenti | Nessuna implementazione, nessun risultato GPU inventato |
-| D0 — Import e baseline | Moonlight standard, build e misure H.264/HEVC | Avvio e streaming sul dispositivo; revisioni riproducibili |
-| D1 — Harness offline | Decoder Metal e frame salvati | Output corretto su A12; geometrie e dati corrotti verificati |
-| D2 — Qualificazione prestazioni | Shader Apple5 e pipeline GPU ottimizzata | Percentili e throughput reali, memory/thermal soak |
+| D0 — Import e baseline | Moonlight standard, build e misure H.264/HEVC | Avvio e streaming H.264/HEVC su ogni modello in matrice; revisioni riproducibili |
+| D1 — Harness offline | Decoder Metal e frame salvati | Output corretto su A12 portabile e A15 nativo; geometrie e dati corrotti verificati |
+| D2 — Qualificazione prestazioni | Shader Apple5 portabile e Apple7+ nativo, pipeline GPU ottimizzata | Percentili e throughput reali per modello/backend/profilo, memory/thermal soak |
 | P0 — Protocollo | Patch selettive common-c e framing Nonary | Handshake, record/length-prefixed e buffer persi corretti |
 | R0 — Renderer | Output texture e presentazione Metal | Stream 1080p60 SDR stabile, audio/input/stop/reconnect |
-| A0 — Selettore Auto | PyroWave manuale + preferenza automatica | Capability, benchmark, rete, profilo e fallback verificati |
-| Q0 — Qualificazione 4K | Stesso percorso a 4K60 | Prova fisica di almeno 30 minuti, coda limitata e margine |
+| N0 — Monitor host | RTT e telemetria rete aggiornati ogni 5 s; stima banda distinta | Più host, timeout, dati scaduti, budget sonde e assenza di disturbo allo streaming verificati |
+| A0 — Selettore Auto | PyroWave manuale + preferenza automatica | Capability, benchmark, rete, profilo e fallback verificati su ogni modello |
+| Q0 — Qualificazione 4K | Stesso percorso a 4K60 | Prova fisica di almeno 30 minuti per modello/profilo ammesso, coda limitata e margine |
 | H0 — Profili aggiuntivi | 4:4:4, 10-bit, HDR | Misure e colorimetria corrette per ciascun profilo |
 
 Lo sviluppo inizierà da D0 soltanto dopo una nuova istruzione dell'utente.
@@ -36,7 +43,7 @@ Lo sviluppo inizierà da D0 soltanto dopo una nuova istruzione dell'utente.
 ## D1/D2 — Lavoro sul decoding
 
 - Separare parsing CPU, upload GPU, dequantizzazione e iDWT; conservare un confronto FP32 prima di ottimizzare.
-- Implementare scan/prefix e shuffle portabili per Apple5 con memoria di threadgroup e barriere. Conservare il percorso Apple7 veloce.
+- Implementare scan/prefix e shuffle portabili per Apple5 con memoria di threadgroup e barriere. Conservare e misurare il percorso Apple7+ nativo su A15; non forzare tutti i chip sul percorso portabile. Verificare anche l’equivalenza fra i due percorsi su A15, dove eseguibili.
 - Verificare limiti effettivi dei pipeline, texture e memoria locale; non basta rimuovere `supportsFamily:Apple7`.
 - Rigenerare anche `metal/shaders/pyrowave_msl.h`, perché il backend originale compila sorgenti incorporate con `newLibraryWithSource`.
 - Partire da gruppi dequant 128 e iDWT 64 come riferimento; cambiare dimensioni soltanto con equivalenza verificata e benchmark.
@@ -64,11 +71,19 @@ Obiettivi aspirazionali GPU decode p95: 2 ms a 1080p60, 4 ms a 4K60. Non sono mi
 | common-c `Limelight.h`, `RtspConnection.c`, `SdpGenerator.c` | Capability/maschere PyroWave e selezione negoziata |
 | common-c `Video.h`, `VideoDepacketizer.c`, `RtpVideoQueue.*`, `VideoStream.c`, `PlatformSockets.*` | Frame parziali, metadati e ricezione UDP Darwin |
 
-Nuovi componenti pianificati: `CodecSelectionPolicy`, `DecoderCapabilityProbe`, `DecoderBenchmarkStore`, `VideoRenderer`, `PyroWaveVideoRenderer`, `PyroWaveMetalPresenter`. I nomi definiscono responsabilità future, non sorgenti esistenti.
+Nuovi componenti pianificati: `CodecSelectionPolicy`, `DecoderCapabilityProbe`, `DecoderBenchmarkStore`, `HostNetworkMonitor`, `HostNetworkSampleStore`, `VideoRenderer`, `PyroWaveVideoRenderer`, `PyroWaveMetalPresenter`. I nomi definiscono responsabilità future, non sorgenti esistenti.
 
 Deviare le DECODE_UNIT PyroWave prima del trattamento dei NAL: il codice attuale tratta i buffer non-PICDATA come parameter set. Conservare `BUFFER_TYPE_LOST`, `BUFFER_TYPE_RECORD_START` e `pyrowaveCriticalPackets`. Trasferire i dati in memoria posseduta prima di completare il frame common-c.
 
 Parser: riusare `pyrowaveframing.cpp/.h` Nonary. Codec: `clear → push_packet → readiness → decode_gpu_buffer`. Output: tre texture Y/Cb/Cr → conversione colore → CAMetalLayer. Pool massimo iniziale: due frame GPU in volo e uno in attesa; sostituire il pending con il più recente.
+
+## N0 — Latenza e banda host ogni 5 secondi
+
+Aggiungere `HostNetworkMonitor` e un archivio di campioni per host/percorso, con aggiornamento nominale ogni 5 secondi in foreground. In streaming leggere il RTT stimato ENet tramite `LiGetEstimatedRttInfo` quando disponibile e misurare il goodput su finestre di 5 secondi; fuori sessione usare richieste leggere a un endpoint host esistente e verificato, etichettando il tempo di risposta del servizio. Non richiedere ICMP o un endpoint echo che il server non offre.
+
+Il ping misura RTT, non banda. Mostrare goodput corrente e capacità utile stimata come valori distinti, con direzione, metodo, età e confidenza. Una stima di capacità richiede un trasferimento/protocollo supportato dall’host: prevedere un test limitato prima della sessione o su richiesta. Durante lo streaming evitare speed test saturanti; se non ci sono dati sufficienti, mostrare banda disponibile sconosciuta o precedente con età, aggiornando comunque RTT e goodput ogni 5 secondi.
+
+La [specifica del monitor](host-network-monitor.md) definisce budget, cancellazione, timeout, UI e integrazione Auto. Le misure di banda devono attraversare la stessa rotta e, per qualificare PyroWave, essere accompagnate da convalida UDP live. N0 alimenta A0; lo stato rete non cambia codec a ogni tick.
 
 ## A0 — Auto preferisce PyroWave
 
@@ -84,10 +99,13 @@ Il codec resta fisso durante la sessione. Il fallback effettua una nuova negozia
 
 - Parser: record troncati, overflow, geometria, indice blocco, padding e perdita header.
 - Decoder: frame reali e sintetici, colori/range, geometrie non allineate e riferimento Vulkan.
-- Policy: capability assenti, misura scaduta, rete insufficiente, profilo incompatibile, PyroWave idoneo, overload e fallback.
+- Policy: cache separate per modello/backend/build OS, capability assenti, misura scaduta, rete insufficiente, profilo incompatibile, PyroWave idoneo, overload e fallback.
+- Monitor host: refresh 5 s, RTT separato da banda, host offline/timeout, endpoint non supportato, rete cambiata, campioni scaduti, budget sonde, impatto sulle code GPU e sui drop.
 - Sessione: frame persi/duplicati/riordinati, stop, reconnect e perdita drawable.
 - Prestazioni: benchmark in ordine alternato dei codec, stesso profilo/workload, p50/p95/p99 e raw timestamp.
 - Soak: almeno 30 minuti per profilo dichiarato; thermal throttling e crescita memoria/code.
 - Build: Mac/Xcode, device arm64 e simulator; firma separata. CI app solo dopo l'import reale.
 
-La prima versione installabile arriva dopo D/P/R/A, non da questo scaffold.
+Il rilascio deve avviarsi e offrire un fallback hardware verificato su tutti i modelli in matrice. Per ciascun profilo dichiarato, PyroWave è qualificato con prove fisiche oppure esplicitamente non ammesso con motivazione; non si estende un risultato A15 ad A12 o fra varianti. I dispositivi non misurati restano non qualificati per Auto.
+
+Rivedere la matrice a ogni nuova major stabile tvOS e a ogni nuovo modello Apple TV; l’ampliamento richiede capability e prove reali. Un aggiornamento di matrice non elimina automaticamente il supporto già rilasciato né cambia il deployment target. La prima versione installabile arriva dopo D/P/R/N/A, non da questo scaffold.

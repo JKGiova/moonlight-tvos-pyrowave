@@ -37,11 +37,11 @@ The frame budget B is 1000/FPS milliseconds. These are provisional admission lim
 
 At 60 FPS these imply GPU decode p95 <= 8.33 ms and client-ready p95 <= 12.5 ms. A decoder that merely averages under 16.67 ms is not qualified for low-latency Auto.
 
-Aspirational GPU decode p95 goals are <= 2 ms at 1080p60 and <= 4 ms at 4K60. They are optimization goals only and must not be advertised as expected A12 performance.
+Aspirational GPU decode p95 goals are <= 2 ms at 1080p60 and <= 4 ms at 4K60. They are optimization goals only and must not be advertised as expected performance on any target device.
 
 ## Optimization order
 
-1. Correct Apple5 dequantization with portable threadgroup scans; preserve the Apple7 fast path.
+1. Correct Apple5 dequantization with portable threadgroup scans on A12; preserve and qualify the native Apple7-or-later fast path on A15. Verify equivalent output where both paths can run; choose using real capabilities and pipeline limits.
 2. Stable memory lifetime and pool reuse; no per-frame texture/pipeline allocation.
 3. FP32 reference versus FP32 arithmetic with FP16 storage.
 4. Keep decoded planes on the GPU; avoid CPU readback and unnecessary conversions.
@@ -54,17 +54,22 @@ Two in-flight frames are an upper bound, not a target backlog. Prefer the smalle
 
 ## Benchmark matrix and procedure
 
-- Physical A12 first; newer Apple TVs are separate result sets.
+- Physical A12 and A15 bring-up; release validation on A2169, A2737 and A2843 from the [device matrix](device-support.md). Keep model/backend/OS/profile result sets separate.
+- Qualify both third-generation variants independently, including thermal soak and network behavior. A shared SoC is not permission to copy an Auto qualification record.
 - 720p60 bring-up, 1080p60 qualification, 4K60 qualification.
 - SDR 8-bit 4:2:0 first; every additional color profile gets separate admission.
 - Workloads: flat fields, gradients, text, random/detail stress and representative game captures.
 - Use the same captures/profile for comparisons; fix quality and record bitrates instead of silently degrading one codec.
 - Warm up, collect at least 10,000 steady-state frames, and run a separate >=30 minute soak.
 - Alternate/randomize codec order and repeat trials to reduce thermal/order bias.
-- Run offline decode and live streaming; live tests include Wi-Fi/Ethernet route and UDP burst loss/jitter.
+- Run offline decode and live streaming; live tests include Wi-Fi on every model and Ethernet on A2169/A2843, plus UDP burst loss/jitter. A2737 has no Ethernet route.
 - Record accepted/rejected frame counts and drops; do not hide slow frames by reporting only completed fast frames.
 - Compare hardware paths with equivalent observable boundaries; AVSampleBufferDisplayLayer enqueue duration is not GPU decode time.
 
 Store raw timestamps locally under benchmarks/local/ (ignored). Commit only sanitized summaries after real measurements, using benchmarks/templates/report.json. Null means not measured; it never passes an Auto gate.
 
 Host capture/encoding latency is recorded separately. Reducing client decode time cannot, by itself, establish that a host-processing stall has been resolved.
+
+## Monitor overhead
+
+The [five-second host monitor](host-network-monitor.md) must not contaminate decoder timing or create stream queues. Compare the same live workload with monitoring on/off; record RTT source, rolling goodput, probe bytes, sample age, timeout count and impact on p95/p99, loss and presentation. Saturating bandwidth tests run before streaming or on explicit request, not every five seconds. Live goodput is demand-limited and cannot prove spare capacity.
