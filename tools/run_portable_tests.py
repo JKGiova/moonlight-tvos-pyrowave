@@ -17,6 +17,8 @@ def main():
     directory=ROOT/'build/portable';directory.mkdir(parents=True,exist_ok=True)
     flags=['-std=c++17','-Wall','-Wextra','-Werror','-g']
     if args.sanitize:flags += ['-fsanitize=address,undefined','-fno-omit-frame-pointer']
+    subprocess.run([compiler,*flags,'-I'+str(ROOT/'native/client'),str(ROOT/'tests/client_runtime_tests.cpp'),'-o',str(directory/'client-runtime-tests')],check=True)
+    subprocess.run([str(directory/'client-runtime-tests')],check=True)
     for target,source in [('framing-tests','tests/framing_tests.cpp'),('framing-check','tools/framing_check.cpp')]:
         subprocess.run([compiler,*flags,'-I'+str(ROOT/'native/protocol'),str(ROOT/source),str(ROOT/'native/protocol/pyrowaveframing.cpp'),'-o',str(directory/target)],check=True)
     codec=ROOT/'third_party/pyrowave/metal'

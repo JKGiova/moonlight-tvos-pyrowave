@@ -2,7 +2,7 @@
 
 Development workspace for a Moonlight tvOS client with low-latency PyroWave GPU decoding and automatic codec selection that prefers PyroWave when it passes device, protocol, performance and network checks.
 
-**Status: implementation started.** The genuine Moonlight app and native PyroWave sources are pinned submodules. Implemented: Nonary framing validation, portable codec interoperability tests, video generation/encoding script and native Metal offline encode/decode harness. PyroWave is not yet wired into the Moonlight app; Auto, host monitoring and the A12 shader adaptation remain pending. No Apple TV device benchmark is claimed. This project is independent of the upstream maintainers.
+**Status: experimental client integration started.** The genuine Moonlight app and native PyroWave sources are pinned submodules. Implemented: Nonary framing validation, portable codec tests, video encoding/round-trip harness, selective protocol patches and a bounded asynchronous Metal decoder/presenter connected to the tvOS client. The live path is restricted to an explicit Debug launch argument and 8-bit SDR 4:2:0; build verification is in progress and live streaming has not been tested. Normal Auto, host monitoring, partial-frame recovery and the A12 shader adaptation remain pending. No Apple TV device benchmark is claimed. This project is independent of the upstream maintainers.
 
 ## Scope
 
@@ -40,9 +40,9 @@ The encoder runs on the host PC. The client chooses the codec/profile, negotiate
 
 ## Repository layout
 
-The genuine app lives in the `app/Moonlight` submodule with its original Xcode project. `third_party/pyrowave` contains the pinned native Metal dependency. Implemented protocol validation lives in `native/protocol`; runnable tests and build/encoding tools live in `tests/` and `tools/`. Design and progress live in `docs/`, benchmarks in `benchmarks/`, and reviewed settings/references in `configs/`. No fake Xcode project is generated.
+The genuine app lives in the `app/Moonlight` submodule with its original Xcode project. `third_party/pyrowave` contains the pinned native Metal dependency. Selective app/common-c patches live in `integration/patches`; `tools/prepare_client.py` creates a generated client checkout under `build/client/` without changing the pristine submodules. The Metal renderer and queue/color/identity helpers live in `native/apple` and `native/client`. Implemented protocol validation lives in `native/protocol`; runnable tests and build/encoding tools live in `tests/` and `tools/`. Design and progress live in `docs/`, benchmarks in `benchmarks/`, and reviewed settings/references in `configs/`. No fake Xcode project is generated.
 
-Clone with `git clone --recurse-submodules https://github.com/JKGiova/moonlight-tvos-pyrowave.git`, then follow [build and test](docs/build-and-test.md). On macOS, `python3 tools/build_engine.py` builds the real Metal harness and `python3 tools/encode_test_video.py --backend metal --roundtrip` generates and encodes the video, validates its frames, and decodes it for comparison. The app’s baseline build is separate: `python3 tools/build_tvos.py --sdk appletvos`.
+Clone with `git clone --recurse-submodules https://github.com/JKGiova/moonlight-tvos-pyrowave.git`, then follow [build and test](docs/build-and-test.md). On macOS, `python3 tools/build_engine.py` builds the real Metal harness and `python3 tools/encode_test_video.py --backend metal --roundtrip` generates and encodes the video, validates its frames, and decodes it for comparison. `python3 tools/build_tvos.py --sdk appletvos` builds the integrated experimental client; add `--baseline` for the pristine app. Read [experimental client testing](docs/experimental-client.md) before requesting PyroWave.
 
 ## First engineering milestone
 

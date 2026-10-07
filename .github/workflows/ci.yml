@@ -56,9 +56,9 @@ jobs:
           python3 tools/run_portable_tests.py
           python3 tools/encode_test_video.py --backend metal --roundtrip --width 320 --height 180 --fps 30 --frames 12 --output-dir benchmarks/local/mac-gpu-smoke
       # A Mac GPU test is not physical Apple TV qualification.
-  tvos-baseline:
+  tvos-client:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - name: Build the genuine Moonlight TV device target without signing
+      - name: Build the integrated Moonlight TV device target without signing
         run: python3 tools/build_tvos.py --sdk appletvos

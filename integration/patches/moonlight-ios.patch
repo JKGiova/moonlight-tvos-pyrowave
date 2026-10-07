@@ -1,0 +1,303 @@
+--- a/Limelight/Stream/VideoDecoderRenderer.h
++++ b/Limelight/Stream/VideoDecoderRenderer.h
+@@ -16,7 +16,9 @@
+ 
+ - (id)initWithView:(UIView*)view callbacks:(id<ConnectionCallbacks>)callbacks streamAspectRatio:(float)aspectRatio useFramePacing:(BOOL)useFramePacing;
+ 
+-- (void)setupWithVideoFormat:(int)videoFormat width:(int)videoWidth height:(int)videoHeight frameRate:(int)frameRate;
++- (int)setupWithVideoFormat:(int)videoFormat width:(int)videoWidth height:(int)videoHeight frameRate:(int)frameRate;
++- (int)submitPyroWaveDecodeUnit:(PDECODE_UNIT)unit;
++- (NSDictionary*)pyroWaveStatistics;
+ - (void)start;
+ - (void)stop;
+ - (void)setHdrMode:(BOOL)enabled;
+--- a/Limelight/Stream/VideoDecoderRenderer.m
++++ b/Limelight/Stream/VideoDecoderRenderer.m
+@@ -8,6 +8,9 @@
+ 
+ #import "VideoDecoderRenderer.h"
+ #import "StreamView.h"
++#if TARGET_OS_TV
++#import "PyroWaveVideoRenderer.h"
++#endif
+ 
+ #include <libavcodec/avcodec.h>
+ #include <libavcodec/cbs.h>
+@@ -35,6 +38,9 @@
+     
+     CADisplayLink* _displayLink;
+     BOOL framePacing;
++#if TARGET_OS_TV
++    PyroWaveVideoRenderer* _pyrowave;
++#endif
+ }
+ 
+ - (void)reinitializeDisplayLayer
+@@ -93,10 +99,36 @@
+     return self;
+ }
+ 
+-- (void)setupWithVideoFormat:(int)videoFormat width:(int)videoWidth height:(int)videoHeight frameRate:(int)frameRate
++- (int)setupWithVideoFormat:(int)videoFormat width:(int)videoWidth height:(int)videoHeight frameRate:(int)frameRate
+ {
+     self->videoFormat = videoFormat;
+     self->frameRate = frameRate;
++#if TARGET_OS_TV
++    if (videoFormat == VIDEO_FORMAT_PYROWAVE) {
++        dispatch_sync(dispatch_get_main_queue(), ^{
++            self->displayLayer.hidden=YES;
++            self->_pyrowave=[[PyroWaveVideoRenderer alloc] initWithView:self->_view callbacks:self->_callbacks];
++        });
++        return [_pyrowave prepareWidth:videoWidth height:videoHeight];
++    }
++#endif
++    return 0;
++}
++
++- (int)submitPyroWaveDecodeUnit:(PDECODE_UNIT)unit {
++#if TARGET_OS_TV
++    return _pyrowave ? [_pyrowave submitDecodeUnit:unit] : DR_OK;
++#else
++    return DR_OK;
++#endif
++}
++
++- (NSDictionary*)pyroWaveStatistics {
++#if TARGET_OS_TV
++    return [_pyrowave statistics];
++#else
++    return nil;
++#endif
+ }
+ 
+ - (void)start
+@@ -122,7 +154,7 @@
+     while (LiPollNextVideoFrame(&handle, &du)) {
+         LiCompleteVideoFrame(handle, DrSubmitDecodeUnit(du));
+         
+-        if (framePacing) {
++        if (framePacing && videoFormat != VIDEO_FORMAT_PYROWAVE) {
+             // Calculate the actual display refresh rate
+             double displayRefreshRate = 1 / (_displayLink.targetTimestamp - _displayLink.timestamp);
+             
+@@ -143,6 +175,9 @@
+ - (void)stop
+ {
+     [_displayLink invalidate];
++#if TARGET_OS_TV
++    [_pyrowave stop];
++#endif
+ }
+ 
+ #define NALU_START_PREFIX_SIZE 3
+--- a/Limelight/Stream/Connection.m
++++ b/Limelight/Stream/Connection.m
+@@ -47,12 +47,12 @@
+ 
+ int DrDecoderSetup(int videoFormat, int width, int height, int redrawRate, void* context, int drFlags)
+ {
+-    [renderer setupWithVideoFormat:videoFormat width:width height:height frameRate:redrawRate];
++    int result=[renderer setupWithVideoFormat:videoFormat width:width height:height frameRate:redrawRate];
+     lastFrameNumber = 0;
+     activeVideoFormat = videoFormat;
+     memset(&currentVideoStats, 0, sizeof(currentVideoStats));
+     memset(&lastVideoStats, 0, sizeof(lastVideoStats));
+-    return 0;
++    return result;
+ }
+ 
+ void DrStart(void)
+@@ -80,10 +80,14 @@
+     return NO;
+ }
+ 
++-(NSDictionary*) getPyroWaveStats { return [renderer pyroWaveStatistics]; }
++
+ -(NSString*) getActiveCodecName
+ {
+     switch (activeVideoFormat)
+     {
++        case VIDEO_FORMAT_PYROWAVE:
++            return @"PyroWave (experimental SDR)";
+         case VIDEO_FORMAT_H264:
+             return @"H.264";
+         case VIDEO_FORMAT_H264_HIGH8_444:
+@@ -133,12 +137,7 @@
+ {
+     int offset = 0;
+     int ret;
+-    unsigned char* data = (unsigned char*) malloc(decodeUnit->fullLength);
+-    if (data == NULL) {
+-        // A frame was lost due to OOM condition
+-        return DR_NEED_IDR;
+-    }
+-    
++
+     CFTimeInterval now = CACurrentMediaTime();
+     if (!lastFrameNumber) {
+         currentVideoStats.startTime = now;
+@@ -178,6 +177,14 @@
+     
+     currentVideoStats.receivedFrames++;
+     currentVideoStats.totalFrames++;
++
++    // PyroWave is opaque record data, not NAL parameter sets. Copy ownership
++    // inside the renderer before common-c completes and frees this decode unit.
++    if (activeVideoFormat == VIDEO_FORMAT_PYROWAVE) {
++        return [renderer submitPyroWaveDecodeUnit:decodeUnit];
++    }
++    unsigned char* data = (unsigned char*) malloc(decodeUnit->fullLength);
++    if (data == NULL) return DR_NEED_IDR;
+ 
+     PLENTRY entry = decodeUnit->bufferList;
+     while (entry != NULL) {
+--- a/Limelight/ViewControllers/MainFrameViewController.m
++++ b/Limelight/ViewControllers/MainFrameViewController.m
+@@ -8,6 +8,9 @@
+ @import ImageIO;
+ 
+ #import "MainFrameViewController.h"
++#if TARGET_OS_TV
++#import "PyroWaveVideoRenderer.h"
++#endif
+ #import "CryptoManager.h"
+ #import "HttpManager.h"
+ #import "Connection.h"
+@@ -683,6 +686,20 @@
+             break;
+     }
+     
++#if TARGET_OS_TV && DEBUG
++    // Explicit Xcode launch argument for development, never normal Auto admission.
++    // Manual HEVC/H.264/AV1 preferences retain their original behavior.
++    if ([[NSUserDefaults standardUserDefaults] boolForKey:@"PyroWaveExperimental"] &&
++        streamSettings.preferredCodec == CODEC_PREF_AUTO && !streamSettings.enableHdr &&
++        (_streamConfig.serverCodecModeSupport & SCM_PYROWAVE) &&
++        _streamConfig.width>=128 && _streamConfig.width<=4096 && _streamConfig.width%2==0 &&
++        _streamConfig.height>=128 && _streamConfig.height<=2160 && _streamConfig.height%2==0 &&
++        [PyroWaveVideoRenderer isNativeBackendAvailable]) {
++        _streamConfig.supportedVideoFormats |= VIDEO_FORMAT_PYROWAVE;
++        Log(LOG_W, @"Explicit experimental PyroWave request; device is not Auto-qualified");
++    }
++#endif
++
+     // HEVC is supported if the user wants it (or it's required by the chosen resolution) and the SoC supports it
+     if ((_streamConfig.width > 4096 || _streamConfig.height > 4096 || streamSettings.enableHdr) && VTIsHardwareDecodeSupported(kCMVideoCodecType_HEVC)) {
+         _streamConfig.supportedVideoFormats |= VIDEO_FORMAT_H265;
+--- a/Moonlight.xcodeproj/project.pbxproj
++++ b/Moonlight.xcodeproj/project.pbxproj
+@@ -136,6 +136,14 @@
+ 		FBD349621A0089F6002D2A60 /* DataManager.m in Sources */ = {isa = PBXBuildFile; fileRef = FBD349611A0089F6002D2A60 /* DataManager.m */; };
+ 		FBDE86E019F7A837001C18A8 /* UIComputerView.m in Sources */ = {isa = PBXBuildFile; fileRef = FBDE86DF19F7A837001C18A8 /* UIComputerView.m */; };
+ 		FBDE86E619F82297001C18A8 /* UIAppView.m in Sources */ = {isa = PBXBuildFile; fileRef = FBDE86E519F82297001C18A8 /* UIAppView.m */; };
++		505742440000000000000000 /* PyroWaveVideoRenderer.mm in build */ = {isa = PBXBuildFile; fileRef = 505752540000000000000000 /* PyroWaveVideoRenderer.mm */; };
++		505742440000000000000001 /* pyrowaveframing.cpp in build */ = {isa = PBXBuildFile; fileRef = 505752540000000000000001 /* pyrowaveframing.cpp */; };
++		505742440000000000000002 /* pyrowave_common.mm in build */ = {isa = PBXBuildFile; fileRef = 505752540000000000000002 /* pyrowave_common.mm */; };
++		505742440000000000000003 /* pyrowave_decoder.mm in build */ = {isa = PBXBuildFile; fileRef = 505752540000000000000003 /* pyrowave_decoder.mm */; };
++		505742440000000000000004 /* pyrowave_bitstream.cpp in build */ = {isa = PBXBuildFile; fileRef = 505752540000000000000004 /* pyrowave_bitstream.cpp */; };
++		505742440000000000000005 /* Metal.framework in build */ = {isa = PBXBuildFile; fileRef = 505752540000000000000005 /* Metal.framework */; };
++		505742440000000000000006 /* QuartzCore.framework in build */ = {isa = PBXBuildFile; fileRef = 505752540000000000000006 /* QuartzCore.framework */; };
++		505742440000000000000007 /* IOSurface.framework in build */ = {isa = PBXBuildFile; fileRef = 505752540000000000000007 /* IOSurface.framework */; };
+ /* End PBXBuildFile section */
+ 
+ /* Begin PBXContainerItemProxy section */
+@@ -320,6 +328,14 @@
+ 		FBDE86DF19F7A837001C18A8 /* UIComputerView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = UIComputerView.m; sourceTree = "<group>"; };
+ 		FBDE86E419F82297001C18A8 /* UIAppView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = UIAppView.h; sourceTree = "<group>"; };
+ 		FBDE86E519F82297001C18A8 /* UIAppView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = UIAppView.m; sourceTree = "<group>"; };
++		505752540000000000000000 /* PyroWaveVideoRenderer.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = "PyroWaveRuntime/apple/PyroWaveVideoRenderer.mm"; sourceTree = SOURCE_ROOT; };
++		505752540000000000000001 /* pyrowaveframing.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = "PyroWaveRuntime/protocol/pyrowaveframing.cpp"; sourceTree = SOURCE_ROOT; };
++		505752540000000000000002 /* pyrowave_common.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = "PyroWaveRuntime/metal/pyrowave_common.mm"; sourceTree = SOURCE_ROOT; };
++		505752540000000000000003 /* pyrowave_decoder.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = "PyroWaveRuntime/metal/pyrowave_decoder.mm"; sourceTree = SOURCE_ROOT; };
++		505752540000000000000004 /* pyrowave_bitstream.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = "PyroWaveRuntime/metal/pyrowave_bitstream.cpp"; sourceTree = SOURCE_ROOT; };
++		505752540000000000000005 /* Metal.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = System/Library/Frameworks/Metal.framework; sourceTree = SDKROOT; };
++		505752540000000000000006 /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
++		505752540000000000000007 /* IOSurface.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = System/Library/Frameworks/IOSurface.framework; sourceTree = SDKROOT; };
+ /* End PBXFileReference section */
+ 
+ /* Begin PBXFrameworksBuildPhase section */
+@@ -327,6 +343,9 @@
+ 			isa = PBXFrameworksBuildPhase;
+ 			buildActionMask = 2147483647;
+ 			files = (
++				505742440000000000000005 /* Metal.framework in Frameworks */,
++				505742440000000000000006 /* QuartzCore.framework in Frameworks */,
++				505742440000000000000007 /* IOSurface.framework in Frameworks */,
+ 				9865DC30213260B40005B9B9 /* libmoonlight-common-tv.a in Frameworks */,
+ 				9865DC3C2132922E0005B9B9 /* GameController.framework in Frameworks */,
+ 				98882A0D2AF60FA000C5A11C /* libavformat.a in Frameworks */,
+@@ -832,6 +851,11 @@
+ 			isa = PBXSourcesBuildPhase;
+ 			buildActionMask = 2147483647;
+ 			files = (
++				505742440000000000000000 /* PyroWaveVideoRenderer.mm in Sources */,
++				505742440000000000000001 /* pyrowaveframing.cpp in Sources */,
++				505742440000000000000002 /* pyrowave_common.mm in Sources */,
++				505742440000000000000003 /* pyrowave_decoder.mm in Sources */,
++				505742440000000000000004 /* pyrowave_bitstream.cpp in Sources */,
+ 				9827E7A42514366900F25707 /* HapticContext.m in Sources */,
+ 				9897B6A62212732C00966419 /* Controller.m in Sources */,
+ 				9865DC3E21332D660005B9B9 /* MainFrameViewController.m in Sources */,
+@@ -975,11 +999,12 @@
+ 		FB1A67662132419A00507771 /* Debug */ = {
+ 			isa = XCBuildConfiguration;
+ 			buildSettings = {
++				USER_HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/PyroWaveRuntime/**";
+ 				ASSETCATALOG_COMPILER_APPICON_NAME = "App Icon & Top Shelf Image";
+ 				ASSETCATALOG_COMPILER_LAUNCHIMAGE_NAME = "Launch Image";
+ 				CLANG_ANALYZER_NONNULL = YES;
+ 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
++				CLANG_CXX_LANGUAGE_STANDARD = "c++17";
+ 				CLANG_ENABLE_OBJC_WEAK = YES;
+ 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+ 				CODE_SIGN_STYLE = Automatic;
+@@ -1030,11 +1055,12 @@
+ 		FB1A67672132419A00507771 /* Release */ = {
+ 			isa = XCBuildConfiguration;
+ 			buildSettings = {
++				USER_HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/PyroWaveRuntime/**";
+ 				ASSETCATALOG_COMPILER_APPICON_NAME = "App Icon & Top Shelf Image";
+ 				ASSETCATALOG_COMPILER_LAUNCHIMAGE_NAME = "Launch Image";
+ 				CLANG_ANALYZER_NONNULL = YES;
+ 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
++				CLANG_CXX_LANGUAGE_STANDARD = "c++17";
+ 				CLANG_ENABLE_OBJC_WEAK = YES;
+ 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+ 				CODE_SIGN_STYLE = Automatic;
+--- a/Limelight/Stream/Connection.h
++++ b/Limelight/Stream/Connection.h
+@@ -30,5 +30,6 @@
+ -(void) main;
+ -(BOOL) getVideoStats:(video_stats_t*)stats;
+ -(NSString*) getActiveCodecName;
++-(NSDictionary*) getPyroWaveStats;
+ 
+ @end
+--- a/Limelight/Stream/StreamManager.m
++++ b/Limelight/Stream/StreamManager.m
+@@ -179,7 +179,7 @@
+     }
+     
+     float interval = stats.endTime - stats.startTime;
+-    return [NSString stringWithFormat:@"Video stream: %dx%d %.2f FPS (Codec: %@)\nFrames dropped by your network connection: %.2f%%\nAverage network latency: %@%@",
++    NSString* text = [NSString stringWithFormat:@"Video stream: %dx%d %.2f FPS (Codec: %@)\nFrames dropped by your network connection: %.2f%%\nAverage network latency: %@%@",
+             _config.width,
+             _config.height,
+             stats.totalFrames / interval,
+@@ -187,6 +187,14 @@
+             stats.networkDroppedFrames / interval,
+             latencyString,
+             hostProcessingString];
++    NSDictionary* pyro=[_connection getPyroWaveStats];
++    if (pyro) {
++        id ready=pyro[@"client_ready_completion_proxy_ms"];
++        NSString* p95=[ready isKindOfClass:NSDictionary.class] ? [NSString stringWithFormat:@"%.2f ms",[ready[@"p95"] doubleValue]] : @"N/A";
++        text=[text stringByAppendingFormat:@"\nPyroWave ready p95 (completion proxy): %@\nGPU/pending: %@/%@  Queue drops: %@  Parser rejects: %@  Decode failures: %@  Present drops: %@",
++            p95,pyro[@"gpu_in_flight"],pyro[@"pending_frames"],pyro[@"pending_replacements"],pyro[@"parser_rejected"],pyro[@"decode_failed"],pyro[@"drawable_dropped"]];
++    }
++    return text;
+ }
+ 
+ @end

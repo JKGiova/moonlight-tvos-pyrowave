@@ -50,7 +50,7 @@ python3 tools/encode_test_video.py --codecs h264,hevc --width 320 --height 180 -
 
 These FFmpeg CPU baselines are not Apple hardware decoder timings or matched-quality PyroWave comparisons. The default PyroWave run fails clearly when the actual encoder/GPU is unavailable.
 
-## Genuine tvOS baseline
+## Integrated experimental tvOS client
 
 On a Mac with Xcode/tvOS SDK:
 
@@ -58,6 +58,6 @@ On a Mac with Xcode/tvOS SDK:
 python3 tools/build_tvos.py --sdk appletvos
 ```
 
-This builds the actual upstream `Moonlight TV` target without signing. Open `app/Moonlight/Moonlight.xcodeproj` in Xcode to configure your local team, unique persistent bundle ID and physical Apple TV deployment. Standard startup/streaming and PIN pairing come first. The app currently retains its standard renderer: the offline PyroWave harness is not wired into it yet.
+This prepares selective patches and builds the actual `Moonlight TV` target without signing. Open `build/client/Moonlight/Moonlight.xcodeproj` in Xcode to configure your local team, unique persistent bundle ID and physical Apple TV deployment. Standard startup/streaming and PIN pairing come first. The standard renderer remains the fallback; an explicit Debug request can select the experimental live PyroWave renderer. See [experimental client testing](experimental-client.md). Add `--baseline` to build the pristine upstream source instead. A changed integration requires a fresh `--client-dir`; existing generated checkouts are preserved.
 
 CI compiles native Metal and the unsigned tvOS device target and runs portable/smoke checks. The Mac job probes actual GPU availability and performs a native encode/decode smoke test only when the backend is supported; otherwise those steps are explicitly skipped. No CI job claims physical GPU latency or accesses the user’s Vibeshine PC. See [development status](development-status.md) and [the live-test setup](vibeshine-testing.md).
