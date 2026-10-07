@@ -1,6 +1,6 @@
 # Piano v3 — Tutte le Apple TV con tvOS attuale, decode veloce e Auto
 
-Stato: sviluppo autorizzato e iniziato il 7 ottobre 2026. Baseline Moonlight e PyroWave importati come submodule; parser, test CPU e harness video offline implementati. Integrazione del decoder nell’app, selettore e monitor rete ancora da realizzare. Vedere [stato sviluppo](development-status.md). PyroWave sarà una scelta manuale e il candidato preferito in modalità Auto dopo la qualificazione; copertura di tutti i modelli compatibili con tvOS stabile e monitoraggio host ogni 5 secondi.
+Stato: sviluppo autorizzato e iniziato il 7 ottobre 2026. Baseline Moonlight e PyroWave importati come submodule; parser, test CPU e harness video offline implementati. Il primo percorso live sperimentale complete-frame è collegato tramite patch selettive a RTSP/SDP e al renderer Metal, con coda limitata e richiesta esplicita Debug. Selettore Auto qualificato, monitor rete, recupero parziale e shader A12 restano da realizzare. Vedere [stato sviluppo](development-status.md). PyroWave sarà una scelta manuale e il candidato preferito in modalità Auto dopo la qualificazione; copertura di tutti i modelli compatibili con tvOS stabile e monitoraggio host ogni 5 secondi.
 
 ## Obiettivo
 
@@ -38,7 +38,7 @@ Una sola app tvOS: percorso portabile Apple5 per A12 e percorso nativo Apple7+ c
 | Q0 — Qualificazione 4K | Stesso percorso a 4K60 | Prova fisica di almeno 30 minuti per modello/profilo ammesso, coda limitata e margine |
 | H0 — Profili aggiuntivi | 4:4:4, 10-bit, HDR | Misure e colorimetria corrette per ciascun profilo |
 
-D0 è iniziato con l’autorizzazione dell’utente: sorgenti veri, bootstrap e comando di build disponibili. Le prove fisiche della baseline restano richieste prima di qualificare la release. D1 dispone già di harness offline Metal e generazione/encoding video, da compilare ed eseguire su un Mac con GPU supportata.
+D0 è iniziato con l’autorizzazione dell’utente: sorgenti veri, bootstrap e comando di build disponibili. Le prove fisiche della baseline restano richieste prima di qualificare la release. D1 dispone di harness offline Metal e generazione/encoding video compilati in CI; il round trip GPU richiede ancora un dispositivo ammesso dal backend. P0/R0 dispongono del primo percorso complete-frame sperimentale, descritto in [test client sperimentale](experimental-client.md). Le milestone restano aperte fino alle prove fisiche.
 
 ## D1/D2 — Lavoro sul decoding
 
@@ -71,7 +71,7 @@ Obiettivi aspirazionali GPU decode p95: 2 ms a 1080p60, 4 ms a 4K60. Non sono mi
 | common-c `Limelight.h`, `RtspConnection.c`, `SdpGenerator.c` | Capability/maschere PyroWave e selezione negoziata |
 | common-c `Video.h`, `VideoDepacketizer.c`, `RtpVideoQueue.*`, `VideoStream.c`, `PlatformSockets.*` | Frame parziali, metadati e ricezione UDP Darwin |
 
-Nuovi componenti pianificati: `CodecSelectionPolicy`, `DecoderCapabilityProbe`, `DecoderBenchmarkStore`, `HostNetworkMonitor`, `HostNetworkSampleStore`, `VideoRenderer`, `PyroWaveVideoRenderer`, `PyroWaveMetalPresenter`. I nomi definiscono responsabilità future, non sorgenti esistenti.
+`PyroWaveVideoRenderer` è ora implementato in `native/apple`, includendo inizialmente il presenter Metal nella stessa classe. Altri componenti pianificati: `CodecSelectionPolicy`, `DecoderCapabilityProbe`, `DecoderBenchmarkStore`, `HostNetworkMonitor`, `HostNetworkSampleStore`, `VideoRenderer` e una futura separazione `PyroWaveMetalPresenter`. I nomi restanti definiscono responsabilità future.
 
 Deviare le DECODE_UNIT PyroWave prima del trattamento dei NAL: il codice attuale tratta i buffer non-PICDATA come parameter set. Conservare `BUFFER_TYPE_LOST`, `BUFFER_TYPE_RECORD_START` e `pyrowaveCriticalPackets`. Trasferire i dati in memoria posseduta prima di completare il frame common-c.
 

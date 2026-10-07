@@ -1,6 +1,6 @@
 # tvOS app boundary
 
-Planned changes: codec preferences, MainFrameViewController selection, Connection negotiated-format dispatch, renderer ownership, settings and statistics. No Objective-C source or Xcode project is present yet.
+Implemented experimental integration: selective MainFrameViewController admission, Connection negotiated-format dispatch, renderer ownership and statistics overlay. The genuine project is preserved in app/Moonlight; tools/prepare_client.py applies integration/patches to a generated client checkout. Normal codec preferences and qualified Auto are still pending. See [experimental client testing](../../docs/experimental-client.md).
 
 Plan a single app for every Apple TV in [the device matrix](../../docs/device-support.md), including both third-generation variants. Runtime feature probes choose decoder paths; no second-generation-only build. Minimum deployment target and SDK/toolchain validation belong to D0 after implementation is authorized.
 

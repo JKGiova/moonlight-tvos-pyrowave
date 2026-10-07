@@ -2,7 +2,7 @@
 
 Development workspace for a Moonlight tvOS client with low-latency PyroWave GPU decoding and automatic codec selection that prefers PyroWave when it passes device, protocol, performance and network checks.
 
-**Status: experimental client integration started.** The genuine Moonlight app and native PyroWave sources are pinned submodules. Implemented: Nonary framing validation, portable codec tests, video encoding/round-trip harness, selective protocol patches and a bounded asynchronous Metal decoder/presenter connected to the tvOS client. The live path is restricted to an explicit Debug launch argument and 8-bit SDR 4:2:0; build verification is in progress and live streaming has not been tested. Normal Auto, host monitoring, partial-frame recovery and the A12 shader adaptation remain pending. No Apple TV device benchmark is claimed. This project is independent of the upstream maintainers.
+**Status: experimental client integration started.** The genuine Moonlight app and native PyroWave sources are pinned submodules. Implemented: Nonary framing validation, portable codec tests, video encoding/round-trip harness, selective protocol patches and a bounded asynchronous Metal decoder/presenter connected to the tvOS client. The live path is restricted to an explicit Debug launch argument and 8-bit SDR 4:2:0; the integrated unsigned ARM64 tvOS build and actual presenter shader/pipeline compilation passed in CI, while live streaming has not been tested. Normal Auto, host monitoring, partial-frame recovery and the A12 shader adaptation remain pending. No Apple TV device benchmark is claimed. This project is independent of the upstream maintainers.
 
 ## Scope
 

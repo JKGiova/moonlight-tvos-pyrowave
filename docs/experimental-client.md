@@ -1,6 +1,6 @@
 # Experimental live tvOS client
 
-The implementation connects PyroWave to the genuine Moonlight TV target through selective, reviewable patches. It is not a release-qualified codec. Real host/device streaming, visual correctness, loss behavior, restart/fallback and latency remain untested.
+The implementation connects PyroWave to the genuine Moonlight TV target through selective, reviewable patches. It is not a release-qualified codec. The integrated unsigned ARM64 target and the actual presenter shader/render pipeline compiled successfully in [CI](https://github.com/JKGiova/moonlight-tvos-pyrowave/actions/runs/37654083647). Real host/device streaming, visual correctness, loss behavior, restart/fallback and latency remain untested.
 
 ## Build and select a development session
 
@@ -21,7 +21,7 @@ Start with 720p60 and record the actual configured host bitrate. The app preserv
 
 `Connection.m` dispatches PyroWave decode units before NAL parameter-set processing. The renderer validates and copies the linked packet buffers before `LiCompleteVideoFrame` releases them. CPU framing validation and drawable acquisition run on a serial worker. The renderer creates two independent native decoder/texture slots, each reused only after its GPU command completes. This also keeps the upstream four-entry upload pool from blocking the UI.
 
-At most two commands are in flight and one newest frame is pending. A new pending frame replaces the previous one under overload. There are no per-frame dispatch blocks accumulating behind the GPU, no image readback, and no GPU completion wait on the main thread. The PyroWave path bypasses the standard one-frame pacing hold. Y/Cb/Cr remain private R8 textures; compute decode and full-screen color conversion share one command buffer and present through CAMetalLayer. Limited/full-range BT.601 and BT.709 are explicit; unsupported color profiles terminate the experiment instead of being displayed as SDR.
+At most two commands are in flight and one newest frame is pending. A new pending frame replaces the previous one under overload. There are no per-frame dispatch blocks accumulating behind the GPU, no image readback, and no GPU completion wait on the main thread. The PyroWave path bypasses the standard one-frame pacing hold. Y/Cb/Cr remain private R8 textures; compute decode and full-screen color conversion share one command buffer and present through CAMetalLayer. Limited/full-range BT.601 and BT.709 are explicit, with range taken from the negotiated session configuration; unsupported color profiles terminate the experiment instead of being displayed as SDR.
 
 ## Current transport boundary
 

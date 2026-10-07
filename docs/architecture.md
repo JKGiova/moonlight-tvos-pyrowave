@@ -1,6 +1,6 @@
 # Proposed architecture
 
-Status: runtime architecture remains under development. Native framing validation and offline GPU harness are implemented; the complete streaming pipeline is not wired yet.
+Status: runtime architecture remains under development. Native framing validation, the offline GPU harness and an experimental complete-frame streaming path are implemented. Qualified Auto, monitoring, A12 shaders and partial-frame recovery are pending.
 
 | Component | Owns | Does not own |
 | --- | --- | --- |
@@ -11,14 +11,14 @@ Status: runtime architecture remains under development. Native framing validatio
 | HostNetworkSampleStore | Host/route/direction samples, timestamps, method, confidence and freshness | Reusing stale measurements as fresh evidence |
 | common-c protocol integration | RTSP/SDP, transport, reassembly and loss metadata | UI preference or renderer internals |
 | PyroWaveVideoRenderer | Validated frame ingestion and decode scheduling | Main-thread blocking GPU waits |
-| PyroWaveMetalPresenter | Texture pool, conversion, drawable and GPU completion | Host encoder selection |
+| Metal presenter (currently inside PyroWaveVideoRenderer) | Texture pool, conversion, drawable and GPU completion | Host encoder selection |
 | Existing Apple renderer | H.264/HEVC path and supported future codecs | PyroWave packet parsing |
 
-The current upstream paths are described in PLAN.md. integration/ contains boundary notes. The real baseline project keeps upstream-compatible paths under app/Moonlight; native/protocol implements the shared framing adapter used by the offline harness.
+The current upstream paths are described in PLAN.md. integration/ contains boundary notes. The real baseline project keeps upstream-compatible paths under app/Moonlight; native/protocol implements the shared framing adapter used by both the offline harness and native/apple/PyroWaveVideoRenderer.mm. Selective integration patches are applied to a generated client under build/client by tools/prepare_client.py; pinned submodules stay pristine.
 
 ## Ownership and execution
 
-A DECODE_UNIT belongs to common-c until copied/transferred into an application-owned slot and completed. Preserve loss and record boundaries during this transfer. Codec parsing/upload happens on a serial worker; UI layer configuration happens on the main thread. GPU completion releases retained slots.
+A DECODE_UNIT belongs to common-c until copied/transferred into an application-owned slot and completed. The current complete-frame path copies opaque picture buffers; preserving lost-packet/record-start metadata requires the planned partial-frame transport patches. Codec parsing/upload happens on a serial worker; UI layer configuration happens on the main thread. GPU completion releases retained slots.
 
 Keep the same command buffer for decode/conversion when appropriate; submit presentation without CPU readback. Stop/reconnect must drain or safely cancel ownership without retaining freed packet pointers.
 
