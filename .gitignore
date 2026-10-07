@@ -21,3 +21,7 @@ xcuserdata/
 # Raw benchmarks/captures: publish sanitized summaries explicitly
 benchmarks/local/
 captures/
+
+# Python cache and local compilation
+__pycache__/
+*.pyc

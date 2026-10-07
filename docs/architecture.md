@@ -1,6 +1,6 @@
 # Proposed architecture
 
-Status: responsibility boundaries, not an implemented system.
+Status: runtime architecture remains under development. Native framing validation and offline GPU harness are implemented; the complete streaming pipeline is not wired yet.
 
 | Component | Owns | Does not own |
 | --- | --- | --- |
@@ -14,7 +14,7 @@ Status: responsibility boundaries, not an implemented system.
 | PyroWaveMetalPresenter | Texture pool, conversion, drawable and GPU completion | Host encoder selection |
 | Existing Apple renderer | H.264/HEVC path and supported future codecs | PyroWave packet parsing |
 
-The current upstream paths are described in PLAN.md. Initial layout in integration/ contains design notes only. Actual source should live at upstream-compatible paths after import.
+The current upstream paths are described in PLAN.md. integration/ contains boundary notes. The real baseline project keeps upstream-compatible paths under app/Moonlight; native/protocol implements the shared framing adapter used by the offline harness.
 
 ## Ownership and execution
 

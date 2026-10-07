@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "status": "passed",
+  "purpose": "offline-encoder-functional-test",
+  "apple_tv_benchmark": false,
+  "auto_qualified": false,
+  "encoders": {
+    "h264": {
+      "status": "passed",
+      "gpu_encode_ms": null,
+      "gpu_decode_ms": null,
+      "auto_qualified": false,
+      "wall_time_is_per_frame_latency": false,
+      "backend": "ffmpeg-cpu-reference",
+      "crf": 18,
+      "preset": "ultrafast",
+      "encode_process_wall_seconds": 0.16425434400025551,
+      "decode_functional_check": true,
+      "output_bytes": 1018811,
+      "output_sha256": "ce18de346ca1c57f4c23e23cc6eaefb30c057c55c154c98ef6453f3a522bcc7c"
+    },
+    "hevc": {
+      "status": "passed",
+      "gpu_encode_ms": null,
+      "gpu_decode_ms": null,
+      "auto_qualified": false,
+      "wall_time_is_per_frame_latency": false,
+      "backend": "ffmpeg-cpu-reference",
+      "crf": 18,
+      "preset": "ultrafast",
+      "encode_process_wall_seconds": 0.7657934340004431,
+      "decode_functional_check": true,
+      "output_bytes": 615305,
+      "output_sha256": "cd0f38f34df6112822d046e6e1655131682aac69f0550a1dff580141cb49b70c"
+    }
+  },
+  "source": {
+    "description": "generated-ffmpeg-motion-gradient-text-seed42",
+    "sha256": "349b12c0e89bb9c4b9fc53bf67b0549209234e1ae45341b6355605f2f2d74685",
+    "profile": {
+      "width": 1280,
+      "height": 720,
+      "pix_fmt": "yuv420p",
+      "r_frame_rate": "60/1",
+      "nb_read_frames": "30"
+    }
+  },
+  "environment": {
+    "system": "Linux",
+    "architecture": "x86_64",
+    "ffmpeg_version": "ffmpeg version 6.1.1-3ubuntu5 Copyright (c) 2000-2023 the FFmpeg developers",
+    "apple_tv": false,
+    "accessible_gpu": false
+  }
+}

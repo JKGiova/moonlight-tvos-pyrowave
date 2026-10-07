@@ -1,0 +1,6 @@
+[submodule "app/Moonlight"]
+	path = app/Moonlight
+	url = https://github.com/moonlight-stream/moonlight-ios.git
+[submodule "third_party/pyrowave"]
+	path = third_party/pyrowave
+	url = https://github.com/Themaister/pyrowave.git

@@ -1,0 +1,38 @@
+name: Development checks
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: checks-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  portable:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Initialize only the pinned codec for CPU interoperability checks
+        run: git submodule update --init third_party/pyrowave
+      - name: Parser and real codec CPU tests
+        run: python3 tools/run_portable_tests.py --sanitize
+      - name: Install FFmpeg for functional video encoding checks
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - name: Encode generated motion/gradient/text video with baseline codecs
+        run: python3 tools/encode_test_video.py --codecs h264,hevc --width 320 --height 180 --fps 30 --frames 12
+  metal-build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - run: git submodule update --init third_party/pyrowave
+      - run: python3 tools/build_engine.py
+      - run: build/metal/pyrowave-video --version
+      # GPU availability on a hosted runner is not assumed; no device benchmark.
+  tvos-baseline:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Build the genuine Moonlight TV device target without signing
+        run: python3 tools/build_tvos.py --sdk appletvos

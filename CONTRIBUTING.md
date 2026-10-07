@@ -1,6 +1,6 @@
 # Contributing
 
-Current scope is project planning and repository scaffolding. Implementation requires a separate authorization from the project owner.
+Implementation started with the project owner’s authorization on 2026-10-07. See docs/development-status.md for what is implemented, tested and still pending.
 
 Before suggesting a change, read [the plan](docs/PLAN.md) and [the selection policy](docs/codec-selection.md). Document which upstream commit and physical device are relevant. Performance claims must include reproducible benchmark metadata and raw measurements; use the empty template in benchmarks/templates/.
 

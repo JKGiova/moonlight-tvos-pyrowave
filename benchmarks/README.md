@@ -1,6 +1,6 @@
 # Benchmark area
 
-Planning only. No capture, harness or measured result exists.
+The offline encoder/decoder harness and generated-video script now exist. No physical Apple TV result is available. results/2026-10-07-linux-cpu-smoke.json records an actual FFmpeg CPU functional check only; it is neither PyroWave GPU performance nor Auto qualification.
 
 - cases.md defines workloads and device/profile combinations.
 - templates/report.json defines an empty sanitized report.

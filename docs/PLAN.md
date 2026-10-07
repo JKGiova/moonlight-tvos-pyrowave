@@ -1,6 +1,6 @@
 # Piano v3 — Tutte le Apple TV con tvOS attuale, decode veloce e Auto
 
-Stato: scaffold e specifica, 7 ottobre 2026. Nessun decoder, selettore o monitor rete è implementato. PyroWave sarà una scelta manuale e il candidato preferito in modalità Auto dopo la qualificazione; copertura di tutti i modelli compatibili con tvOS stabile e monitoraggio host ogni 5 secondi.
+Stato: sviluppo autorizzato e iniziato il 7 ottobre 2026. Baseline Moonlight e PyroWave importati come submodule; parser, test CPU e harness video offline implementati. Integrazione del decoder nell’app, selettore e monitor rete ancora da realizzare. Vedere [stato sviluppo](development-status.md). PyroWave sarà una scelta manuale e il candidato preferito in modalità Auto dopo la qualificazione; copertura di tutti i modelli compatibili con tvOS stabile e monitoraggio host ogni 5 secondi.
 
 ## Obiettivo
 
@@ -38,7 +38,7 @@ Una sola app tvOS: percorso portabile Apple5 per A12 e percorso nativo Apple7+ c
 | Q0 — Qualificazione 4K | Stesso percorso a 4K60 | Prova fisica di almeno 30 minuti per modello/profilo ammesso, coda limitata e margine |
 | H0 — Profili aggiuntivi | 4:4:4, 10-bit, HDR | Misure e colorimetria corrette per ciascun profilo |
 
-Lo sviluppo inizierà da D0 soltanto dopo una nuova istruzione dell'utente.
+D0 è iniziato con l’autorizzazione dell’utente: sorgenti veri, bootstrap e comando di build disponibili. Le prove fisiche della baseline restano richieste prima di qualificare la release. D1 dispone già di harness offline Metal e generazione/encoding video, da compilare ed eseguire su un Mac con GPU supportata.
 
 ## D1/D2 — Lavoro sul decoding
 

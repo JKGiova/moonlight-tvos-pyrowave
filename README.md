@@ -1,8 +1,8 @@
 # Moonlight tvOS PyroWave
 
-Scaffold for a Moonlight tvOS client with low-latency PyroWave GPU decoding and automatic codec selection that prefers PyroWave when it passes device, protocol, performance and network checks.
+Development workspace for a Moonlight tvOS client with low-latency PyroWave GPU decoding and automatic codec selection that prefers PyroWave when it passes device, protocol, performance and network checks.
 
-**Status: planning only.** There is no app target, decoder implementation, codec-selection runtime or measured Apple TV benchmark in this repository yet. This project is independent of the upstream maintainers.
+**Status: implementation started.** The genuine Moonlight app and native PyroWave sources are pinned submodules. Implemented: Nonary framing validation, portable codec interoperability tests, video generation/encoding script and native Metal offline encode/decode harness. PyroWave is not yet wired into the Moonlight app; Auto, host monitoring and the A12 shader adaptation remain pending. No Apple TV device benchmark is claimed. This project is independent of the upstream maintainers.
 
 ## Scope
 
@@ -24,6 +24,8 @@ The encoder runs on the host PC. The client chooses the codec/profile, negotiate
 | --- | --- |
 | [Device support matrix](docs/device-support.md) | All in-scope models, GPU paths and release qualification |
 | [Device manifest](configs/devices.json) | Reviewed hardware scope; not a runtime allowlist |
+| [Development status](docs/development-status.md) | Implemented code, actual checks and remaining work |
+| [Build and encoding tests](docs/build-and-test.md) | Initialize sources, build genuine targets, encode the chosen video |
 | [Implementation plan](docs/PLAN.md) | Milestones and source integration points |
 | [Decode performance](docs/decoding-performance.md) | Metrics, optimization priorities and benchmark protocol |
 | [Automatic codec selection](docs/codec-selection.md) | PyroWave-first selection and fallback contract |
@@ -32,15 +34,15 @@ The encoder runs on the host PC. The client chooses the codec/profile, negotiate
 | [Network specification](configs/network-monitor.example.json) | Probe cadence, budgets and freshness policy; not runtime settings |
 | [Architecture](docs/architecture.md) | Proposed component ownership |
 | [Source research](docs/research.md) | Verified upstream facts and pinned references |
-| [Dependency manifest](configs/upstreams.lock.json) | Reviewed source revisions; sources are not vendored |
+| [Dependency manifest](configs/upstreams.lock.json) | Reviewed source revisions and registered dependency pins |
 | [Policy specification](configs/codec-policy.example.json) | Proposed settings; not loaded by an application |
 | [Benchmark report template](benchmarks/templates/report.json) | Empty result template; no claimed measurements |
 
 ## Repository layout
 
-Documentation lives in `docs/`; planned integration boundaries live in `integration/`; benchmark definitions live in `benchmarks/`; reviewed dependency and policy specifications live in `configs/`. GitHub issue/PR templates are provided. This scaffold intentionally contains no placeholder decoder code or fake Xcode project.
+The genuine app lives in the `app/Moonlight` submodule with its original Xcode project. `third_party/pyrowave` contains the pinned native Metal dependency. Implemented protocol validation lives in `native/protocol`; runnable tests and build/encoding tools live in `tests/` and `tools/`. Design and progress live in `docs/`, benchmarks in `benchmarks/`, and reviewed settings/references in `configs/`. No fake Xcode project is generated.
 
-See [upstream import](docs/upstream-import.md) before importing Moonlight or registering submodules. Development starts only after a separate instruction authorizes implementation.
+Clone with `git clone --recurse-submodules https://github.com/JKGiova/moonlight-tvos-pyrowave.git`, then follow [build and test](docs/build-and-test.md). On macOS, `python3 tools/build_engine.py` builds the real Metal harness and `python3 tools/encode_test_video.py --backend metal --roundtrip` generates and encodes the video, validates its frames, and decodes it for comparison. The app’s baseline build is separate: `python3 tools/build_tvos.py --sdk appletvos`.
 
 ## First engineering milestone
 
