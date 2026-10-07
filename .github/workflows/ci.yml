@@ -18,6 +18,11 @@ jobs:
         run: git submodule update --init third_party/pyrowave
       - name: Parser and real codec CPU tests
         run: python3 tools/run_portable_tests.py --sanitize
+      - name: CMake portable build and tests
+        run: |
+          cmake -S . -B build/cmake -DBUILD_METAL_VIDEO_TOOL=OFF
+          cmake --build build/cmake --parallel 2
+          ctest --test-dir build/cmake --output-on-failure
       - name: Install FFmpeg for functional video encoding checks
         run: sudo apt-get update && sudo apt-get install -y ffmpeg
       - name: Encode generated motion/gradient/text video with baseline codecs
@@ -29,7 +34,28 @@ jobs:
       - run: git submodule update --init third_party/pyrowave
       - run: python3 tools/build_engine.py
       - run: build/metal/pyrowave-video --version
-      # GPU availability on a hosted runner is not assumed; no device benchmark.
+      - name: Inspect available Metal backend
+        id: gpu
+        run: |
+          python3 - <<'PYCODE'
+          import json, os, subprocess
+          probe = json.loads(subprocess.check_output(['build/metal/pyrowave-video', '--probe'], text=True))
+          print(json.dumps(probe))
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+              output.write('supported=' + str(probe['native_backend_supported']).lower() + '\n')
+          PYCODE
+      - name: Install FFmpeg if a supported GPU is available
+        if: steps.gpu.outputs.supported == 'true'
+        run: |
+          if ! command -v ffmpeg >/dev/null; then
+            brew install ffmpeg
+          fi
+      - name: Validate real Metal encoding and reconstruction when possible
+        if: steps.gpu.outputs.supported == 'true'
+        run: |
+          python3 tools/run_portable_tests.py
+          python3 tools/encode_test_video.py --backend metal --roundtrip --width 320 --height 180 --fps 30 --frames 12 --output-dir benchmarks/local/mac-gpu-smoke
+      # A Mac GPU test is not physical Apple TV qualification.
   tvos-baseline:
     runs-on: macos-latest
     steps:

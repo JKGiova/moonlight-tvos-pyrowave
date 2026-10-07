@@ -14,9 +14,9 @@ def main():
     args=parser.parse_args()
     if platform.system()!='Darwin':raise RuntimeError('tvOS compilation requires Mac/Xcode.')
     source=ROOT/'app/Moonlight'
+    subprocess.run(['git','submodule','update','--init','--recursive','app/Moonlight'],check=True,cwd=ROOT)
     if subprocess.check_output(['git','-C',str(source),'rev-parse','HEAD'],text=True).strip()!='02dc9780496eeeac6d01c8bbdccb8b6fe71ef28a':
         raise RuntimeError('Moonlight baseline revision differs from the reviewed pin.')
-    subprocess.run(['git','submodule','update','--init','--recursive','app/Moonlight'],check=True,cwd=ROOT)
     destination='generic/platform=tvOS Simulator' if args.sdk=='appletvsimulator' else 'generic/platform=tvOS'
     subprocess.run(['xcodebuild','-project',str(source/'Moonlight.xcodeproj'),'-scheme','Moonlight TV',
                     '-configuration',args.configuration,'-sdk',args.sdk,'-destination',destination,

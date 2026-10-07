@@ -60,4 +60,4 @@ python3 tools/build_tvos.py --sdk appletvos
 
 This builds the actual upstream `Moonlight TV` target without signing. Open `app/Moonlight/Moonlight.xcodeproj` in Xcode to configure your local team, unique persistent bundle ID and physical Apple TV deployment. Standard startup/streaming and PIN pairing come first. The app currently retains its standard renderer: the offline PyroWave harness is not wired into it yet.
 
-CI compiles native Metal and the unsigned tvOS device target and runs portable/smoke checks. No CI job claims physical GPU latency or accesses the user’s Vibeshine PC. See [development status](development-status.md) and [the live-test setup](vibeshine-testing.md).
+CI compiles native Metal and the unsigned tvOS device target and runs portable/smoke checks. The Mac job probes actual GPU availability and performs a native encode/decode smoke test only when the backend is supported; otherwise those steps are explicitly skipped. No CI job claims physical GPU latency or accesses the user’s Vibeshine PC. See [development status](development-status.md) and [the live-test setup](vibeshine-testing.md).

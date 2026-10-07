@@ -121,6 +121,12 @@ static void decode(const char* inputPath,const char* outputPath,const char* metr
 }
 int main(int argc,char** argv) {
     @autoreleasepool { try {
+        if(argc==2&&std::string(argv[1])=="--probe") {
+            id<MTLDevice> device=MTLCreateSystemDefaultDevice();
+            const bool supported=device&&pyrowave_device_is_supported((__bridge void*)device);
+            std::cout<<"{\"device_available\":"<<(device?"true":"false")<<",\"native_backend_supported\":"<<(supported?"true":"false")<<",\"auto_qualified\":false}\n";
+            return 0;
+        }
         if(argc==2&&std::string(argv[1])=="--version"){std::cout<<"pyrowave-video bitstream=186f0393 native-Metal offline-tool\n";return 0;}
         if(argc==5&&std::string(argv[1])=="encode")encode(argv[2],argv[3],argv[4]);
         else if(argc==5&&std::string(argv[1])=="decode")decode(argv[2],argv[3],argv[4]);
