@@ -252,7 +252,18 @@
  				CLANG_ENABLE_OBJC_WEAK = YES;
  				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
  				CODE_SIGN_STYLE = Automatic;
-@@ -1030,11 +1055,12 @@
+@@ -992,7 +1017,9 @@
+ 				HEADER_SEARCH_PATHS = (
+ 					"$(PROJECT_DIR)/moonlight-common/moonlight-common-c/src",
+ 					"$(SDKROOT)/usr/include/libxml2/**",
+-					"$(PROJECT_DIR)/libs/**",
++					"$(PROJECT_DIR)/libs/FFmpeg/include",
++					"$(PROJECT_DIR)/libs/SDL2/include",
++					"$(PROJECT_DIR)/libs/opus/include/opus",
+ 				);
+ 				INFOPLIST_FILE = "Moonlight TV/Info.plist";
+ 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.games";
+@@ -1030,11 +1057,12 @@
  		FB1A67672132419A00507771 /* Release */ = {
  			isa = XCBuildConfiguration;
  			buildSettings = {
@@ -266,6 +277,17 @@
  				CLANG_ENABLE_OBJC_WEAK = YES;
  				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
  				CODE_SIGN_STYLE = Automatic;
+@@ -1048,7 +1076,9 @@
+ 				HEADER_SEARCH_PATHS = (
+ 					"$(PROJECT_DIR)/moonlight-common/moonlight-common-c/src",
+ 					"$(SDKROOT)/usr/include/libxml2/**",
+-					"$(PROJECT_DIR)/libs/**",
++					"$(PROJECT_DIR)/libs/FFmpeg/include",
++					"$(PROJECT_DIR)/libs/SDL2/include",
++					"$(PROJECT_DIR)/libs/opus/include/opus",
+ 				);
+ 				INFOPLIST_FILE = "Moonlight TV/Info.plist";
+ 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.games";
 --- a/Limelight/Stream/Connection.h
 +++ b/Limelight/Stream/Connection.h
 @@ -30,5 +30,6 @@

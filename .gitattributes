@@ -1,4 +1,2 @@
-* text=auto eol=lf
-*.md text
-*.json text
-*.csv text
+# Unified-diff context prefixes are followed by upstream tabs.
+integration/patches/*.patch whitespace=-space-before-tab
