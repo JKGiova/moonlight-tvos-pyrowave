@@ -1,11 +1,12 @@
 --- a/Limelight/Stream/VideoDecoderRenderer.h
 +++ b/Limelight/Stream/VideoDecoderRenderer.h
-@@ -16,7 +16,9 @@
+@@ -16,7 +16,10 @@
  
  - (id)initWithView:(UIView*)view callbacks:(id<ConnectionCallbacks>)callbacks streamAspectRatio:(float)aspectRatio useFramePacing:(BOOL)useFramePacing;
  
 -- (void)setupWithVideoFormat:(int)videoFormat width:(int)videoWidth height:(int)videoHeight frameRate:(int)frameRate;
 +- (int)setupWithVideoFormat:(int)videoFormat width:(int)videoWidth height:(int)videoHeight frameRate:(int)frameRate;
++- (void)setVideoColorRange:(int)range;
 +- (int)submitPyroWaveDecodeUnit:(PDECODE_UNIT)unit;
 +- (NSDictionary*)pyroWaveStatistics;
  - (void)start;
@@ -23,7 +24,15 @@
  
  #include <libavcodec/avcodec.h>
  #include <libavcodec/cbs.h>
-@@ -35,6 +38,9 @@
+@@ -27,6 +30,7 @@
+     AVSampleBufferDisplayLayer* displayLayer;
+     int videoFormat;
+     int frameRate;
++    int _colorRange;
+     
+     NSMutableArray *parameterSetBuffers;
+     NSData *masteringDisplayColorVolume;
+@@ -35,6 +39,9 @@
      
      CADisplayLink* _displayLink;
      BOOL framePacing;
@@ -33,7 +42,7 @@
  }
  
  - (void)reinitializeDisplayLayer
-@@ -93,10 +99,36 @@
+@@ -93,11 +100,40 @@
      return self;
  }
  
@@ -42,13 +51,15 @@
  {
      self->videoFormat = videoFormat;
      self->frameRate = frameRate;
+-}
 +#if TARGET_OS_TV
 +    if (videoFormat == VIDEO_FORMAT_PYROWAVE) {
 +        dispatch_sync(dispatch_get_main_queue(), ^{
 +            self->displayLayer.hidden=YES;
 +            self->_pyrowave=[[PyroWaveVideoRenderer alloc] initWithView:self->_view callbacks:self->_callbacks];
 +        });
-+        return [_pyrowave prepareWidth:videoWidth height:videoHeight];
++        if (_colorRange != COLOR_RANGE_LIMITED && _colorRange != COLOR_RANGE_FULL) return -1;
++        return [_pyrowave prepareWidth:videoWidth height:videoHeight fullRange:_colorRange == COLOR_RANGE_FULL];
 +    }
 +#endif
 +    return 0;
@@ -68,10 +79,13 @@
 +#else
 +    return nil;
 +#endif
- }
++}
++
++- (void)setVideoColorRange:(int)range { _colorRange=range; }
  
  - (void)start
-@@ -122,7 +154,7 @@
+ {
+@@ -122,7 +158,7 @@
      while (LiPollNextVideoFrame(&handle, &du)) {
          LiCompleteVideoFrame(handle, DrSubmitDecodeUnit(du));
          
@@ -80,7 +94,7 @@
              // Calculate the actual display refresh rate
              double displayRefreshRate = 1 / (_displayLink.targetTimestamp - _displayLink.timestamp);
              
-@@ -143,6 +175,9 @@
+@@ -143,6 +179,9 @@
  - (void)stop
  {
      [_displayLink invalidate];
@@ -136,11 +150,10 @@
      CFTimeInterval now = CACurrentMediaTime();
      if (!lastFrameNumber) {
          currentVideoStats.startTime = now;
-@@ -178,6 +177,14 @@
-     
+@@ -179,6 +178,14 @@
      currentVideoStats.receivedFrames++;
      currentVideoStats.totalFrames++;
-+
+ 
 +    // PyroWave is opaque record data, not NAL parameter sets. Copy ownership
 +    // inside the renderer before common-c completes and frees this decode unit.
 +    if (activeVideoFormat == VIDEO_FORMAT_PYROWAVE) {
@@ -148,9 +161,18 @@
 +    }
 +    unsigned char* data = (unsigned char*) malloc(decodeUnit->fullLength);
 +    if (data == NULL) return DR_NEED_IDR;
- 
++
      PLENTRY entry = decodeUnit->bufferList;
      while (entry != NULL) {
+         // Submit parameter set NALUs directly since no copy is required by the decoder
+@@ -442,6 +449,7 @@
+     _streamConfig.bitrate = config.bitRate;
+     _streamConfig.supportedVideoFormats = config.supportedVideoFormats;
+     _streamConfig.audioConfiguration = config.audioConfiguration;
++    [renderer setVideoColorRange:_streamConfig.colorRange];
+     
+     // Since we require iOS 12 or above, we're guaranteed to be running
+     // on a 64-bit device with ARMv8 crypto instructions, so we don't
 --- a/Limelight/ViewControllers/MainFrameViewController.m
 +++ b/Limelight/ViewControllers/MainFrameViewController.m
 @@ -8,6 +8,9 @@

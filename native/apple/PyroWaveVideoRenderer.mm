@@ -52,7 +52,7 @@ id distribution(std::vector<double> values) {
     PWClient::LatestFrameQueue<Frame> _mailbox;
     std::shared_ptr<Runtime> _runtime;
     PyroWaveFraming::StreamGeometry _geometry;
-    BOOL _pumpScheduled, _shown, _fatalReported;
+    BOOL _pumpScheduled, _shown, _fatalReported, _fullRange;
     uint64_t _parserRejected, _profileRejected, _decodeFailed, _drawableDropped, _completed;
     std::array<double,2048> _readyTimes, _gpuTimes;
     size_t _readyCount, _gpuCount;
@@ -81,10 +81,10 @@ id distribution(std::vector<double> values) {
 }
 
 // Called during decoder setup, on the connection worker (never the UI thread).
-- (int)prepareWidth:(int)width height:(int)height {
+- (int)prepareWidth:(int)width height:(int)height fullRange:(BOOL)fullRange {
     if ([NSThread isMainThread] || width<128 || height<128 || width>4096 || height>2160 || width%2 || height%2 ||
         !_metal || !pyrowave_device_is_supported((__bridge void*)_metal)) return -1;
-    _geometry={width,height,false};
+    _geometry={width,height,false}; _fullRange=fullRange;
     auto runtime=std::make_shared<Runtime>();
     pyrowave_device_create_info deviceInfo{}; deviceInfo.mtl_device=(__bridge void*)_metal;
     if (pyrowave_device_create(&deviceInfo,&runtime->device)!=PYROWAVE_SUCCESS) return -1;
@@ -137,7 +137,7 @@ id distribution(std::vector<double> values) {
     if (!unit || unit->fullLength<8 || size_t(unit->fullLength)>MaxFrameBytes) {
         [_lock lock]; ++_parserRejected; [_lock unlock]; return DR_OK;
     }
-    if ((unit->colorspace!=COLORSPACE_REC_601 && unit->colorspace!=COLORSPACE_REC_709) || unit->colorRange>COLOR_RANGE_FULL) {
+    if ((unit->colorspace!=COLORSPACE_REC_601 && unit->colorspace!=COLORSPACE_REC_709) || unit->hdrActive) {
         [_lock lock]; ++_profileRejected; [_lock unlock]; [self failSession]; return DR_OK;
     }
     [_lock lock];
@@ -154,7 +154,7 @@ id distribution(std::vector<double> values) {
     }
     if (!valid || offset!=size_t(unit->fullLength)) { free(bytes); ++_parserRejected; [_lock unlock]; return DR_OK; }
     NSData* data=[NSData dataWithBytesNoCopy:bytes length:offset freeWhenDone:YES];
-    _mailbox.submit({data,unit->colorspace,unit->colorRange==COLOR_RANGE_FULL,received});
+    _mailbox.submit({data,unit->colorspace,bool(_fullRange),received});
     [self schedulePumpLocked]; [_lock unlock];
     return DR_OK; // PyroWave frames are independent; never request an IDR for a drop.
 }
