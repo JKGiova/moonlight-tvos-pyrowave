@@ -18,7 +18,7 @@ The Linux runtime here has no accessible Metal/Vulkan GPU and no Xcode. The nati
 
 The complete [CI run](https://github.com/JKGiova/moonlight-tvos-pyrowave/actions/runs/37622987361) passed for implementation commit `4f4a947c2515e0abb5250ff955e30e6dbed44272`: portable sanitizers, seven Python runner tests, CMake/CTest, CPU video encoding, Metal compilation and unsigned Moonlight TV compilation. A [sanitized check record](../benchmarks/results/2026-10-07-ci-checks.json) captures the evidence and limitations. Compilation against SDK 26.5 does not validate execution on the current tvOS 27.
 
-Next: execute the real Metal round trip on supported Apple Silicon, then implement/validate the Apple5 shader path and wire the decoder into the actual tvOS protocol/renderer. Physical device, source/load comparability and exact profile gates remain required for Auto.
+Next: execute the real Metal round trip on supported Apple Silicon, validate the experimental protocol/renderer on physical A15 devices, then implement/validate the Apple5 shader path for A12. Physical device, source/load comparability and exact profile gates remain required for Auto.
 
 The new client integration is described in [experimental client testing](experimental-client.md). Standard Auto remains unchanged. Incomplete frames still follow stock common-c loss handling; the Nonary partial-frame transport patches have not yet been imported. These complete-frame patches do not replace common-c with the divergent donor fork.
 
