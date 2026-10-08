@@ -76,13 +76,13 @@ int main() {
         auto portable=pipeline(device,library(device,wavelet_dequant_apple5_msl_source),@"pyrowave_wavelet_dequant",128);
         // Compile the actual unchanged iDWT in every precision and DC mode under
         // the same MSL 2.2 ceiling used by the portable runtime.
-        for (const char* source:{idwt_fp16_msl_source,idwt_fp16_storage_msl_source,idwt_msl_source}) {
+        for (const char* source:{PyroWave::idwt_fp16_msl_source,PyroWave::idwt_fp16_storage_msl_source,PyroWave::idwt_msl_source}) {
             auto compiled=library(device,source);
             for (int shift=0;shift<2;++shift) pipeline(device,compiled,@"pyrowave_idwt",64,shift);
         }
         id<MTLComputePipelineState> native=nil;
         if ([device supportsFamily:MTLGPUFamilyApple7]) {
-            native=pipeline(device,library(device,wavelet_dequant_msl_source),@"pyrowave_wavelet_dequant",128);
+            native=pipeline(device,library(device,PyroWave::wavelet_dequant_msl_source),@"pyrowave_wavelet_dequant",128);
             PWTest::require(native.threadExecutionWidth==32,"native SIMD width");
         }
         double maxError=0;
