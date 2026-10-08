@@ -41,8 +41,7 @@ On a Mac with a Metal GPU:
 ```sh
 python3 tools/build_engine.py
 python3 tools/embed_apple5_shader.py --check
-xcrun clang++ -std=c++17 -fobjc-arc -I native/apple -I tests -I native/protocol -I third_party/pyrowave/metal tools/check_apple5_decoder.mm third_party/pyrowave/metal/pyrowave_bitstream.cpp native/protocol/pyrowaveframing.cpp -framework Metal -framework Foundation -o build/metal/check-apple5
-build/metal/check-apple5
+python3 tools/build_decoder_check.py --run
 ```
 
 This executes the actual portable shader and checks 32,768 FP32 coefficients
@@ -52,6 +51,17 @@ compile. On Apple7+, the native dequantizer also checks the same expected
 coefficients. On another Mac GPU only the portable kernel is executed; that
 numerical check does not enable the full codec or establish Apple TV performance.
 A missing GPU is reported as skipped, not passed execution.
+
+When the GPU passes decoder candidate admission, the checker also creates the
+real portable decoder device and runs two complete all-zero wavelet frames
+(128x128 and 320x180) through parser, upload, dequant and all iDWT levels into
+private YUV textures. Each reconstructed plane must be uniformly normalized
+0.5 (127 or 128 after R8 UNORM conversion). This tests allocation, padded
+geometry, sampler and inter-pass ordering, without requiring a GPU encoder.
+On a GPU outside the live Apple-family admission gate this full-decoder check
+is skipped and reported as zero tested profiles; the isolated kernel check
+can still execute. It is a synthetic correctness smoke test, not a latency
+benchmark or a real-video round trip.
 
 For real encoded-frame comparison on a supported Apple Silicon Mac:
 

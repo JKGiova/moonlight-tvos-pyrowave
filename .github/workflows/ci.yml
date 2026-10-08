@@ -44,8 +44,7 @@ jobs:
       - name: Compile Apple5 pipelines and check dequant coefficients on the available GPU
         run: |
           python3 tools/embed_apple5_shader.py --check
-          xcrun clang++ -std=c++17 -fobjc-arc -I native/apple -I tests -I native/protocol -I third_party/pyrowave/metal tools/check_apple5_decoder.mm third_party/pyrowave/metal/pyrowave_bitstream.cpp native/protocol/pyrowaveframing.cpp -framework Metal -framework Foundation -o build/metal/check-apple5
-          build/metal/check-apple5
+          python3 tools/build_decoder_check.py --run
       - name: Compile the actual live presenter shader and render pipeline
         run: |
           xcrun clang++ -std=c++17 -fobjc-arc -I native/apple tools/check_presenter_shader.mm -framework Metal -framework Foundation -o build/metal/check-presenter

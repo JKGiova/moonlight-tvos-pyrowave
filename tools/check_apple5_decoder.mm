@@ -5,6 +5,7 @@
 #import <Metal/Metal.h>
 #include "PyroWaveApple5Source.h"
 #include "shaders/pyrowave_msl.h"
+#include "pyrowave_decoder_backend.h"
 #include "dequant_fixture.hpp"
 #include <algorithm>
 #include <iostream>
@@ -67,6 +68,66 @@ static double verify(id<MTLDevice> device,id<MTLComputePipelineState> state,cons
     }
     return maximum;
 }
+static unsigned fullDecoderSmoke(id<MTLDevice> metal) {
+    if (!pw_decoder_backend_is_candidate((__bridge void*)metal)) return 0;
+    struct Device {
+        pyrowave_device value=nullptr;
+        ~Device(){pyrowave_device_destroy(value);}
+    } device;
+    auto check=[](pyrowave_result result) {
+        if (result!=PYROWAVE_SUCCESS) throw std::runtime_error(pyrowave_result_to_string(result));
+    };
+    pyrowave_device_create_info deviceInfo{};deviceInfo.mtl_device=(__bridge void*)metal;
+    check(pw_decoder_device_create(&deviceInfo,true,&device.value));
+    PWTest::require(std::string(pw_decoder_backend_name(device.value))=="metal-portable-apple5","full decoder backend choice");
+    auto queue=[metal newCommandQueue];PWTest::require(queue!=nil,"full decoder queue");
+    unsigned profiles=0;
+    for (auto dimensions:{std::pair<int,int>{128,128},{320,180}}) {
+        struct Decoder {
+            pyrowave_decoder value=nullptr;
+            ~Decoder(){pyrowave_decoder_destroy(value);}
+        } decoder;
+        pyrowave_decoder_create_info info{};info.device=device.value;info.width=dimensions.first;info.height=dimensions.second;
+        info.chroma=PYROWAVE_CHROMA_SUBSAMPLING_420;check(pyrowave_decoder_create(&info,&decoder.value));
+        PyroWave::BlockLayout layout;PWTest::require(layout.init(info.width,info.height,PyroWave::ChromaSubsampling::Chroma420),"zero-frame layout");
+        // All-zero wavelet coefficients analytically reconstruct normalized 0.5
+        // in every plane after the final DC shift. This is not encoded video.
+        std::vector<PyroWave::BitstreamPacket> metadata(size_t(layout.block_count_32x32));
+        metadata[0]={0,2};std::array<uint32_t,2> raw{};PyroWave::BitstreamHeader header{};
+        header.payload_words=2;header.sequence=3;std::memcpy(raw.data(),&header,sizeof(header));
+        std::vector<uint8_t> bytes(32);PyroWave::Packet packet{};
+        PWTest::require(PyroWave::packetize(layout,&packet,bytes.size(),bytes.data(),bytes.size(),metadata.data(),raw.data())==1,"zero-frame packetization");
+        PyroWaveFraming::Frame frame;std::string error;
+        if (!PyroWaveFraming::parse(bytes.data()+packet.offset,packet.size,{info.width,info.height,false},frame,error)) throw std::runtime_error(error);
+        for (auto span:frame.spans) check(pyrowave_decoder_push_packet(decoder.value,bytes.data()+packet.offset+span.offset,span.size));
+        PWTest::require(pyrowave_decoder_decode_is_ready(decoder.value,false),"zero-frame readiness");
+        id<MTLTexture> planes[3];id<MTLBuffer> readbacks[3];size_t rows[3];pyrowave_gpu_buffers buffers{};
+        for (unsigned p=0;p<3;++p) {
+            const size_t width=size_t(info.width)/(p?2:1),height=size_t(info.height)/(p?2:1);
+            auto descriptor=[MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatR8Unorm width:width height:height mipmapped:NO];
+            descriptor.storageMode=MTLStorageModePrivate;descriptor.usage=MTLTextureUsageShaderRead|MTLTextureUsageShaderWrite;
+            planes[p]=[metal newTextureWithDescriptor:descriptor];rows[p]=(width+255)&~size_t(255);
+            readbacks[p]=[metal newBufferWithLength:rows[p]*height options:MTLResourceStorageModeShared];
+            PWTest::require(planes[p]&&readbacks[p],"full decoder plane allocation");buffers.planes[p]=(__bridge void*)planes[p];
+        }
+        auto command=[queue commandBuffer];PWTest::require(command!=nil,"full decoder command");
+        check(pyrowave_decoder_decode_gpu_buffer(decoder.value,(__bridge void*)command,&buffers));
+        auto blit=[command blitCommandEncoder];PWTest::require(blit!=nil,"full decoder readback");
+        for (unsigned p=0;p<3;++p) [blit copyFromTexture:planes[p] sourceSlice:0 sourceLevel:0 sourceOrigin:MTLOriginMake(0,0,0)
+                sourceSize:MTLSizeMake(planes[p].width,planes[p].height,1) toBuffer:readbacks[p] destinationOffset:0
+                destinationBytesPerRow:rows[p] destinationBytesPerImage:rows[p]*planes[p].height];
+        [blit endEncoding];[command commit];[command waitUntilCompleted];
+        if (command.status!=MTLCommandBufferStatusCompleted) throw std::runtime_error(command.error.localizedDescription.UTF8String ?: "full decoder command failed");
+        for (unsigned p=0;p<3;++p) {
+            auto pixels=static_cast<const uint8_t*>(readbacks[p].contents);
+            PWTest::require(pixels[0]==127||pixels[0]==128,"zero-frame DC shift");
+            for (size_t y=0;y<planes[p].height;++y) for (size_t x=0;x<planes[p].width;++x)
+                PWTest::require(pixels[y*rows[p]+x]==pixels[0],"zero-frame is not uniform");
+        }
+        ++profiles;
+    }
+    return profiles;
+}
 int main() {
     @autoreleasepool {try {
         auto device=MTLCreateSystemDefaultDevice();
@@ -91,8 +152,10 @@ int main() {
             maxError=std::max(maxError,verify(device,portable,fixture));
             if (native) verify(device,native,fixture);
         }
+        const unsigned fullProfiles=fullDecoderSmoke(device);
         std::cout<<"{\"device_available\":true,\"portable_pipeline_compiled\":true,\"idwt_pipelines_compiled\":6,\"gpu_execution_tested\":true,\"fixture_cases\":8,\"coefficients_checked\":32768,\"max_absolute_error\":"<<maxError
-                 <<",\"native_reference_tested\":"<<(native?"true":"false")<<",\"physical_apple_tv_tested\":false,\"auto_qualified\":false}\n";
+                 <<",\"native_reference_tested\":"<<(native?"true":"false")<<",\"full_decoder_zero_profiles\":"<<fullProfiles
+                 <<",\"full_decoder_backend\":"<<(fullProfiles?"\"metal-portable-apple5\"":"null")<<",\"physical_apple_tv_tested\":false,\"auto_qualified\":false}\n";
         return 0;
     }catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;} }
 }
