@@ -1,6 +1,6 @@
 # Apple TV device support plan
 
-Status: scope and qualification specification only. Checked on 2026-10-07. No app or PyroWave backend has been tested on these devices in this project.
+Status: scope checked on 2026-10-07; development update 2026-10-08. The user reports standard-client streaming working on their A12/tvOS 27 Apple TV. This is an unmeasured smoke test, not model/profile qualification. PyroWave is untested on every physical model.
 
 ## Scope policy
 
@@ -8,7 +8,7 @@ Target every Apple TV compatible with the latest **stable** tvOS, excluding beta
 
 | Model | Model number | SoC / expected Metal family | Planned PyroWave path | Network validation | Qualification |
 | --- | --- | --- | --- | --- | --- |
-| Apple TV 4K, 2nd generation | A2169 | A12 / Apple5 | Portable dequantization and adapted shader path | Wi-Fi and Ethernet | Not tested |
+| Apple TV 4K, 2nd generation | A2169 | A12 / Apple5 | Experimental portable dequantizer implemented | Wi-Fi and Ethernet | Not tested |
 | Apple TV 4K, 3rd generation, Wi-Fi | A2737 | A15 / Apple8 | Native Apple7-or-later candidate | Wi-Fi | Not tested |
 | Apple TV 4K, 3rd generation, Wi-Fi + Ethernet | A2843 | A15 / Apple8 | Native Apple7-or-later candidate | Wi-Fi and Ethernet | Not tested |
 
@@ -16,9 +16,9 @@ Apple TV HD A1625 and Apple TV 4K first generation A1842 are outside this initia
 
 ## One app, feature-selected backends
 
-Use one tvOS app target. The expected GPU family above is planning information: query actual device capabilities and verify shader/pipeline creation, threadgroup limits, memory and profile support before choosing a backend. The pinned native PyroWave device gate requires Apple7; A15/Apple8 is therefore a candidate, while A12/Apple5 needs a portable path. This is an inference from GPU families and the reviewed upstream gate, not proof of successful decoding.
+Use one tvOS app target. The expected GPU family above is planning information: query actual device capabilities and verify shader/pipeline creation, threadgroup limits, memory and profile support before choosing a backend. The pinned native PyroWave device gate requires Apple7; A15/Apple8 is therefore a candidate, while A12/Apple5 now has an experimental portable path. This is an inference from GPU families and the reviewed upstream gate, not proof of successful decoding.
 
-Preserve the native path for newer GPUs and develop the portable path for A12. On A15, compare native and portable numerical output where both can execute. Select only a correct backend, then use physical-device latency and throughput evidence to qualify it. Never force all chips onto the portable path merely to share a build.
+The implementation preserves the native path for newer GPUs and selects the experimental portable path for A12. See [Apple5 details](apple5-decoder.md). On A15, compare native and portable numerical output where both can execute. Select only a correct backend, then use physical-device latency and throughput evidence to qualify it. Never force all chips onto the portable path merely to share a build.
 
 ## Qualification and release coverage
 

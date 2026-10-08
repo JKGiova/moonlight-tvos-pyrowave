@@ -5,6 +5,7 @@ import platform
 import subprocess
 import sys
 from pathlib import Path
+from prepare_metal import prepare_metal
 ROOT=Path(__file__).resolve().parents[1]
 PIN='186f0393b77f7755953b5ecde994bb1cec2e4155'
 def main():
@@ -14,10 +15,11 @@ def main():
     revision=subprocess.check_output(['git','-C',str(source),'rev-parse','HEAD'],text=True).strip()
     if revision!=PIN:raise RuntimeError('PyroWave dependency revision differs from the reviewed pin.')
     output=ROOT/'build/metal';output.mkdir(parents=True,exist_ok=True)
-    files=[source/'metal'/name for name in ['pyrowave_common.mm','pyrowave_encoder.mm','pyrowave_decoder.mm','pyrowave_bitstream.cpp']]
+    metal=prepare_metal()
+    files=[metal/name for name in ['pyrowave_common.mm','pyrowave_encoder.mm','pyrowave_decoder.mm','pyrowave_bitstream.cpp']]
     files += [source/'yuv4mpeg.cpp',ROOT/'native/protocol/pyrowaveframing.cpp',ROOT/'tools/pyrowave_video.mm']
     subprocess.run(['xcrun','clang++','-std=c++17','-O2','-fobjc-arc','-DPYROWAVE_EXPORT_SYMBOLS',
-                    '-I'+str(source/'metal'),'-I'+str(source),'-I'+str(ROOT/'native/protocol'),
+                    '-I'+str(metal),'-I'+str(source),'-I'+str(ROOT/'native/protocol'),
                     *map(str,files),'-framework','Metal','-framework','Foundation','-framework','IOSurface',
                     '-o',str(output/'pyrowave-video')],check=True)
     print(output/'pyrowave-video')

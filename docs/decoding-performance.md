@@ -41,7 +41,7 @@ Aspirational GPU decode p95 goals are <= 2 ms at 1080p60 and <= 4 ms at 4K60. Th
 
 ## Optimization order
 
-1. Correct Apple5 dequantization with portable threadgroup scans on A12; preserve and qualify the native Apple7-or-later fast path on A15. Verify equivalent output where both paths can run; choose using real capabilities and pipeline limits.
+1. Validate the implemented experimental Apple5 dequantization with portable threadgroup scans on A12; preserve and qualify the native Apple7-or-later fast path on A15. Verify equivalent output where both paths can run; choose using real capabilities and pipeline limits.
 2. Stable memory lifetime and pool reuse; no per-frame texture/pipeline allocation.
 3. FP32 reference versus FP32 arithmetic with FP16 storage.
 4. Keep decoded planes on the GPU; avoid CPU readback and unnecessary conversions.

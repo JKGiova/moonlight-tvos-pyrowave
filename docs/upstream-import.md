@@ -6,6 +6,6 @@ Implementation was authorized on 2026-10-07. The standard app is registered as a
 
 Future app modifications must be committed to a reviewed app-source branch/fork or maintained as reviewed patches applied to the pinned working tree, then referenced explicitly. Do not rely on uncommitted submodule changes. Transfer Nonary protocol fixes selectively, retaining the standard baseline’s corrections and licenses.
 
-The native Metal offline tool uses the original dependency and preserves its Apple7 device gate. Apple5 adaptation remains a separate shader/library change that requires correctness and physical validation. The portable Nonary framing adapter records its source and modifications in [UPSTREAM.md](../native/protocol/UPSTREAM.md).
+The native Metal offline tool and prepared client use a generated dependency copy plus the reviewed Apple5 decoder patch. Encoding preserves the original Apple7 gate; the decoder-only factory selects portable Apple5 or native Apple7 after capability/pipeline checks. See [Apple5 implementation](apple5-decoder.md); physical validation remains pending. The portable Nonary framing adapter records its source and modifications in [UPSTREAM.md](../native/protocol/UPSTREAM.md).
 
 No Qt application or incompatible Android container is imported. See [build and test](build-and-test.md).

@@ -1,6 +1,6 @@
 # Proposed architecture
 
-Status: runtime architecture remains under development. Native framing validation, the offline GPU harness and an experimental complete-frame streaming path are implemented. Qualified Auto, monitoring, A12 shaders and partial-frame recovery are pending.
+Status: runtime architecture remains under development. Native framing validation, the offline GPU harness and an experimental complete-frame streaming path are implemented. The Apple5 shader and decoder capability selection are implemented experimentally. Qualified Auto, monitoring and partial-frame recovery are pending.
 
 | Component | Owns | Does not own |
 | --- | --- | --- |

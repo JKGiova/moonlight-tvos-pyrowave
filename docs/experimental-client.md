@@ -1,19 +1,26 @@
 # Experimental live tvOS client
 
-The implementation connects PyroWave to the genuine Moonlight TV target through selective, reviewable patches. It is not a release-qualified codec. The integrated unsigned ARM64 target and the actual presenter shader/render pipeline compiled successfully in [CI](https://github.com/JKGiova/moonlight-tvos-pyrowave/actions/runs/37654083647). Real host/device streaming, visual correctness, loss behavior, restart/fallback and latency remain untested.
+The implementation connects PyroWave to the genuine Moonlight TV target through selective, reviewable patches. It is not a release-qualified codec. The earlier integrated unsigned ARM64 target and presenter pipeline compiled in [CI](https://github.com/JKGiova/moonlight-tvos-pyrowave/actions/runs/37654083647). The user reports standard streaming working on A12/tvOS 27 with Xcode 26.6/SDK 26.5. Physical PyroWave streaming, visual correctness and latency remain untested. The new app is named **Moonlight Pyro** and includes an experimental Apple5 decoder.
 
 ## Build and select a development session
 
 On a Mac, initialize dependencies and prepare/build the integrated client:
 
 ```sh
+git pull --ff-only
 python3 tools/bootstrap.py
-python3 tools/build_tvos.py --sdk appletvos
+python3 tools/prepare_client.py --client-dir build/client/Moonlight-apple5
 ```
 
-Open `build/client/Moonlight/Moonlight.xcodeproj` and configure your local signing team and a unique persistent bundle ID. For a Debug build, add the Xcode scheme launch arguments `-PyroWaveExperimental YES`. Keep the normal codec preference at Auto, disable HDR, choose 8-bit SDR 4:2:0 and a supported geometry from 128x128 through 4096x2160. Perform normal manual PIN pairing with the selected Vibeshine host. This argument is an explicit experimental request, not normal Auto admission; manual HEVC/H.264/AV1 preferences are respected. Release builds ignore the argument. No credentials or PC addresses are stored in the repository.
+Use a fresh directory if `Moonlight-apple5` already exists with older inputs; the tool preserves your previous generated checkout and signing edits. Open `build/client/Moonlight-apple5/Moonlight.xcodeproj`, select **Moonlight TV** and the paired physical TV, and copy the same Team and unique Bundle Identifier you used for the working build. Build/install with Run. The earlier generated project is not automatically updated. Intel macOS with Xcode 26.6/SDK 26.5 can compile this app; the runtime shader executes on the Apple TV.
 
-The original native Apple7 support gate stays intact: A12/Apple5 is not enabled yet. A supported family permits an experiment, not a performance/correctness qualification. The host must advertise `SCM_PYROWAVE` and exactly one line `a=x-ss-pyrowave.bitstream:186f0393` in its RTSP DESCRIBE response. Missing, duplicated or mismatched identity lines preserve standard HEVC/H.264 negotiation. Shader/decoder setup failure rejects startup; automatic retry/reconnection after that failure is not implemented yet.
+To test without launch arguments, select **PyroWave (Experimental SDR)** under **Preferred Codec** on the TV. This preference persists across app launches and applies to Debug and Release builds. Disable HDR and start at 720p60, 8-bit SDR 4:2:0. Keep your chosen bitrate. Pair manually with Vibeshine if needed. Disconnect the Xcode debugger before rebooting the dual-boot PC into Windows; launch Moonlight Pyro from the TV and connect to Vibeshine. Xcode does not need to stay open.
+
+Normal **Auto** still negotiates standard hardware codecs. The alternative Debug launch arguments `-PyroWaveExperimental YES` request an experiment only when Auto is selected; Release ignores these arguments. Manual HEVC/H.264/AV1 choices keep their original behavior. No credentials or PC addresses are stored in the repository.
+
+The decoder-only factory chooses `metal-portable-apple5` on A12 and `metal-native-apple7` on Apple7+ devices such as A15, after real pipeline/resource checks. The original native encoder/device API gate stays intact. A supported family permits an experiment, not qualification. The host must advertise `SCM_PYROWAVE` and exactly one line `a=x-ss-pyrowave.bitstream:186f0393` in RTSP DESCRIBE. Missing, duplicated or mismatched identity lines preserve standard HEVC/H.264 negotiation. Unsupported device/host/SDR geometry or HDR requests also preserve the standard codec mask and log a refusal. Always verify the actual negotiated codec in the overlay. Shader/decoder setup failure rejects startup; automatic retry is not implemented. If startup fails, select Auto or HEVC for the next launch.
+
+For native/portable comparison on A15, add the Debug arguments `-PyroWavePortable YES` while explicitly requesting PyroWave. A12 already chooses the portable backend and needs no such argument. See [Apple5 decoder checks](apple5-decoder.md).
 
 Start with 720p60 and record the actual configured host bitrate. The app preserves the selected bitrate; it does not inflate it or reduce resolution/quality to admit PyroWave. The generated-video script is still available for real offline encoding and reconstruction checks before live testing.
 
@@ -33,4 +40,6 @@ The patches derive their constants/negotiation from pinned Nonary common-c `d6a1
 
 The statistics overlay exposes queue occupancy/replacements, parser rejects, GPU failures, drawable drops and a completion-based client-ready p95 proxy. Network loss stays in the original network counter. The renderer's statistics also provide rolling p50/p95/p99, up to 2,048 samples. Valid command-buffer timestamps cover **decode plus color conversion**, not decoder-only latency; decoder-only metrics remain null. Completion timing is a proxy and includes scheduling, so it cannot qualify normal Auto or be compared against hardware enqueue time.
 
-Still required: physical A15 visual/live tests, A12 shader adaptation, partial-frame recovery, separate GPU-stage measurements and observed presentation timing, qualified normal Auto, one-shot session fallback and the five-second host monitor. A passing build does not establish any of those results.
+The overlay now also names the backend; on A12 it must show **PyroWave metal-portable-apple5**. If it shows HEVC/H.264, the PyroWave decoder is not being tested. Record the scene, TV model/OS, host version/settings, profile/bitrate and the counters after warm-up; start with five minutes at 720p60 before moving to 1080p60.
+
+Still required: physical A12/A15 visual/live tests, full saved-frame native/portable comparison, partial-frame recovery, separate GPU-stage measurements and observed presentation timing, qualified normal Auto, one-shot session fallback and the five-second host monitor. A passing build or Mac coefficient test does not establish those results.

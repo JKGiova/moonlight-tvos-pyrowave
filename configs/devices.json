@@ -18,14 +18,23 @@
       "name": "Apple TV 4K (2nd generation)",
       "soc": "A12",
       "expected_metal_gpu_family": "Apple5",
-      "planned_pyrowave_backend": "portable-apple5-planned",
+      "planned_pyrowave_backend": "portable-apple5-experimental-implemented",
       "network_routes": [
         "wifi",
         "ethernet"
       ],
-      "application_qualification": "not-tested",
+      "application_qualification": "user-reported-standard-smoke-unqualified",
       "pyrowave_qualification": "not-tested",
-      "auto_admissible": false
+      "auto_admissible": false,
+      "standard_client_smoke": {
+        "date": "2026-10-08",
+        "source": "user-report-not-independently-verified",
+        "tvos": "27",
+        "xcode": "26.6",
+        "sdk": "26.5",
+        "measured": false,
+        "pyrowave_tested": false
+      }
     },
     {
       "model_number": "A2737",

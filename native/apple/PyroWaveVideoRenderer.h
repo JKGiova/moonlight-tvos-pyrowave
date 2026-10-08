@@ -4,7 +4,7 @@
 #include "Limelight.h"
 
 @interface PyroWaveVideoRenderer : NSObject
-+ (BOOL)isNativeBackendAvailable;
++ (BOOL)isDecoderBackendCandidate;
 - (instancetype)initWithView:(UIView*)view callbacks:(id<ConnectionCallbacks>)callbacks;
 - (int)prepareWidth:(int)width height:(int)height fullRange:(BOOL)fullRange;
 // Copies all bytes before returning; the caller can complete the decode unit.

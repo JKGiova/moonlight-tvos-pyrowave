@@ -8,6 +8,7 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
+from prepare_metal import prepare_metal
 ROOT = Path(__file__).resolve().parents[1]
 PINS = {'app/Moonlight': '02dc9780496eeeac6d01c8bbdccb8b6fe71ef28a',
         'app/Moonlight/moonlight-common/moonlight-common-c': 'f900dd4767759c7b9d0e93bcea666b55c69ea62f',
@@ -15,7 +16,7 @@ PINS = {'app/Moonlight': '02dc9780496eeeac6d01c8bbdccb8b6fe71ef28a',
 
 
 def inputs():
-    files = []
+    files = [Path(__file__), ROOT/'tools/prepare_metal.py', ROOT/'tools/embed_apple5_shader.py']
     for directory in ['native/apple', 'native/client', 'native/protocol', 'third_party/pyrowave/metal', 'integration/patches']:
         files += [p for p in (ROOT/directory).rglob('*') if p.is_file()]
     return sorted(files)
@@ -53,7 +54,7 @@ def prepare(destination: Path) -> Path:
         runtime = destination/'PyroWaveRuntime'
         for name in ['apple','client','protocol']:
             shutil.copytree(ROOT/'native'/name, runtime/name)
-        shutil.copytree(ROOT/'third_party/pyrowave/metal', runtime/'metal')
+        prepare_metal(runtime/'metal')
         shutil.copy2(ROOT/'native/client/bitstream_identity.h',destination/'moonlight-common/moonlight-common-c/src/bitstream_identity.h')
         (destination/'pyrowave-preparation.json').write_text(json.dumps(manifest,indent=2)+'\n')
     except Exception:

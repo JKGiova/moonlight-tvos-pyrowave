@@ -185,21 +185,28 @@
  #import "CryptoManager.h"
  #import "HttpManager.h"
  #import "Connection.h"
-@@ -683,6 +686,20 @@
+@@ -683,6 +686,27 @@
              break;
      }
      
-+#if TARGET_OS_TV && DEBUG
-+    // Explicit Xcode launch argument for development, never normal Auto admission.
-+    // Manual HEVC/H.264/AV1 preferences retain their original behavior.
-+    if ([[NSUserDefaults standardUserDefaults] boolForKey:@"PyroWaveExperimental"] &&
-+        streamSettings.preferredCodec == CODEC_PREF_AUTO && !streamSettings.enableHdr &&
-+        (_streamConfig.serverCodecModeSupport & SCM_PYROWAVE) &&
-+        _streamConfig.width>=128 && _streamConfig.width<=4096 && _streamConfig.width%2==0 &&
-+        _streamConfig.height>=128 && _streamConfig.height<=2160 && _streamConfig.height%2==0 &&
-+        [PyroWaveVideoRenderer isNativeBackendAvailable]) {
-+        _streamConfig.supportedVideoFormats |= VIDEO_FORMAT_PYROWAVE;
-+        Log(LOG_W, @"Explicit experimental PyroWave request; device is not Auto-qualified");
++#if TARGET_OS_TV
++    // Persistent manual request works when launched from the TV, without Xcode.
++    // Normal Auto still requires future physical qualification.
++    BOOL pyroRequested=streamSettings.preferredCodec == CODEC_PREF_PYROWAVE;
++#if DEBUG
++    pyroRequested |= streamSettings.preferredCodec == CODEC_PREF_AUTO &&
++        [[NSUserDefaults standardUserDefaults] boolForKey:@"PyroWaveExperimental"];
++#endif
++    if (pyroRequested) {
++        if (!streamSettings.enableHdr && (_streamConfig.serverCodecModeSupport & SCM_PYROWAVE) &&
++            _streamConfig.width>=128 && _streamConfig.width<=4096 && _streamConfig.width%2==0 &&
++            _streamConfig.height>=128 && _streamConfig.height<=2160 && _streamConfig.height%2==0 &&
++            [PyroWaveVideoRenderer isDecoderBackendCandidate]) {
++            _streamConfig.supportedVideoFormats |= VIDEO_FORMAT_PYROWAVE;
++            Log(LOG_W, @"Explicit experimental PyroWave request; device is not Auto-qualified");
++        } else {
++            Log(LOG_W, @"PyroWave refused: unsupported device, host or SDR geometry/profile; keeping standard codec mask");
++        }
 +    }
 +#endif
 +
@@ -338,10 +345,68 @@
 +    if (pyro) {
 +        id ready=pyro[@"client_ready_completion_proxy_ms"];
 +        NSString* p95=[ready isKindOfClass:NSDictionary.class] ? [NSString stringWithFormat:@"%.2f ms",[ready[@"p95"] doubleValue]] : @"N/A";
-+        text=[text stringByAppendingFormat:@"\nPyroWave ready p95 (completion proxy): %@\nGPU/pending: %@/%@  Queue drops: %@  Parser rejects: %@  Decode failures: %@  Present drops: %@",
-+            p95,pyro[@"gpu_in_flight"],pyro[@"pending_frames"],pyro[@"pending_replacements"],pyro[@"parser_rejected"],pyro[@"decode_failed"],pyro[@"drawable_dropped"]];
++        text=[text stringByAppendingFormat:@"\nPyroWave %@\nReady p95 (completion proxy): %@\nGPU/pending: %@/%@  Queue drops: %@  Parser rejects: %@  Decode failures: %@  Present drops: %@",
++            pyro[@"decoder_backend"],p95,pyro[@"gpu_in_flight"],pyro[@"pending_frames"],pyro[@"pending_replacements"],pyro[@"parser_rejected"],pyro[@"decode_failed"],pyro[@"drawable_dropped"]];
 +    }
 +    return text;
  }
  
  @end
+--- a/Moonlight TV/Info.plist
++++ b/Moonlight TV/Info.plist
+@@ -6,7 +6,7 @@
+ 	<key>CFBundleDevelopmentRegion</key>
+ 	<string>$(DEVELOPMENT_LANGUAGE)</string>
+ 	<key>CFBundleDisplayName</key>
+-	<string>Moonlight</string>
++	<string>Moonlight Pyro</string>
+ 	<key>CFBundleExecutable</key>
+ 	<string>$(EXECUTABLE_NAME)</string>
+ 	<key>CFBundleIdentifier</key>
+--- a/Limelight/Database/TemporarySettings.h
++++ b/Limelight/Database/TemporarySettings.h
+@@ -24,6 +24,7 @@
+     CODEC_PREF_H264,
+     CODEC_PREF_HEVC,
+     CODEC_PREF_AV1,
++    CODEC_PREF_PYROWAVE = 4, // Explicit experimental tvOS request
+ } preferredCodec;
+ @property (nonatomic) BOOL useFramePacing;
+ @property (nonatomic) BOOL multiController;
+--- a/Limelight/ViewControllers/MainFrameViewController.m
++++ b/Limelight/ViewControllers/MainFrameViewController.m
+@@ -671,6 +671,7 @@
+ #endif
+             // Fall-through
+             
++        case CODEC_PREF_PYROWAVE: // Keep hardware fallbacks available during negotiation.
+         case CODEC_PREF_AUTO:
+         case CODEC_PREF_HEVC:
+             if (VTIsHardwareDecodeSupported(kCMVideoCodecType_HEVC)) {
+--- a/Limelight/ViewControllers/SettingsViewController.m
++++ b/Limelight/ViewControllers/SettingsViewController.m
+@@ -214,6 +214,7 @@
+         [self.resolutionSelector setEnabled:NO forSegmentAtIndex:3];
+     }
+     switch (currentSettings.preferredCodec) {
++        case CODEC_PREF_PYROWAVE: // tvOS uses Settings.bundle; iOS displays Auto.
+         case CODEC_PREF_AUTO:
+             [self.codecSelector setSelectedSegmentIndex:self.codecSelector.numberOfSegments - 1];
+             break;
+--- a/Moonlight TV/Settings.bundle/Root.plist
++++ b/Moonlight TV/Settings.bundle/Root.plist
+@@ -200,12 +200,14 @@
+ 				<string>0</string>
+ 				<string>1</string>
+ 				<string>2</string>
++				<string>4</string>
+ 			</array>
+ 			<key>Titles</key>
+ 			<array>
+ 				<string>Auto</string>
+ 				<string>H.264</string>
+ 				<string>HEVC</string>
++				<string>PyroWave (Experimental SDR)</string>
+ 			</array>
+ 		</dict>
+ 		<dict>

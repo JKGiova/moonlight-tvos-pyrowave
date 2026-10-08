@@ -1,0 +1,170 @@
+diff --git a/pyrowave_common.hpp b/pyrowave_common.hpp
+--- a/pyrowave_common.hpp
++++ b/pyrowave_common.hpp
+@@ -98,6 +98,8 @@
+ struct pyrowave_device_opaque
+ {
+ 	id<MTLDevice> mtl;
++	bool decoder_only = false;
++	bool portable_dequant = false;
+ 
+ 	// Decode. Compiled by pyrowave_device_create().
+ 	id<MTLComputePipelineState> dequant_pipeline;
+diff --git a/pyrowave_common.mm b/pyrowave_common.mm
+--- a/pyrowave_common.mm
++++ b/pyrowave_common.mm
+@@ -7,6 +7,8 @@
+ #include "pyrowave_common.hpp"
+ 
+ #include "shaders/pyrowave_msl.h"
++#include "shaders/pyrowave_apple5_msl.h"
++#include "pyrowave_decoder_backend.h"
+ 
+ #include <memory>
+ #include <stdarg.h>
+@@ -51,8 +53,14 @@
+ 	// Default (fast) math is kept deliberately. MathModeSafe was measured and does
+ 	// not reduce the residual ~1 LSB disagreement with the Vulkan decoder, so the
+ 	// difference does not come from FMA contraction or reassociation.
++	MTLCompileOptions *options = nil;
++	if (device->portable_dequant)
++	{
++		options = [MTLCompileOptions new];
++		options.languageVersion = MTLLanguageVersion2_2;
++	}
+ 	id<MTLLibrary> library = [device->mtl newLibraryWithSource:@(source)
+-	                                                  options:nil
++	                                                  options:options
+ 	                                                    error:&error];
+ 	if (!library)
+ 	{
+@@ -97,6 +105,14 @@
+ 	{
+ 		device->log("%s only supports %u threads per threadgroup, needs %u.",
+ 		            entry_point, unsigned(pipeline.maxTotalThreadsPerThreadgroup), required_threads);
++		return nil;
++	}
++
++	if (pipeline.staticThreadgroupMemoryLength > device->mtl.maxThreadgroupMemoryLength)
++	{
++		device->log("%s needs %u bytes of threadgroup memory, device has %u.",
++		            entry_point, unsigned(pipeline.staticThreadgroupMemoryLength),
++		            unsigned(device->mtl.maxThreadgroupMemoryLength));
+ 		return nil;
+ 	}
+ 
+@@ -185,6 +201,15 @@
+ 
+ namespace
+ {
++bool decoder_is_candidate(id<MTLDevice> mtl)
++{
++	if (!mtl || mtl.maxThreadsPerThreadgroup.width < DequantThreadgroupSize)
++		return false;
++	if (@available(macOS 10.15, iOS 13.0, tvOS 13.0, *))
++		return [mtl supportsFamily:MTLGPUFamilyApple5];
++	return false;
++}
++
+ bool device_is_supported(id<MTLDevice> mtl)
+ {
+ 	if (!mtl)
+@@ -232,18 +257,22 @@
+ 	return pyrowave_device_create(&info, device);
+ }
+ 
+-pyrowave_result pyrowave_device_create(const pyrowave_device_create_info *info, pyrowave_device *device)
++static pyrowave_result create_device(const pyrowave_device_create_info *info, pyrowave_device *device,
++                                     bool decoder_only, bool force_portable)
+ {
+ 	if (!info || !device)
+ 		return PYROWAVE_ERROR_INVALID_ARGUMENT;
++	*device = nullptr;
+ 
+ 	@autoreleasepool
+ 	{
+ 		id<MTLDevice> mtl = (__bridge id<MTLDevice>)info->mtl_device;
+ 		if (mtl == nil)
+ 			mtl = MTLCreateSystemDefaultDevice();
+-		if (!device_is_supported(mtl))
++		if (decoder_only ? !decoder_is_candidate(mtl) : !device_is_supported(mtl))
+ 			return PYROWAVE_ERROR_UNSUPPORTED_DEVICE;
++		const bool portable = decoder_only &&
++		                      (force_portable || ![mtl supportsFamily:MTLGPUFamilyApple7]);
+ 
+ 		auto created = std::unique_ptr<pyrowave_device_opaque>(new (std::nothrow) pyrowave_device_opaque);
+ 		if (!created)
+@@ -252,10 +281,13 @@
+ 		created->message_cb = info->message_callback;
+ 		created->message_userdata = info->message_userdata;
+ 		created->mtl = mtl;
++		created->decoder_only = decoder_only;
++		created->portable_dequant = portable;
+ 		created->precision = requested_precision();
+ 
+ 		id<MTLLibrary> dequant_library =
+-				compile_library(created.get(), wavelet_dequant_msl_source, "wavelet_dequant");
++				compile_library(created.get(), portable ? wavelet_dequant_apple5_msl_source : wavelet_dequant_msl_source,
++		                portable ? "wavelet_dequant_apple5" : "wavelet_dequant");
+ 
+ 		char idwt_label[32];
+ 		snprintf(idwt_label, sizeof(idwt_label), "idwt (precision %d)", created->precision);
+@@ -287,7 +319,7 @@
+ 			return PYROWAVE_ERROR_SHADER_COMPILATION;
+ 
+ 		// The dequant shader's subgroup path assumes a 32 wide SIMD group.
+-		if (created->dequant_pipeline.threadExecutionWidth != 32)
++		if (!portable && created->dequant_pipeline.threadExecutionWidth != 32)
+ 		{
+ 			created->log("Unexpected SIMD width %u, expected 32.",
+ 			             unsigned(created->dequant_pipeline.threadExecutionWidth));
+@@ -306,11 +338,34 @@
+ 		if (!created->mirror_repeat_sampler)
+ 			return PYROWAVE_ERROR_OUT_OF_DEVICE_MEMORY;
+ 
++		created->log("Decoder backend: %s (experimental, not Auto qualified)",
++		             portable ? "metal-portable-apple5" : "metal-native-apple7");
+ 		*device = created.release();
+ 		return PYROWAVE_SUCCESS;
+ 	}
+ }
+ 
++pyrowave_result pyrowave_device_create(const pyrowave_device_create_info *info, pyrowave_device *device)
++{
++	return create_device(info, device, false, false);
++}
++
++bool pw_decoder_backend_is_candidate(pyrowave_mtl_device device)
++{
++	return decoder_is_candidate((__bridge id<MTLDevice>)device);
++}
++
++pyrowave_result pw_decoder_device_create(const pyrowave_device_create_info *info,
++                                        bool force_portable, pyrowave_device *device)
++{
++	return create_device(info, device, true, force_portable);
++}
++
++const char *pw_decoder_backend_name(pyrowave_device device)
++{
++	return !device ? "unavailable" : device->portable_dequant ? "metal-portable-apple5" : "metal-native-apple7";
++}
++
+ void pyrowave_device_destroy(pyrowave_device device)
+ {
+ 	delete device;
+diff --git a/pyrowave_encoder.mm b/pyrowave_encoder.mm
+--- a/pyrowave_encoder.mm
++++ b/pyrowave_encoder.mm
+@@ -1100,6 +1100,11 @@
+ 	if (!info || !encoder || !info->device)
+ 		return PYROWAVE_ERROR_INVALID_ARGUMENT;
+ 
++	// The local Apple5 extension creates decoder-only devices. Never compile
++	// the native SIMD/border-sampler encoder on these devices.
++	if (info->device->decoder_only)
++		return PYROWAVE_ERROR_UNSUPPORTED_DEVICE;
++
+ 	if (info->chroma != PYROWAVE_CHROMA_SUBSAMPLING_420 &&
+ 	    info->chroma != PYROWAVE_CHROMA_SUBSAMPLING_444)
+ 		return PYROWAVE_ERROR_INVALID_ARGUMENT;

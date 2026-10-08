@@ -1,12 +1,12 @@
 # Piano v3 — Tutte le Apple TV con tvOS attuale, decode veloce e Auto
 
-Stato: sviluppo autorizzato e iniziato il 7 ottobre 2026. Baseline Moonlight e PyroWave importati come submodule; parser, test CPU e harness video offline implementati. Il primo percorso live sperimentale complete-frame è collegato tramite patch selettive a RTSP/SDP e al renderer Metal, con coda limitata e richiesta esplicita Debug. Selettore Auto qualificato, monitor rete, recupero parziale e shader A12 restano da realizzare. Vedere [stato sviluppo](development-status.md). PyroWave sarà una scelta manuale e il candidato preferito in modalità Auto dopo la qualificazione; copertura di tutti i modelli compatibili con tvOS stabile e monitoraggio host ogni 5 secondi.
+Stato: sviluppo autorizzato e iniziato il 7 ottobre 2026. Baseline Moonlight e PyroWave importati come submodule; parser, test CPU e harness video offline implementati. Il primo percorso live sperimentale complete-frame è collegato tramite patch selettive a RTSP/SDP e al renderer Metal, con coda limitata e richiesta esplicita Debug. Lo shader Apple5 per A12, la factory decoder con controlli sui pipeline e la scelta manuale persistente PyroWave sono implementati sperimentalmente. Selettore Auto qualificato, monitor rete e recupero parziale restano da realizzare. Vedere [stato sviluppo](development-status.md). PyroWave sarà una scelta manuale e il candidato preferito in modalità Auto dopo la qualificazione; copertura di tutti i modelli compatibili con tvOS stabile e monitoraggio host ogni 5 secondi.
 
 ## Obiettivo
 
 Integrare nel client Moonlight standard per tvOS il protocollo Nonary e il decoder Metal PyroWave, concentrandosi sul tempo di decoding e sulla latenza fino al frame pronto. L'encoder è sul PC host: il client negozia codec/profilo e sceglie il proprio decoder. Non implementiamo un encoder sulla Apple TV.
 
-Il supporto PyroWave non è ancora qualificato su nessun modello. Per A12: il backend Metal ispezionato richiede Apple7, mentre A12 è Apple5. Il percorso portabile deve sostituire le operazioni SIMD non supportate. L'identità iniziale del bitstream è `186f0393`; sorgenti fissate in [upstreams.lock.json](../configs/upstreams.lock.json).
+Il supporto PyroWave non è ancora qualificato su nessun modello. Per A12: il backend Metal ispezionato richiede Apple7, mentre A12 è Apple5. Il percorso portabile implementato sostituisce le operazioni SIMD non supportate con scan di threadgroup; deve ancora essere verificato sulla TV fisica. L'identità iniziale del bitstream è `186f0393`; sorgenti fissate in [upstreams.lock.json](../configs/upstreams.lock.json).
 
 ## Copertura dispositivi
 
@@ -38,14 +38,14 @@ Una sola app tvOS: percorso portabile Apple5 per A12 e percorso nativo Apple7+ c
 | Q0 — Qualificazione 4K | Stesso percorso a 4K60 | Prova fisica di almeno 30 minuti per modello/profilo ammesso, coda limitata e margine |
 | H0 — Profili aggiuntivi | 4:4:4, 10-bit, HDR | Misure e colorimetria corrette per ciascun profilo |
 
-D0 è iniziato con l’autorizzazione dell’utente: sorgenti veri, bootstrap e comando di build disponibili. Le prove fisiche della baseline restano richieste prima di qualificare la release. D1 dispone di harness offline Metal e generazione/encoding video compilati in CI; il round trip GPU richiede ancora un dispositivo ammesso dal backend. P0/R0 dispongono del primo percorso complete-frame sperimentale, descritto in [test client sperimentale](experimental-client.md). Le milestone restano aperte fino alle prove fisiche.
+D0 è iniziato con l’autorizzazione dell’utente: sorgenti veri, bootstrap e comando di build disponibili. Le prove fisiche della baseline restano richieste prima di qualificare la release. D1 dispone di harness offline Metal e generazione/encoding video compilati in CI; il round trip GPU richiede ancora un dispositivo ammesso dal backend. P0/R0 dispongono del primo percorso complete-frame sperimentale, descritto in [test client sperimentale](experimental-client.md). Il primo smoke test standard su A12/tvOS 27 è riferito dall’utente il 2026-10-08, senza misure e senza prova PyroWave. Le milestone restano aperte fino alle prove fisiche complete.
 
 ## D1/D2 — Lavoro sul decoding
 
 - Separare parsing CPU, upload GPU, dequantizzazione e iDWT; conservare un confronto FP32 prima di ottimizzare.
 - Implementare scan/prefix e shuffle portabili per Apple5 con memoria di threadgroup e barriere. Conservare e misurare il percorso Apple7+ nativo su A15; non forzare tutti i chip sul percorso portabile. Verificare anche l’equivalenza fra i due percorsi su A15, dove eseguibili.
 - Verificare limiti effettivi dei pipeline, texture e memoria locale; non basta rimuovere `supportsFamily:Apple7`.
-- Rigenerare anche `metal/shaders/pyrowave_msl.h`, perché il backend originale compila sorgenti incorporate con `newLibraryWithSource`.
+- Il percorso Apple5 usa `native/apple/PyroWaveApple5Source.h`, generato dallo shader effettivo e verificato in CI; i sorgenti incorporati nativi `pyrowave_msl.h` restano intatti. Entrambi sono compilati con `newLibraryWithSource`.
 - Partire da gruppi dequant 128 e iDWT 64 come riferimento; cambiare dimensioni soltanto con equivalenza verificata e benchmark.
 - Provare FP32 math/FP16 storage (precisione 1) contro FP32 (precisione 2). Tolleranze su coefficienti interi e output floating point sono distinte.
 - Tenere texture private e output GPU; niente readback di immagini nella pipeline normale. Un upload del bitstream resta necessario.

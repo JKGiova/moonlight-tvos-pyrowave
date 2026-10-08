@@ -3,6 +3,7 @@
 #import <Foundation/Foundation.h>
 #import <Metal/Metal.h>
 #include "pyrowave_metal.h"
+#include "pyrowave_decoder_backend.h"
 #include "pyrowave_file.hpp"
 #include "yuv4mpeg.hpp"
 #include <algorithm>
@@ -23,11 +24,11 @@ struct Engine {
     pyrowave_encoder encoder=nullptr;
     pyrowave_decoder decoder=nullptr;
     id<MTLDevice> metal=nil;
-    Engine() {
+    Engine(bool decoderOnly=false,bool portable=false) {
         metal=MTLCreateSystemDefaultDevice();
         if(!metal)throw std::runtime_error("no Metal GPU");
         pyrowave_device_create_info info{};info.mtl_device=(__bridge void*)metal;
-        check(pyrowave_device_create(&info,&device));
+        check(decoderOnly ? pw_decoder_device_create(&info,portable,&device) : pyrowave_device_create(&info,&device));
     }
     ~Engine(){if(encoder)pyrowave_encoder_destroy(encoder);if(decoder)pyrowave_decoder_destroy(decoder);if(device)pyrowave_device_destroy(device);}
 };
@@ -76,9 +77,9 @@ static void encode(const char* inputPath,const char* outputPath,const char* budg
 static double percentile(std::vector<double> values,double q) {
     std::sort(values.begin(),values.end());return values.at(size_t(std::ceil(q*values.size()))-1);
 }
-static void decode(const char* inputPath,const char* outputPath,const char* metricsPath) {
+static void decode(const char* inputPath,const char* outputPath,const char* metricsPath,bool portable=false) {
     std::ifstream input(inputPath,std::ios::binary);if(!input)throw std::runtime_error("cannot read PyroWave file");
-    const auto header=PWFile::readHeader(input);Engine engine;
+    const auto header=PWFile::readHeader(input);Engine engine(true,portable);
     pyrowave_decoder_create_info info{};info.device=engine.device;info.width=int(header.width);info.height=int(header.height);info.chroma=PYROWAVE_CHROMA_SUBSAMPLING_420;
     check(pyrowave_decoder_create(&info,&engine.decoder));
     id<MTLCommandQueue> queue=[engine.metal newCommandQueue];if(!queue)throw std::runtime_error("cannot create Metal queue");
@@ -115,7 +116,7 @@ static void decode(const char* inputPath,const char* outputPath,const char* metr
     if(!count)throw std::runtime_error("no decoded frames");
     output.flush();if(!output)throw std::runtime_error("decoded output flush failed");
     std::ofstream metrics(metricsPath);if(!metrics)throw std::runtime_error("cannot create metrics");
-    metrics<<"{\"frames\":"<<count<<",\"gpu_timing_samples\":"<<gpuTimes.size()<<",\"method\":\"offline-serial-with-readback\",\"auto_qualified\":false,\"gpu_decode_ms\":";
+    metrics<<"{\"frames\":"<<count<<",\"backend\":\""<<pw_decoder_backend_name(engine.device)<<"\",\"gpu_timing_samples\":"<<gpuTimes.size()<<",\"method\":\"offline-serial-with-readback\",\"auto_qualified\":false,\"gpu_decode_ms\":";
     if(gpuTimes.empty())metrics<<"null";else metrics<<"{\"p50\":"<<percentile(gpuTimes,.5)<<",\"p95\":"<<percentile(gpuTimes,.95)<<",\"p99\":"<<percentile(gpuTimes,.99)<<"}";
     metrics<<"}\n";metrics.flush();if(!metrics)throw std::runtime_error("metrics write failed");
 }
@@ -124,13 +125,15 @@ int main(int argc,char** argv) {
         if(argc==2&&std::string(argv[1])=="--probe") {
             id<MTLDevice> device=MTLCreateSystemDefaultDevice();
             const bool supported=device&&pyrowave_device_is_supported((__bridge void*)device);
-            std::cout<<"{\"device_available\":"<<(device?"true":"false")<<",\"native_backend_supported\":"<<(supported?"true":"false")<<",\"auto_qualified\":false}\n";
+            const bool candidate=device&&pw_decoder_backend_is_candidate((__bridge void*)device);
+            std::cout<<"{\"device_available\":"<<(device?"true":"false")<<",\"native_backend_supported\":"<<(supported?"true":"false")<<",\"decoder_backend_candidate\":"<<(candidate?"true":"false")<<",\"auto_qualified\":false}\n";
             return 0;
         }
-        if(argc==2&&std::string(argv[1])=="--version"){std::cout<<"pyrowave-video bitstream=186f0393 native-Metal offline-tool\n";return 0;}
+        if(argc==2&&std::string(argv[1])=="--version"){std::cout<<"pyrowave-video bitstream=186f0393 native+portable-Metal offline-tool\n";return 0;}
         if(argc==5&&std::string(argv[1])=="encode")encode(argv[2],argv[3],argv[4]);
         else if(argc==5&&std::string(argv[1])=="decode")decode(argv[2],argv[3],argv[4]);
-        else throw std::runtime_error("Usage: pyrowave-video encode input.y4m output.pyrowave bytes_per_frame | decode input.pyrowave reconstructed.y4m metrics.json");
+        else if(argc==5&&std::string(argv[1])=="decode-portable")decode(argv[2],argv[3],argv[4],true);
+        else throw std::runtime_error("Usage: pyrowave-video encode input.y4m output.pyrowave bytes_per_frame | decode[-portable] input.pyrowave reconstructed.y4m metrics.json");
         return 0;
     }catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;} }
 }

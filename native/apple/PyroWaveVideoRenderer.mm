@@ -3,6 +3,7 @@
 #import <Metal/Metal.h>
 #import <QuartzCore/CAMetalLayer.h>
 #include "pyrowave_metal.h"
+#include "pyrowave_decoder_backend.h"
 #include "pyrowaveframing.h"
 #include "latest_frame_queue.hpp"
 #include "color_conversion.hpp"
@@ -58,9 +59,9 @@ id distribution(std::vector<double> values) {
     size_t _readyCount, _gpuCount;
 }
 
-+ (BOOL)isNativeBackendAvailable {
++ (BOOL)isDecoderBackendCandidate {
     id<MTLDevice> device=MTLCreateSystemDefaultDevice();
-    return device && pyrowave_device_is_supported((__bridge void*)device);
+    return device && pw_decoder_backend_is_candidate((__bridge void*)device);
 }
 
 - (instancetype)initWithView:(UIView*)view callbacks:(id<ConnectionCallbacks>)callbacks {
@@ -83,11 +84,15 @@ id distribution(std::vector<double> values) {
 // Called during decoder setup, on the connection worker (never the UI thread).
 - (int)prepareWidth:(int)width height:(int)height fullRange:(BOOL)fullRange {
     if ([NSThread isMainThread] || width<128 || height<128 || width>4096 || height>2160 || width%2 || height%2 ||
-        !_metal || !pyrowave_device_is_supported((__bridge void*)_metal)) return -1;
+        !_metal || !pw_decoder_backend_is_candidate((__bridge void*)_metal)) return -1;
     _geometry={width,height,false}; _fullRange=fullRange;
     auto runtime=std::make_shared<Runtime>();
     pyrowave_device_create_info deviceInfo{}; deviceInfo.mtl_device=(__bridge void*)_metal;
-    if (pyrowave_device_create(&deviceInfo,&runtime->device)!=PYROWAVE_SUCCESS) return -1;
+    BOOL portable=NO;
+#if DEBUG
+    portable=[[NSUserDefaults standardUserDefaults] boolForKey:@"PyroWavePortable"];
+#endif
+    if (pw_decoder_device_create(&deviceInfo,portable,&runtime->device)!=PYROWAVE_SUCCESS) return -1;
     for (auto& slot:runtime->slots) {
         pyrowave_decoder_create_info info{}; info.device=runtime->device; info.width=width; info.height=height;
         info.chroma=PYROWAVE_CHROMA_SUBSAMPLING_420;
@@ -252,7 +257,8 @@ id distribution(std::vector<double> values) {
         @"gpu_in_flight":@(_mailbox.inFlight()),@"pending_frames":@(_mailbox.pending()?1:0),
         @"client_ready_completion_proxy_ms":distribution(ready),
         @"decode_and_color_gpu_ms":distribution(gpu),
-        @"gpu_decode_ms":NSNull.null,@"auto_qualified":@NO};
+        @"gpu_decode_ms":NSNull.null,@"auto_qualified":@NO,
+        @"decoder_backend":@(pw_decoder_backend_name(_runtime ? _runtime->device : nullptr))};
     [_lock unlock]; return result;
 }
 @end

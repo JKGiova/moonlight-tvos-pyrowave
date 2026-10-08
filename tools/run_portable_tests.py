@@ -30,6 +30,10 @@ def main():
                     str(ROOT/'tests/codec_layout_tests.cpp'),str(ROOT/'native/protocol/pyrowaveframing.cpp'),
                     str(directory/'codec-bitstream.o'),'-o',str(directory/'codec-layout-tests')],check=True)
     subprocess.run([str(directory/'codec-layout-tests')],check=True)
+    subprocess.run([compiler,*flags,'-I'+str(ROOT/'native/protocol'),'-I'+str(codec),
+                    str(ROOT/'tests/dequant_fixture_tests.cpp'),str(ROOT/'native/protocol/pyrowaveframing.cpp'),
+                    str(directory/'codec-bitstream.o'),'-o',str(directory/'dequant-fixture-tests')],check=True)
+    subprocess.run([str(directory/'dequant-fixture-tests')],check=True)
     subprocess.run([str(directory/'framing-tests')],check=True)
     subprocess.run([sys.executable,'-m','unittest','discover','-s',str(ROOT/'tests'),'-p','test_*.py'],check=True,cwd=ROOT)
 if __name__=='__main__':

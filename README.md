@@ -2,7 +2,7 @@
 
 Development workspace for a Moonlight tvOS client with low-latency PyroWave GPU decoding and automatic codec selection that prefers PyroWave when it passes device, protocol, performance and network checks.
 
-**Status: experimental client integration started.** The genuine Moonlight app and native PyroWave sources are pinned submodules. Implemented: Nonary framing validation, portable codec tests, video encoding/round-trip harness, selective protocol patches and a bounded asynchronous Metal decoder/presenter connected to the tvOS client. The live path is restricted to an explicit Debug launch argument and 8-bit SDR 4:2:0; the integrated unsigned ARM64 tvOS build and actual presenter shader/pipeline compilation passed in CI, while live streaming has not been tested. Normal Auto, host monitoring, partial-frame recovery and the A12 shader adaptation remain pending. No Apple TV device benchmark is claimed. This project is independent of the upstream maintainers.
+**Status: experimental client integration started.** The genuine Moonlight app and native PyroWave sources are pinned submodules. Implemented: Nonary framing validation, portable codec tests, video encoding/round-trip harness, selective protocol patches and a bounded asynchronous Metal decoder/presenter connected to the tvOS client. The live path is restricted to an explicit Debug launch argument and 8-bit SDR 4:2:0; the integrated unsigned ARM64 tvOS build and actual presenter shader/pipeline compilation passed in CI. The user reports standard-client streaming working on A12/tvOS 27; PyroWave remains untested on physical Apple TVs. The Apple5 dequantizer, capability-selected decoder-only factory and persistent experimental codec choice are now implemented. Normal qualified Auto, host monitoring and partial-frame recovery remain pending. No Apple TV device benchmark is claimed. This project is independent of the upstream maintainers.
 
 ## Scope
 
@@ -24,6 +24,7 @@ The encoder runs on the host PC. The client chooses the codec/profile, negotiate
 | --- | --- |
 | [Device support matrix](docs/device-support.md) | All in-scope models, GPU paths and release qualification |
 | [Device manifest](configs/devices.json) | Reviewed hardware scope; not a runtime allowlist |
+| [Apple5 decoder](docs/apple5-decoder.md) | Portable shader, candidate selection and correctness checks |
 | [Development status](docs/development-status.md) | Implemented code, actual checks and remaining work |
 | [Build and encoding tests](docs/build-and-test.md) | Initialize sources, build genuine targets, encode the chosen video |
 | [Implementation plan](docs/PLAN.md) | Milestones and source integration points |
