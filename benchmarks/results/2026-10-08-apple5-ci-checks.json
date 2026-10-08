@@ -1,0 +1,98 @@
+{
+  "schema_version": 1,
+  "kind": "apple5-decoder-build-and-synthetic-correctness-checks",
+  "date": "2026-10-08",
+  "implementation_commit": "5203f4bda439272f4b0bf5898f79c3817ea662f4",
+  "ci_run_url": "https://github.com/JKGiova/moonlight-tvos-pyrowave/actions/runs/37809452393",
+  "conclusion": "success",
+  "checks": {
+    "integrated_tvos_client": {
+      "status": "compiled",
+      "target": "Moonlight TV",
+      "architecture": "arm64",
+      "signed": false,
+      "xcode": "26.6",
+      "sdk": "tvOS 26.5",
+      "minimum_deployment_target": "15.0",
+      "pyrowave_streaming_execution": "not-tested"
+    },
+    "portable": {
+      "status": "passed",
+      "asan_ubsan": true,
+      "runtime_checks": 100068,
+      "framing_directed_checks": 71,
+      "malformed_fuzz_inputs": 10000,
+      "real_codec_cpu_profiles": 12,
+      "synthetic_dequant_fixtures": 8,
+      "python_tests": 7,
+      "cmake_ctest_tests": 4,
+      "ffmpeg_video_encode_decode": [
+        "h264",
+        "hevc"
+      ]
+    },
+    "metal": {
+      "native_offline_harness": "compiled",
+      "cmake_staged_harness": "compiled",
+      "live_presenter_shader_pipeline": "compiled",
+      "probe": {
+        "device_available": true,
+        "native_backend_supported": false,
+        "decoder_backend_candidate": true,
+        "auto_qualified": false
+      },
+      "portable_gpu_checker": {
+        "device_available": true,
+        "portable_pipeline_compiled": true,
+        "idwt_pipelines_compiled": 6,
+        "gpu_execution_tested": true,
+        "fixture_cases": 8,
+        "coefficients_checked": 32768,
+        "max_absolute_error": 0,
+        "native_reference_tested": false,
+        "full_decoder_zero_profiles": 2,
+        "full_decoder_backend": "metal-portable-apple5",
+        "physical_apple_tv_tested": false,
+        "auto_qualified": false
+      },
+      "coefficient_output_format": "R32Float",
+      "coefficient_tolerance": {
+        "absolute": 0.0001,
+        "relative": 1e-05
+      },
+      "full_decoder_zero_frame_profiles": [
+        {
+          "width": 128,
+          "height": 128,
+          "chroma": "420"
+        },
+        {
+          "width": 320,
+          "height": 180,
+          "chroma": "420"
+        }
+      ],
+      "full_decoder_zero_frame_reference": "uniform-normalized-0.5-per-plane; R8 UNORM 127-or-128",
+      "gpu_encoded_video_roundtrip": "skipped-upstream-encoder-support-gate",
+      "native_portable_real_video_comparison": "not-tested"
+    }
+  },
+  "standard_client_user_smoke": {
+    "source": "user-report-not-independently-verified",
+    "date": "2026-10-08",
+    "device": "Apple TV 4K 2nd generation / A12",
+    "tvos": "27",
+    "xcode": "26.6",
+    "sdk": "26.5",
+    "measured": false,
+    "pyrowave_tested": false,
+    "application_commit": null
+  },
+  "apple_tv_benchmark": false,
+  "auto_qualified": false,
+  "gpu_decode_ms": null,
+  "physical_pyrowave_testing": "pending",
+  "qualified_auto": "pending",
+  "host_monitor": "pending",
+  "partial_transport_recovery": "pending"
+}

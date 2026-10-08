@@ -4,6 +4,15 @@ Implemented on 2026-10-08; physical PyroWave correctness and latency are still
 unverified. The user's successful standard-client smoke test on an A12 Apple TV
 does not qualify this decoder. Normal Auto remains unchanged.
 
+[CI](https://github.com/JKGiova/moonlight-tvos-pyrowave/actions/runs/37809452393)
+passed for `5203f4bda439272f4b0bf5898f79c3817ea662f4`: the actual portable GPU
+kernel matched all 32,768 reference coefficients exactly, all six iDWT pipelines
+compiled, and the full portable decoder reconstructed two uniform synthetic
+profiles correctly. The unsigned tvOS target and both Metal harness build paths
+also passed. [Recorded evidence](../benchmarks/results/2026-10-08-apple5-ci-checks.json)
+keeps real-video, native/portable comparison, physical-device and latency tests
+explicitly pending.
+
 ## Backend choice
 
 `pw_decoder_device_create` probes the actual GPU. Apple5/6 use

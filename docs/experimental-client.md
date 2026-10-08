@@ -2,6 +2,8 @@
 
 The implementation connects PyroWave to the genuine Moonlight TV target through selective, reviewable patches. It is not a release-qualified codec. The earlier integrated unsigned ARM64 target and presenter pipeline compiled in [CI](https://github.com/JKGiova/moonlight-tvos-pyrowave/actions/runs/37654083647). The user reports standard streaming working on A12/tvOS 27 with Xcode 26.6/SDK 26.5. Physical PyroWave streaming, visual correctness and latency remain untested. The new app is named **Moonlight Pyro** and includes an experimental Apple5 decoder.
 
+The new [Apple5 CI run](https://github.com/JKGiova/moonlight-tvos-pyrowave/actions/runs/37809452393) also passed unsigned tvOS compilation, GPU coefficient checks and full synthetic decoder reconstruction. Your next run will be the first physical-TV test of this decoder; use the fresh project below.
+
 ## Build and select a development session
 
 On a Mac, initialize dependencies and prepare/build the integrated client:
