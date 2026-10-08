@@ -36,6 +36,11 @@ jobs:
       - run: git submodule update --init third_party/pyrowave
       - run: python3 tools/build_engine.py
       - run: build/metal/pyrowave-video --version
+      - name: Verify the staged Metal source also builds through CMake
+        run: |
+          cmake -S . -B build/cmake-metal -DBUILD_TESTING=OFF -DBUILD_METAL_VIDEO_TOOL=ON
+          cmake --build build/cmake-metal --target pyrowave-video --parallel 2
+          build/cmake-metal/pyrowave-video --probe
       - name: Compile Apple5 pipelines and check dequant coefficients on the available GPU
         run: |
           python3 tools/embed_apple5_shader.py --check

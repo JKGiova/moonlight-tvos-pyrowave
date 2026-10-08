@@ -1,6 +1,6 @@
 # Automatic codec selection contract
 
-Status: proposed client behavior; no selector implementation exists.
+Status: qualified Auto is proposed behavior; no benchmark-aware selector exists. The persistent experimental PyroWave manual choice is implemented for tvOS, with device/host/profile checks and exact RTSP identity validation. Normal Auto remains the standard hardware path. See [experimental testing](experimental-client.md).
 
 ## Responsibilities
 
