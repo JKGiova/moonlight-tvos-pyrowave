@@ -1,66 +1,119 @@
-# Host latency and bandwidth monitor
+# Host dashboard and pre-stream network monitor
 
-Status: planned feature only. Refresh host latency and network telemetry nominally every **5 seconds** while the app is active. No monitor, speed test or host endpoint is implemented in this scaffold.
+Implemented for the generated tvOS client. A saved PC always opens its dashboard.
+The five-second monitor runs only while that dashboard is in the foreground.
+Physical Apple TV layout, focus and LAN/WAN behavior still need device tests.
 
-## What the user sees
+## Dashboard states
 
-Each configured host has a compact network summary in the host list and a detailed view. The active session has the same measurements in its statistics panel. Display values, direction, method and age clearly:
+| Evidence | Layout and controls |
+| --- | --- |
+| Matching, paired HTTPS streaming service | Existing apps grid and launch/resume/quit controls; bottom metrics panel and Test bandwidth. Bottom scroll space keeps focused apps clear of the panel. |
+| PC responds but service is unavailable | Horizontally and vertically centered panel, response metrics, Retry and Wake PC when a MAC address is saved. |
+| No service or echo replies across repeated checks | Centered “PC unreachable” panel, Retry and Wake PC when configured. The message allows power-off, disconnection and blocked probes. |
+| Service found but pairing is missing/invalid | Centered Pair PC panel. Only explicit selection enters the existing PIN workflow. |
+| Initial check or network-path change | Centered checking state. Old asynchronous results cannot authorize apps or bandwidth. |
 
-| Value | Meaning | Five-second update |
-| --- | --- | --- |
-| RTT, ms | Round-trip estimate; not one-way latency or decode time | Fresh control/probe result where supported; otherwise unavailable/stale |
-| Response variation, ms | Observed RTT spread across a rolling window, with sample count | Recomputed from valid samples; keep ENet-reported variance separately labelled |
-| Stream receive goodput, Mbps | Unique useful host-to-client bytes received per rolling five-second interval | Recomputed during streaming; excludes duplicate/FEC/transport overhead where observable |
-| Available bandwidth estimate, Mbps | Estimated useful path rate for the specified direction/method | Refresh estimate/status/age; obtain new evidence only from a supported capacity test |
-| State and age | Reachable, probe failed, unsupported, unavailable or stale | Refreshed each tick; never turn unknown into 0 ms/0 Mbps |
+The view automatically returns to apps after a successful service check.
+Refreshing metrics does not reload the grid or move focus each tick. App lists
+refresh at most every 15 seconds after successful retrieval; serverinfo updates
+current-game state every five seconds. Long-press host management remains in the
+PC picker.
 
-Use host-to-client as the primary bandwidth direction because it carries video. Optional client-to-host tests have separate records; never infer symmetry. The receive rate of a 20 Mbps stream is not a claim that the path's maximum or available bandwidth is 20 Mbps. Do not estimate capacity from RTT or nominal Wi-Fi/Ethernet link speed. RTT/2 is not a measured one-way latency.
+## Measurements
 
-## Latency sources
+- **Service response / HTTP response:** monotonic request-to-completion timing,
+  including connection/TLS setup and service processing. It is not ICMP RTT.
+- **Ping RTT:** optional echo fallback after service failure. Darwin unprivileged
+  datagram ICMP sockets support IPv4/IPv6; DNS and socket reads are asynchronous
+  and cancellable. Replies must match the address, type/code, identifier,
+  sequence and random 128-bit token, plus the ICMPv4 checksum. Denied sockets or
+  missing replies remain unknown, never measured zero.
+- **Connection response:** HTTP errors or explicit connection refusals show an
+  endpoint response without proving service availability. Firewalls affect this.
+- **Variation:** population standard deviation of at most 12 successful samples
+  from the same timing source. Failed probes never become latency samples.
+- **Download:** slowest of three complete authenticated HTTPS transfers after
+  one discarded warm-up. The raw rate includes setup; UI labels method, age and
+  staleness. This is not link speed or guaranteed UDP capacity.
 
-During an active connection, prefer the pinned common-c `LiGetEstimatedRttInfo` ENet control-channel estimate when it succeeds. Call only inside the connection lifecycle; serialize access/cancellation with stop and reconnect. Check units, variance semantics, source timestamp and thread-safety in D0/N0 before implementing the adapter. Polling every five seconds does not prove that ENet obtained a new sample every five seconds: keep collection and source-measurement time separate and mark source freshness unknown if unavailable.
+Response timing becomes stale after 15 seconds and download evidence after 30
+seconds. Reopening the dashboard starts a new observation. Network-path or
+selected-address changes invalidate samples. Nothing is stored as Auto
+qualification; the existing PyroWave Auto gates are unchanged.
 
-For idle hosts, schedule one lightweight request per refresh to an existing, source-verified host service supported by that host. Reuse paired/trusted transport and established port discovery; do not assume a new UDP echo service or require raw ICMP privileges. Label a service response measurement as such because it includes service processing/transport setup. Reuse connections where supported and report cold connection setup separately. Unsupported probes are not proof that an otherwise usable host is offline.
+## Bandwidth protocol and limits
 
-For the primary Vibeshine 2.0.0 reference, paired HTTPS `/serverinfo` is the planned idle service request. Timing it measures service response, not an ICMP echo RTT. Capability-detect and verify the installed host; standard Moonlight-compatible hosts remain usable when optional probe metadata is absent. The capacity endpoint below is verified in the pinned host source; the client adapter still needs implementation and physical validation.
+The pinned Vibeshine source advertises `PyroWaveBandwidthProbeBytes=33554432`
+through the paired service. The client requires that exact size and a matching
+host identity over certificate-pinned HTTPS before requesting
+`/pyrowave-bandwidth-probe`. It reuses Moonlight authentication and rejects
+redirects. The endpoint is not inferred for other hosts.
 
-## Bandwidth evidence and traffic budget
+One 32 MiB warm-up and three 32 MiB transfers are sequential: maximum **128 MiB
+and eight seconds**, with at most two seconds per request. Chunks are counted and
+discarded, never accumulated or written to disk. Partial, oversized, failed or
+timed-out transfers cannot create a new bandwidth result.
 
-Refresh telemetry every five seconds without running a saturating speed test every tick. During a stream, count unique validated payload at receive/reassembly boundaries before decode drops, with wire-byte/loss/FEC counters separately; if accounting is not observable, label the measured boundary and do not fabricate goodput. This measures delivered traffic and congestion symptoms, not spare capacity.
+An automatic test runs once per dashboard visit when the service supports it and
+no app is active. Otherwise use Test bandwidth. A per-host, in-process 60-second
+cooldown also covers leaving/reopening the dashboard. HTTP 429 ends the test
+without automatic retry. The host's eight-requests-per-minute quota remains
+authoritative, including after app restarts. Failed retests retain the previous
+result's original timestamp. The displayed raw rate has no Auto headroom applied.
 
-Vibeshine 2.0.0 provides paired, pinned HTTPS GET `/pyrowave-bandwidth-probe`, sending exactly **32 MiB**, advertised as `PyroWaveBandwidthProbeBytes` in `/serverinfo`. Its source permits at most **8 requests per paired client per minute** and closes the connection after each response. Plan one warm-up followed by three completed measurements, taking the slowest transfer rate, as documented upstream. Budget the whole calibration at **8 seconds / 128 MiB**, with at most **2 seconds per request**, sequential requests and cancellation. The final connection may need fresh TLS setup: report handshake/setup separately from payload timing. An incomplete/timed-out transfer is not a valid completed measurement. Track local quota use, honor HTTP 429 and avoid queued or automatic repeated tests. These are provisional client traffic limits, not a promised measurement accuracy. Show transfer duration, actual bytes, loss and whether a byte/time cap limited inference. A TCP/service transfer cannot by itself qualify UDP streaming: combine sufficient useful-rate evidence with same-route live UDP validation. An endpoint with a server-side rate limit is not a measurement of the unconstrained network.
+Lightweight responses are capped at 64 KiB and two seconds. App-list loads have a
+separate 2 MiB cap. Only one request/probe sequence is active; slow work skips a
+tick instead of queuing another. Optional echo has a 1.5-second deadline including
+DNS. Failed checks rotate through the saved endpoint candidates.
 
-While streaming, prefer passive counters and existing control statistics. Any optional supported lightweight probe is bounded to **128 KiB per five-second interval globally**, with no overlapping transfers and immediate suspension on congestion/decoder pressure. This low traffic budget is not enough to measure arbitrary high path capacity: report estimate unknown/stale when evidence cannot be refreshed. Do not silently launch the large test, increase the video bitrate, or sacrifice frames to keep a number looking fresh.
+## Cancellation
 
-Store measured raw useful throughput and apply the existing 20% Auto headroom exactly once; do not reserve it once in calibration and a second time in the selector. `PyroWaveHostLinkMbps` is the host’s local wired link speed, not end-to-end throughput; zero means an unknown/non-wired route, not measured zero capacity. The bulk result remains an estimate, never a UDP guarantee. No upload endpoint is inferred from this download endpoint.
+Back to PCs, background, pairing and controller exit stop the monitor.
+Launch/resume cancels the timer, path observer, HTTP transfers, DNS and ICMP;
+it waits for URLSession invalidation and socket closure, then drains existing
+discovery workers before creating the stream. Dashboard identity/generation
+rejects late callbacks. No monitor or bandwidth probe runs during streaming.
+Passive stream telemetry is outside this update.
 
-If the installed host lacks a suitable capacity-test endpoint, the UI still shows RTT and current goodput, and explicitly reports available bandwidth unknown. Choosing whether to add a host-side extension is a later implementation decision; no host code is included here.
+## Implementation and checks
 
-## Scheduling and sample lifecycle
+- `native/apple/MLHostNetworkMonitor.*`: cadence, identity/admission, states and capacity adapter.
+- `native/apple/MLHostProbeSession.*`: bounded URL loading, authentication delegation and cancellation.
+- `native/apple/MLHostPing.*`: optional bounded DNS/ICMP fallback.
+- `native/apple/MLHostDashboardView.*`: footer and centered panel.
+- `native/client/host_monitor_policy.hpp`: freshness, statistics, calibration and ICMP validation.
+- `integration/patches/moonlight-host-dashboard.patch`: selective tvOS integration. Pristine upstream pins are unchanged.
 
-- Foreground cadence: 5 seconds, with stable per-host offsets, a global maximum of two lightweight host probes in flight, one per host, and a 2-second per-request timeout. Many hosts may delay a tick; display the actual age rather than pretending exact freshness.
-- Refresh configured hosts while their list/detail is visible; keep the active host monitored during streaming. Avoid probing all saved hosts from a hidden screen. Stop timers/probes in background, on removal, or when the active host is stopped; resume with an immediate refresh.
-- Keep the last 12 valid RTT samples (about one minute at nominal cadence), sample count and failures. A timeout is a failed sample, not an artificially large successful RTT. Three consecutive supported probe failures mark the monitoring state unreachable; transport unsupported/authentication errors remain distinct, and existing stream health takes precedence over one optional probe.
-- Initial stale thresholds: RTT 15 seconds; capacity evidence 30 seconds. Evaluate age from the actual measurement timestamp, not display refresh. If the source timestamp is unavailable, expose that limitation rather than extending a qualification TTL through polling.
-- Key records by host identity, endpoint/address family, client interface/route, direction and transport. Invalidate route evidence immediately on interface/address/route changes and reconnect; do not reuse a LAN estimate for a WAN route.
-- No monotonic-clock mixing: durations use a client monotonic clock; any host timestamp requires calibration. Provide sanitized summary data, not pairing keys or persistent raw packet logs.
+Portable sanitizer tests cover freshness, statistics, calibration and malformed
+ICMP parsing, including 10,000 randomized packets. Mac fixtures execute the real
+URL loader and monitor for normal/service/pairing/unreachable states, recovery,
+wrong identities, response limits, partial transfer, quota, HTTP 429 and the stop
+barrier. They substitute upstream models/parsers/authentication and ping results;
+they do not validate TLS pairing or physical network speed. Separate Mac loopback
+tests execute the actual IPv4/IPv6/DNS ping helper. CI also compiles the integrated
+Debug/Release device and Debug simulator targets and runs Xcode static analysis.
 
-## Auto and live degradation
+## Physical acceptance checklist
 
-Before negotiation, Auto consumes fresh route-specific capacity and UDP evidence plus device/profile decode qualification. PyroWave still requires useful capacity headroom of at least 20%; RTT alone never satisfies it. Missing/stale evidence leads to a bounded supported preflight test or verified hardware fallback. A monitoring refresh cannot manufacture admission. The capacity TTL governs admission or a new negotiation; its expiry alone does not terminate an otherwise healthy running stream.
+1. Generate a fresh client, preserving old signing edits:
+   `python3 tools/prepare_client.py --client-dir build/client/Moonlight-dashboard`.
+   Open its Xcode project, select Moonlight TV, and reuse your Team and bundle ID.
+2. With paired Vibeshine open, check app controls, bottom metrics, scrolling and
+   remote focus at 1080p/4K. Include empty and large app lists.
+3. Close Vibeshine while allowing ping, then reopen it: centered service panel
+   must recover to apps. Block ping too: repeated failures must show the cautious
+   unreachable message. Test Wake PC with and without a saved MAC.
+4. Exercise pairing/re-pairing, custom ports, IPv4/IPv6, LAN/WAN changes, and an
+   ordinary host without the optional bandwidth capability.
+5. During a bandwidth test select Launch/Resume, Back and Home. Verify host-side
+   traffic stops and no probe remains after stream creation; repeat reconnects.
+6. Compare received byte counts/rates with a controlled network reference.
+   Slow-route timeouts mean unavailable, not zero Mbps.
 
-During streaming, refresh indicators every five seconds and track persistent route degradation across three consecutive windows (initial 15-second hysteresis), alongside actual packet loss, queue pressure and client-ready latency. Show degraded state/rejection reason; isolated jitter does not reconnect. Codec remains fixed for the session. If established session overload policy requires fallback, perform the existing single bounded renegotiation and cooldown; do not switch codecs each tick or silently reduce the requested profile. Immediate protocol/disconnection failures follow connection handling without waiting for the monitoring window.
+## Sources
 
-## Planned validation
-
-B11 covers active ENet available/unavailable, idle service supported/unsupported, timeout/auth failure, multiple hosts, IPv4/IPv6 routes, interface changes, source timestamps, stale estimates, cancellation/background, asymmetric transfer, bounded-probe caps and capacity unavailable. Compare monitor on/off on every target model with the same live content, codec and route; monitor must not cause recurring frame-budget misses or growing queues. Validate measured bytes against receiver counters and a controlled network reference. No numeric result is claimed until these physical tests run.
-
-## Sources and related specifications
-
-- [Pinned Vibeshine protocol and probe](https://github.com/Nonary/vibeshine/blob/0689b2e021d6106612a7ed72a34dacc714b7a133/docs/pyrowave-protocol.md)
-- [Pinned Vibeshine handler, payload size and per-client quota](https://github.com/Nonary/vibeshine/blob/0689b2e021d6106612a7ed72a34dacc714b7a133/src/nvhttp.cpp)
-- [Local test workflow](vibeshine-testing.md)
-- [Pinned common-c RTT API](https://github.com/moonlight-stream/moonlight-common-c/blob/f900dd4767759c7b9d0e93bcea666b55c69ea62f/src/Limelight.h)
-- [RFC 5136: network capacity, available capacity and usage](https://www.rfc-editor.org/rfc/rfc5136)
-- [Auto selection](codec-selection.md), [decode performance](decoding-performance.md), [device support](device-support.md)
-- [Network monitor settings specification](../configs/network-monitor.example.json)
+- [Pinned Vibeshine protocol](https://github.com/Nonary/vibeshine/blob/0689b2e021d6106612a7ed72a34dacc714b7a133/docs/pyrowave-protocol.md)
+- [Vibeshine payload, quota and authentication handler](https://github.com/Nonary/vibeshine/blob/0689b2e021d6106612a7ed72a34dacc714b7a133/src/nvhttp.cpp)
+- [Apple datagram ICMP reference](https://developer.apple.com/library/archive/samplecode/SimplePing/Listings/Common_SimplePing_m.html)
+- [URLSession cancellation](https://developer.apple.com/documentation/foundation/urlsession/invalidateandcancel())

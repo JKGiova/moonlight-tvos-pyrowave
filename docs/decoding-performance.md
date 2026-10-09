@@ -72,4 +72,4 @@ Host capture/encoding latency is recorded separately. Reducing client decode tim
 
 ## Monitor overhead
 
-The [five-second host monitor](host-network-monitor.md) must not contaminate decoder timing or create stream queues. Compare the same live workload with monitoring on/off; record RTT source, rolling goodput, probe bytes, sample age, timeout count and impact on p95/p99, loss and presentation. Saturating bandwidth tests run before streaming or on explicit request, not every five seconds. Live goodput is demand-limited and cannot prove spare capacity.
+The [five-second host monitor](host-network-monitor.md) runs only on the selected PC dashboard. All requests, DNS/ICMP work and timers are canceled before streaming; launch/resume waits for cancellation completion. Physical validation must check that no probe remains active during decoder measurements. The bounded HTTPS bandwidth test is pre-stream only; it includes connection setup and does not prove UDP capacity. Passive in-stream goodput is future work.

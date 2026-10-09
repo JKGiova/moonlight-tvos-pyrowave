@@ -1,6 +1,6 @@
 # Piano v3 — Tutte le Apple TV con tvOS attuale, decode veloce e Auto
 
-Stato: sviluppo autorizzato e iniziato il 7 ottobre 2026. Baseline Moonlight e PyroWave importati come submodule; parser, test CPU e harness video offline implementati. Il primo percorso live sperimentale complete-frame è collegato tramite patch selettive a RTSP/SDP e al renderer Metal, con coda limitata e richiesta sperimentale esplicita. Lo shader Apple5 per A12, la factory decoder con controlli sui pipeline e la scelta manuale persistente PyroWave sono implementati sperimentalmente. Selettore Auto qualificato, monitor rete e recupero parziale restano da realizzare. Vedere [stato sviluppo](development-status.md). PyroWave è una scelta manuale sperimentale e sarà il candidato preferito in modalità Auto dopo la qualificazione; copertura di tutti i modelli compatibili con tvOS stabile e monitoraggio host ogni 5 secondi.
+Stato: sviluppo autorizzato e iniziato il 7 ottobre 2026. Baseline Moonlight e PyroWave importati come submodule; parser, test CPU e harness video offline implementati. Il primo percorso live sperimentale complete-frame è collegato tramite patch selettive a RTSP/SDP e al renderer Metal, con coda limitata e richiesta sperimentale esplicita. Lo shader Apple5 per A12, la factory decoder con controlli sui pipeline e la scelta manuale persistente PyroWave sono implementati sperimentalmente. Il monitor pre-stream nella dashboard host è implementato; qualificazione fisica, selettore Auto qualificato e recupero parziale restano da completare. Vedere [stato sviluppo](development-status.md). PyroWave è una scelta manuale sperimentale e sarà il candidato preferito in modalità Auto dopo la qualificazione; copertura di tutti i modelli compatibili con tvOS stabile e monitoraggio host ogni 5 secondi.
 
 ## Obiettivo
 
@@ -77,13 +77,15 @@ Deviare le DECODE_UNIT PyroWave prima del trattamento dei NAL: il codice attuale
 
 Parser: riusare `pyrowaveframing.cpp/.h` Nonary. Codec: `clear → push_packet → readiness → decode_gpu_buffer`. Output: tre texture Y/Cb/Cr → conversione colore → CAMetalLayer. Pool massimo iniziale: due frame GPU in volo e uno in attesa; sostituire il pending con il più recente.
 
-## N0 — Latenza e banda host ogni 5 secondi
+## N0 — Dashboard host e monitor pre-stream
 
-Aggiungere `HostNetworkMonitor` e un archivio di campioni per host/percorso, con aggiornamento nominale ogni 5 secondi in foreground. In streaming leggere il RTT stimato ENet tramite `LiGetEstimatedRttInfo` quando disponibile e misurare il goodput su finestre di 5 secondi; fuori sessione usare richieste leggere a un endpoint host esistente e verificato, etichettando il tempo di risposta del servizio. Non richiedere ICMP o un endpoint echo che il server non offre.
+Implementato nella dashboard del PC selezionato, accessibile anche quando il servizio non risponde. Con servizio associato disponibile, preservare la griglia app e i controlli esistenti, con metriche in basso e spazio riservato per il focus. Con PC raggiungibile ma servizio non disponibile, o con PC non raggiungibile, mostrare pannello centrato e azioni Retry / Wake PC ove configurato. Pair PC richiede un'azione esplicita.
 
-Il ping misura RTT, non banda. Mostrare goodput corrente e capacità utile stimata come valori distinti, con direzione, metodo, età e confidenza. Una stima di capacità richiede un trasferimento/protocollo supportato dall’host: prevedere un test limitato prima della sessione o su richiesta. Durante lo streaming evitare speed test saturanti; se non ci sono dati sufficienti, mostrare banda disponibile sconosciuta o precedente con età, aggiornando comunque RTT e goodput ogni 5 secondi.
+Ogni 5 secondi: serverinfo limitato; in caso di mancata risposta, echo ICMP opzionale tramite socket datagram non privilegiato, con scadenza e cancellazione DNS. Etichettare separatamente tempo di risposta del servizio e RTT ICMP. Un timeout non prova lo spegnimento del PC.
 
-La [specifica del monitor](host-network-monitor.md) definisce budget, cancellazione, timeout, UI e integrazione Auto. Le misure di banda devono attraversare la stessa rotta e, per qualificare PyroWave, essere accompagnate da convalida UDP live. N0 alimenta A0; lo stato rete non cambia codec a ogni tick.
+Quando l'host associato annuncia esattamente il probe Vibeshine da 32 MiB, eseguire un warm-up e tre download completati, con massimo 8 secondi / 128 MiB, limite locale fra tentativi e gestione HTTP 429. Mostrare il download HTTPS misurato (setup incluso), la sua età e lo stato stale; non è una misura UDP né un gate Auto. Test automatico una volta per visita se il PC non ha un'app attiva, oppure tramite pulsante. Nessun probe durante streaming: annullare e attendere invalidazione URLSession / chiusura ICMP prima di launch o resume.
+
+La [specifica e guida test](host-network-monitor.md) descrive implementazione e limiti. I test su fixture e la compilazione tvOS non sostituiscono la verifica su PC Vibeshine e Apple TV fisica. Il monitor passivo durante streaming non fa parte di questo aggiornamento.
 
 ## A0 — Auto preferisce PyroWave
 

@@ -19,4 +19,4 @@ Implementation was authorized by the owner on 2026-10-07. Develop the standard t
 
 Device scope: all Apple TV models compatible with the latest stable tvOS, as dated in docs/device-support.md and configs/devices.json. Maintain a single planned app and per-model/backend/OS/profile qualification; never copy Auto admission between models. The current implementation authorization includes this device scope.
 
-Host monitoring is planned at a five-second foreground cadence. RTT is not bandwidth; keep delivered goodput, available capacity, source timestamps and unknown/stale states distinct. Optional host endpoints require source verification and capability detection; monitoring must not saturate active streams.
+Host monitoring runs only in the selected host dashboard at a five-second foreground cadence. Cancel and drain monitor tasks before launch/resume; stop on background, navigation away, or pairing. RTT is not bandwidth; keep delivered goodput, available capacity, source timestamps and unknown/stale states distinct. Optional host endpoints require source verification and capability detection; monitoring must not saturate active streams.

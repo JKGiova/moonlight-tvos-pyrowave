@@ -19,6 +19,8 @@ def main():
     if args.sanitize:flags += ['-fsanitize=address,undefined','-fno-omit-frame-pointer']
     subprocess.run([compiler,*flags,'-I'+str(ROOT/'native/client'),str(ROOT/'tests/client_runtime_tests.cpp'),'-o',str(directory/'client-runtime-tests')],check=True)
     subprocess.run([str(directory/'client-runtime-tests')],check=True)
+    subprocess.run([compiler,*flags,'-I'+str(ROOT/'native/client'),str(ROOT/'tests/host_monitor_tests.cpp'),'-o',str(directory/'host-monitor-tests')],check=True)
+    subprocess.run([str(directory/'host-monitor-tests')],check=True)
     for target,source in [('framing-tests','tests/framing_tests.cpp'),('framing-check','tools/framing_check.cpp')]:
         subprocess.run([compiler,*flags,'-I'+str(ROOT/'native/protocol'),str(ROOT/source),str(ROOT/'native/protocol/pyrowaveframing.cpp'),'-o',str(directory/target)],check=True)
     codec=ROOT/'third_party/pyrowave/metal'

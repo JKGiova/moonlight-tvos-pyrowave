@@ -56,6 +56,7 @@ def prepare(destination: Path) -> Path:
         subprocess.run(['git','init','--quiet',str(destination)],check=True)
         for patch, directory in [('moonlight-ios.patch', destination),
                                   ('moonlight-cleanup.patch', destination),
+                                  ('moonlight-host-dashboard.patch', destination),
                                   ('moonlight-common-c.patch', destination/'moonlight-common/moonlight-common-c'),
                                   ('common-c-cleanup.patch', destination/'moonlight-common/moonlight-common-c')]:
             command = ['git','-C',str(destination),'apply','--unsafe-paths','--directory='+str(directory),str(ROOT/'integration/patches'/patch)]
