@@ -1,4 +1,4 @@
-# Development status — 2026-10-08
+# Development status — 2026-10-09
 
 Implementation has begun. The experimental live client path is now implemented; this is not a qualified PyroWave release.
 
@@ -7,12 +7,13 @@ Implementation has begun. The experimental live client path is now implemented; 
 | Standard tvOS app | Genuine pinned Moonlight source/project submodule, bootstrap and unsigned build command; app named Moonlight Pyro | Earlier unsigned ARM64 device-target build passed with Xcode 26.6 / tvOS SDK 26.5; user reports standard streaming working on A12/tvOS 27 on 2026-10-08, unmeasured and not independently verified |
 | PyroWave dependency | Genuine pinned Metal source plus a generated decoder-only Apple5 patch | Original encoder gate retained; portable dequantizer implemented, physical correctness/performance pending |
 | Apple5 correctness checks | Eight canonical fixtures, actual GPU coefficient checker, six iDWT pipeline builds and complete portable decoder smoke tests | CI passed: 32,768 FP32 coefficients with maximum absolute error 0; complete zero-wavelet frames at 128x128 and 320x180 reconstructed correctly; no physical TV result |
-| Nonary framing | Record and length-prefixed parser, loss metadata and structural/payload bounds | 71 directed checks plus 10,000 random malformed frames, ASan/UBSan |
+| Nonary framing | Record and length-prefixed parser, loss metadata and structural/payload bounds | 71 directed checks, 10,000 random malformed frames and 10,000 valid-record mutations (5,739 accepted mutations independently checked by the pinned CPU parser), ASan/UBSan |
 | Codec interoperability | Real pinned CPU layout, packetization and decoder parser | 12 geometry/chroma combinations through 4K, CPU only |
 | Video test script | Generated motion/gradient/text clip or selected input; real codec invocation; output/count/framing checks; failure reports | Actual FFmpeg H.264/HEVC encode/decode checks at 320x180/30 and 1280x720/60 |
-| Metal offline harness | Native encoder, offline file writer, decoder feeding validated spans, YUV reconstruction and optional GPU timestamps | Native source compiled successfully in Mac CI; the exposed Metal device failed the upstream support gate, so GPU execution was explicitly skipped |
+| Metal offline harness | Native encoder, offline file writer, decoder feeding validated spans, YUV reconstruction and optional GPU timestamps | Direct and CMake native harness builds passed; native encoding/real-video round trip skipped by the upstream support gate. The available GPU executed portable dequant, complete synthetic decoding and presenter checks separately |
 | App renderer/protocol dispatch | Selective RTSP/SDP and complete-frame delivery patches; bounded asynchronous Metal decoder, private YUV textures and GPU presenter; explicit manual request or Debug launch argument | Integrated unsigned ARM64 target compiled in CI with Xcode 26.6 / tvOS SDK 26.5; live streaming and physical correctness pending |
-| Runtime admission / scheduling | Exact single SDP bitstream identity; two GPU slots plus one latest pending frame; BT.601/709 full/limited-range conversion | 100,068 portable runtime checks passed under ASan/UBSan in CI; presenter MSL/render pipeline compiled; live presentation execution pending |
+| Runtime admission / scheduling | Exact single SDP bitstream identity; two GPU slots plus one latest pending frame; synchronized setup/stop; BT.601/709 full/limited-range conversion | 100,075 portable runtime checks under ASan/UBSan; 25 actual GPU presenter cases / 3,200 pixels passed with maximum channel error 1. Physical display timing pending |
+| Reliability / Xcode diagnostics | Five source-preparation regression tests, four diagnostic-report tests, complete build logs/result bundles and targeted warning cleanup | 16 Python tests passed; Debug/Release device builds and Debug arm64/x86_64 simulator build passed; static analysis found 20 upstream findings requiring the [prioritized review plan](reliability-and-xcode.md) |
 | Manual choice / Auto preference | Persistent PyroWave (Experimental SDR) tvOS setting; normal Auto remains standard | Manual request still checks device/host/profile/identity; qualified Auto pending |
 | Host monitor / debug reconnect | Pending | Design and templates available; no runtime claim |
 
@@ -27,3 +28,12 @@ The new client integration is described in [experimental client testing](experim
 The [integrated client CI run](https://github.com/JKGiova/moonlight-tvos-pyrowave/actions/runs/37654083647) passed for implementation commit `369084a5ef3d323fe180c3830c045a4da50fe81d`: integrated unsigned ARM64 Moonlight TV compilation, actual live presenter shader/pipeline compilation, native offline harness compilation, 100,068 runtime checks, parser/CPU codec tests, seven Python tests, three CTest cases and baseline CPU video encoding. The codec GPU round trip remains explicitly skipped because the Mac device does not pass the upstream Apple7 gate. See [the sanitized integration check record](../benchmarks/results/2026-10-07-live-integration-ci.json).
 
 The [Apple5 CI run](https://github.com/JKGiova/moonlight-tvos-pyrowave/actions/runs/37809452393) passed for implementation commit `5203f4bda439272f4b0bf5898f79c3817ea662f4`: unsigned ARM64 tvOS build with Xcode 26.6/SDK 26.5, direct and CMake Metal harness builds, portable sanitizers, four CTest cases, baseline video tests, actual portable GPU dequantization and complete synthetic decoding. The Mac probe reported native encoder support false but decoder candidate true. All 32,768 reference coefficients matched exactly; the real portable factory, wavelet allocations, sampler and full iDWT reconstructed two uniform synthetic frames correctly. Native/portable real-video comparison, GPU encoding and physical Apple TV tests remain pending. See [the check record](../benchmarks/results/2026-10-08-apple5-ci-checks.json). These correctness checks provide no latency result or Auto qualification.
+
+The [reliability CI run](https://github.com/JKGiova/moonlight-tvos-pyrowave/actions/runs/37892132736)
+passed all five jobs for `fe670ac1ea12c8f29a43248148e8443a9fdf39e1`, including
+the expanded portable/GPU tests, 720p60 CPU video checks, Debug/Release device
+builds, simulator compilation and static analysis. The nine targeted device
+compiler warnings disappeared (28 to 19). Static analysis is not clean: twenty
+findings remain in existing upstream code, with a concrete investigation/fix
+plan in [reliability and Xcode diagnostics](reliability-and-xcode.md). No physical
+TV, real-video PyroWave round trip or thermal/latency qualification is claimed.

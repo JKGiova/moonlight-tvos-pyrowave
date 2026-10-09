@@ -16,10 +16,11 @@ class XcodeDiagnosticsTests(unittest.TestCase):
             '/tmp/Moonlight TV/Source.m:42:3: warning: old API [-Wdeprecated-declarations]',
             'libtool: warning: object has no symbols',
             'warning: Metadata extraction skipped. No AppIntents.framework dependency found.',
+            '2026-10-09 06:11:13.842 appintentsmetadataprocessor[2843:12004] warning: Metadata extraction skipped.',
             '/tmp/PyroWaveRuntime/apple/Renderer.mm:8:4: error: missing type',
             'note: this is context, not another warning',
         ], 65)
-        self.assertEqual((report['errors'], report['warnings']), (1, 3))
+        self.assertEqual((report['errors'], report['warnings']), (1, 4))
         self.assertFalse(report['succeeded'])
         self.assertTrue(report['diagnostics'][-1]['owned_source'])
 

@@ -5,12 +5,15 @@ import re
 import subprocess
 
 DIAGNOSTIC = re.compile(r'^(?:(?P<location>.+?):)?\s*(?P<severity>fatal error|error|warning):\s*(?P<message>.*)$')
+TOOL_DIAGNOSTIC = re.compile(
+    r'^(?P<location>\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}\.\d+\s+\S+\[\d+:\d+\])'
+    r'\s+(?P<severity>fatal error|error|warning):\s*(?P<message>.*)$')
 
 
 def diagnostics(lines, returncode):
     entries = []
     for line in lines:
-        match = DIAGNOSTIC.match(line.strip())
+        match = DIAGNOSTIC.match(line.strip()) or TOOL_DIAGNOSTIC.match(line.strip())
         if not match:
             continue
         entry = match.groupdict()

@@ -28,7 +28,7 @@ behavior on a physical A12/A15. Normal Auto remains the standard hardware path.
 ## Observed compiler warnings and fix plan
 
 The previous [Apple5 device build](https://github.com/JKGiova/moonlight-tvos-pyrowave/actions/runs/37809452393)
-used Xcode 26.6 / tvOS SDK 26.5, completed successfully, and emitted 29 warnings,
+used Xcode 26.6 / tvOS SDK 26.5, completed successfully, and emitted 28 warnings,
 with no compiler errors. These are observed CI diagnostics; they are not a
 transcription of the user's unavailable screenshots.
 
@@ -50,6 +50,34 @@ Xcode static-analyzer findings are separate from ordinary compiler warnings.
 Inspect null dereferences, lifetime/ownership and uninitialized reads first;
 confirm each path before changing protocol or authentication behavior. A successful
 `analyze` command can still report findings and is not proof of runtime safety.
+
+## Actual static-analyzer findings and prioritized work
+
+The first review [CI run](https://github.com/JKGiova/moonlight-tvos-pyrowave/actions/runs/37892132736)
+passed all five jobs, including Debug/Release device builds, the Debug simulator
+and the Debug device analyzer. The device builds emitted 19 warning occurrences,
+down from 28; the simulator emitted 35 because most sources build for both arm64
+and x86_64. No warning/error came from the owned PyroWave runtime sources.
+
+The analyzer additionally reported **20 findings in existing upstream code**;
+its successful exit does not resolve them. They require the following work before
+release qualification. The full diagnostics remain visible in the CI artifacts.
+
+| Priority / finding | Source assessment | Concrete fix/validation plan |
+| --- | --- | --- |
+| P0: two apparent frees of stack `qduDS` in `VideoDepacketizer.c` | Direct-submit uses stack storage and queued-submit uses heap storage, both guarded by the global decoder capability. A callback boundary makes the analyzer suspect that capability may change. No actual invalid free was reproduced. | Reproduce direct/queued delivery and callbacks under ASan, including stop/error/overflow; verify the capability is immutable for the ownership lifetime. If a real path exists, record ownership explicitly rather than infer it from a mutable global at cleanup. |
+| P0: null `pendingFecBlockList.head` in `RtpVideoQueue.c` | FEC recovery expects a nonempty pending list. The analyzer does not prove the count/head invariant through all paths. | Test empty, truncated, out-of-order and heavily lost FEC blocks; verify count/head consistency. If reachable, reject recovery before dereferencing and count the lost frame, preserving FEC cleanup. |
+| P0: null `localAddress` in ENet `unix.c` | The Apple address-conversion branch checks `peerAddress`, then reads `localAddress`; the function permits optional address outputs elsewhere. The alert deserves a real API/call-site test. | Call receive with peer-only and peer+local outputs on IPv4/IPv6 dual-stack sockets. Add an explicit non-null gate for the conversion when confirmed; preserve IPv4-mapped behavior and reconnect tests. |
+| P1: possible `newOpt` leak in `RtspParser.c` | The newly allocated node is passed to `insertOption`, so ownership-transfer reasoning may be incomplete. Not a demonstrated leak. | Test normal/truncated CRLF endings, malformed headers and failure cleanup under leak checking. Prove each node reaches the message/free-list owner; fix only a leaking exit path. |
+| P1: nine `unix.Errno` findings in socket/control failure paths | Failure codes cross helper/callback boundaries; the analyzer cannot prove that `errno` was set. No incorrect code was measured. | Inject send/connect/get-socket-option failures; propagate an explicit error result instead of relying on stale `errno` if the helper contract does not guarantee it. Verify termination reason and retry behavior. |
+| P1: three nullable UIKit arguments | Two `UIAppView` subviews are deliberately optional; the touch-removal path in `OnScreenControls` is guarded by membership but lacks a visible non-null invariant to the analyzer. | Guard absent overlays/labels before `addSubview`; reproduce with missing artwork/no running game. Validate non-null touch collection/membership, then guard removal if necessary; exercise controller/touch cancellation. |
+| P2: three dead stores in ENet QoS/compression | Earlier `result` values can be overwritten by subsequent platform options; `parent` is assigned but not consumed. No stream failure demonstrated. | Review per-platform QoS result semantics before simplification; remove only redundant assignments and run transport tests. |
+
+P0 means investigate potential crash/corruption first; it is not a claim that the
+user's current stream has that bug. Preserve the pristine source pins and use
+separate reviewed patches with regression fixtures. Certificate API and UI/launch
+modernization from the compiler-warning table follow these ownership/transport
+checks. Auto stays unqualified until these reviews and physical tests are complete.
 
 ## Reproduce and collect diagnostics
 
