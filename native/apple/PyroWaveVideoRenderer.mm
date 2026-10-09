@@ -175,73 +175,75 @@ id distribution(std::vector<double> values) {
 
 - (void)pump {
     for (;;) {
-        [_lock lock];
-        auto work=_mailbox.take();
-        if (!work) { _pumpScheduled=NO; [_lock unlock]; return; }
-        auto runtime=_runtime;
-        [_lock unlock];
-        auto& slot=runtime->slots[work->slot];
-        std::string error;
-        bool valid=PyroWaveFraming::parse(static_cast<const uint8_t*>(work->frame.data.bytes),work->frame.data.length,
-            _geometry,slot.parsed,error) && !slot.parsed.partial;
-        if (!valid) {
-            [_lock lock]; ++_parserRejected; _mailbox.complete(work->slot); [_lock unlock]; continue;
+        @autoreleasepool {
+            [_lock lock];
+            auto work=_mailbox.take();
+            if (!work) { _pumpScheduled=NO; [_lock unlock]; return; }
+            auto runtime=_runtime;
+            [_lock unlock];
+            auto& slot=runtime->slots[work->slot];
+            std::string error;
+            bool valid=PyroWaveFraming::parse(static_cast<const uint8_t*>(work->frame.data.bytes),work->frame.data.length,
+                _geometry,slot.parsed,error) && !slot.parsed.partial;
+            if (!valid) {
+                [_lock lock]; ++_parserRejected; _mailbox.complete(work->slot); [_lock unlock]; continue;
+            }
+            pyrowave_decoder_clear(slot.decoder);
+            for (const auto& span:slot.parsed.spans) {
+                if (pyrowave_decoder_push_packet(slot.decoder,static_cast<const uint8_t*>(work->frame.data.bytes)+span.offset,span.size)!=PYROWAVE_SUCCESS) { valid=false; break; }
+            }
+            if (!valid || !pyrowave_decoder_decode_is_ready(slot.decoder,false)) {
+                [_lock lock]; ++_parserRejected; _mailbox.complete(work->slot); [_lock unlock]; continue;
+            }
+            // Drawable acquisition happens on this worker; never wait for GPU/UI on main.
+            id<CAMetalDrawable> drawable=[_layer nextDrawable];
+            if (!drawable) {
+                [_lock lock]; ++_drawableDropped; _mailbox.complete(work->slot); [_lock unlock]; continue;
+            }
+            [_lock lock]; BOOL stopped=_mailbox.stopped(); [_lock unlock];
+            if (stopped) { [_lock lock]; _mailbox.complete(work->slot); [_lock unlock]; continue; }
+            id<MTLCommandBuffer> command=[_commands commandBuffer];
+            pyrowave_gpu_buffers output{};
+            for (unsigned p=0;p<3;++p) output.planes[p]=(__bridge void*)slot.planes[p];
+            if (!command || pyrowave_decoder_decode_gpu_buffer(slot.decoder,(__bridge void*)command,&output)!=PYROWAVE_SUCCESS) {
+                [_lock lock]; ++_decodeFailed; _mailbox.complete(work->slot); [_lock unlock]; [self failSession]; continue;
+            }
+            auto pass=[MTLRenderPassDescriptor renderPassDescriptor];
+            pass.colorAttachments[0].texture=drawable.texture;
+            pass.colorAttachments[0].loadAction=MTLLoadActionDontCare; pass.colorAttachments[0].storeAction=MTLStoreActionStore;
+            id<MTLRenderCommandEncoder> encoder=[command renderCommandEncoderWithDescriptor:pass];
+            if (!encoder) {
+                [_lock lock]; ++_decodeFailed; _mailbox.complete(work->slot); [_lock unlock]; [self failSession]; continue;
+            }
+            const auto conversion=PWClient::colorConversion(work->frame.colorSpace,work->frame.fullRange);
+            [encoder setRenderPipelineState:_presenter];
+            for (unsigned p=0;p<3;++p) [encoder setFragmentTexture:slot.planes[p] atIndex:p];
+            [encoder setFragmentBytes:&conversion length:sizeof(conversion) atIndex:0];
+            [encoder drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:3]; [encoder endEncoding];
+            [command presentDrawable:drawable];
+            const size_t index=work->slot; const double received=work->frame.received;
+            [command addCompletedHandler:^(id<MTLCommandBuffer> completed) {
+                // runtime retains decoders, upload buffers and texture slots until completion.
+                (void)runtime;
+                [self->_lock lock];
+                BOOL successful=completed.status==MTLCommandBufferStatusCompleted;
+                BOOL reveal=successful && !self->_shown && !self->_mailbox.stopped();
+                if (successful) {
+                    ++self->_completed;
+                    self->_readyTimes[self->_readyCount++%self->_readyTimes.size()]=(CACurrentMediaTime()-received)*1000;
+                    const double gpu=(completed.GPUEndTime-completed.GPUStartTime)*1000;
+                    if (completed.GPUStartTime>0 && gpu>0 && std::isfinite(gpu)) self->_gpuTimes[self->_gpuCount++%self->_gpuTimes.size()]=gpu;
+                    if (reveal) self->_shown=YES;
+                } else ++self->_decodeFailed;
+                self->_mailbox.complete(index); [self schedulePumpLocked]; [self->_lock unlock];
+                if (reveal) dispatch_async(dispatch_get_main_queue(), ^{
+                    [self->_lock lock]; BOOL active=!self->_mailbox.stopped(); [self->_lock unlock];
+                    if (active) { self->_layer.hidden=NO; [self->_callbacks videoContentShown]; }
+                });
+                if (!successful) [self failSession];
+            }];
+            [command commit];
         }
-        pyrowave_decoder_clear(slot.decoder);
-        for (const auto& span:slot.parsed.spans) {
-            if (pyrowave_decoder_push_packet(slot.decoder,static_cast<const uint8_t*>(work->frame.data.bytes)+span.offset,span.size)!=PYROWAVE_SUCCESS) { valid=false; break; }
-        }
-        if (!valid || !pyrowave_decoder_decode_is_ready(slot.decoder,false)) {
-            [_lock lock]; ++_parserRejected; _mailbox.complete(work->slot); [_lock unlock]; continue;
-        }
-        // Drawable acquisition happens on this worker; never wait for GPU/UI on main.
-        id<CAMetalDrawable> drawable=[_layer nextDrawable];
-        if (!drawable) {
-            [_lock lock]; ++_drawableDropped; _mailbox.complete(work->slot); [_lock unlock]; continue;
-        }
-        [_lock lock]; BOOL stopped=_mailbox.stopped(); [_lock unlock];
-        if (stopped) { [_lock lock]; _mailbox.complete(work->slot); [_lock unlock]; continue; }
-        id<MTLCommandBuffer> command=[_commands commandBuffer];
-        pyrowave_gpu_buffers output{};
-        for (unsigned p=0;p<3;++p) output.planes[p]=(__bridge void*)slot.planes[p];
-        if (!command || pyrowave_decoder_decode_gpu_buffer(slot.decoder,(__bridge void*)command,&output)!=PYROWAVE_SUCCESS) {
-            [_lock lock]; ++_decodeFailed; _mailbox.complete(work->slot); [_lock unlock]; [self failSession]; continue;
-        }
-        auto pass=[MTLRenderPassDescriptor renderPassDescriptor];
-        pass.colorAttachments[0].texture=drawable.texture;
-        pass.colorAttachments[0].loadAction=MTLLoadActionDontCare; pass.colorAttachments[0].storeAction=MTLStoreActionStore;
-        id<MTLRenderCommandEncoder> encoder=[command renderCommandEncoderWithDescriptor:pass];
-        if (!encoder) {
-            [_lock lock]; ++_decodeFailed; _mailbox.complete(work->slot); [_lock unlock]; [self failSession]; continue;
-        }
-        const auto conversion=PWClient::colorConversion(work->frame.colorSpace,work->frame.fullRange);
-        [encoder setRenderPipelineState:_presenter];
-        for (unsigned p=0;p<3;++p) [encoder setFragmentTexture:slot.planes[p] atIndex:p];
-        [encoder setFragmentBytes:&conversion length:sizeof(conversion) atIndex:0];
-        [encoder drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:3]; [encoder endEncoding];
-        [command presentDrawable:drawable];
-        const size_t index=work->slot; const double received=work->frame.received;
-        [command addCompletedHandler:^(id<MTLCommandBuffer> completed) {
-            // runtime retains decoders, upload buffers and texture slots until completion.
-            (void)runtime;
-            [self->_lock lock];
-            BOOL successful=completed.status==MTLCommandBufferStatusCompleted;
-            BOOL reveal=successful && !self->_shown && !self->_mailbox.stopped();
-            if (successful) {
-                ++self->_completed;
-                self->_readyTimes[self->_readyCount++%self->_readyTimes.size()]=(CACurrentMediaTime()-received)*1000;
-                const double gpu=(completed.GPUEndTime-completed.GPUStartTime)*1000;
-                if (completed.GPUStartTime>0 && gpu>0 && std::isfinite(gpu)) self->_gpuTimes[self->_gpuCount++%self->_gpuTimes.size()]=gpu;
-                if (reveal) self->_shown=YES;
-            } else ++self->_decodeFailed;
-            self->_mailbox.complete(index); [self schedulePumpLocked]; [self->_lock unlock];
-            if (reveal) dispatch_async(dispatch_get_main_queue(), ^{
-                [self->_lock lock]; BOOL active=!self->_mailbox.stopped(); [self->_lock unlock];
-                if (active) { self->_layer.hidden=NO; [self->_callbacks videoContentShown]; }
-            });
-            if (!successful) [self failSession];
-        }];
-        [command commit];
     }
 }
 

@@ -26,7 +26,13 @@ jobs:
           cmake --build build/cmake --parallel 2
           ctest --test-dir build/cmake --output-on-failure
       - name: Install FFmpeg for functional video encoding checks
-        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+        timeout-minutes: 6
+        run: |
+          if ! command -v ffmpeg >/dev/null || ! command -v ffprobe >/dev/null; then
+            timeout 180 sudo apt-get update
+            timeout 180 sudo apt-get install -y ffmpeg
+          fi
+          ffmpeg -version
       - name: Encode generated motion/gradient/text video with baseline codecs
         run: python3 tools/encode_test_video.py --codecs h264,hevc --width 320 --height 180 --fps 30 --frames 12
       - name: Check baseline encoding and reconstruction at 720p60

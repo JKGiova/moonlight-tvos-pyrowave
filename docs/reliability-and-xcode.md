@@ -10,6 +10,9 @@ behavior on a physical A12/A15. Normal Auto remains the standard hardware path.
   reject setup after stop rather than reviving an interrupted session.
 - Sort rolling timing snapshots after releasing that lock, so diagnostics do not
   delay frame arrival or GPU completion. Timing definitions are unchanged.
+- Drain the worker's temporary autorelease pool once per frame, even under a
+  continuously busy producer; command-buffer completion retains the runtime
+  until in-flight GPU work finishes. Physical memory-soak checks remain required.
 - Recheck exact upstream revisions, tracked modifications and nested gitlinks
   even when a prepared-client cache record matches. Preserve local signing edits;
   choose a fresh destination when integration inputs change.
@@ -24,6 +27,8 @@ behavior on a physical A12/A15. Normal Auto remains the standard hardware path.
 - Build unsigned Debug and Release device targets and the Debug simulator;
   run Xcode's static analyzer on the Debug device target. Keep the original
   compiler diagnostics enabled and archive complete logs/result bundles.
+- Reuse FFmpeg when already installed and bound package-manager waits in CI;
+  dependency-mirror stalls must not hold a test run indefinitely.
 
 ## Observed compiler warnings and fix plan
 
