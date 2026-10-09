@@ -85,7 +85,10 @@ id distribution(std::vector<double> values) {
 - (int)prepareWidth:(int)width height:(int)height fullRange:(BOOL)fullRange {
     if ([NSThread isMainThread] || width<128 || height<128 || width>4096 || height>2160 || width%2 || height%2 ||
         !_metal || !pw_decoder_backend_is_candidate((__bridge void*)_metal)) return -1;
-    _geometry={width,height,false}; _fullRange=fullRange;
+    [_lock lock];
+    const bool unavailable=_mailbox.stopped() || bool(_runtime);
+    [_lock unlock];
+    if (unavailable) return -1;
     auto runtime=std::make_shared<Runtime>();
     pyrowave_device_create_info deviceInfo{}; deviceInfo.mtl_device=(__bridge void*)_metal;
     BOOL portable=NO;
@@ -116,7 +119,6 @@ id distribution(std::vector<double> values) {
     _presenter=[_metal newRenderPipelineStateWithDescriptor:descriptor error:&error];
     _commands=[_metal newCommandQueue];
     if (!_presenter || !_commands) return -1;
-    _runtime=std::move(runtime);
     dispatch_sync(dispatch_get_main_queue(), ^{
         const CGFloat aspect=(CGFloat)width/height;
         CGSize bounds=self->_view.bounds.size;
@@ -126,6 +128,13 @@ id distribution(std::vector<double> values) {
         self->_layer.contentsScale=self->_view.window.screen.scale ?: 1;
         self->_layer.drawableSize=CGSizeMake(size.width*self->_layer.contentsScale,size.height*self->_layer.contentsScale);
     });
+    // Publish fully initialized state under the same lock used by submit,
+    // statistics and stop. An interrupted setup must never revive the session.
+    [_lock lock];
+    if (_mailbox.stopped()) { [_lock unlock]; return -1; }
+    _geometry={width,height,false}; _fullRange=fullRange;
+    _runtime=std::move(runtime);
+    [_lock unlock];
     return 0;
 }
 
@@ -252,13 +261,16 @@ id distribution(std::vector<double> values) {
     [_lock lock];
     std::vector<double> ready(_readyTimes.begin(),_readyTimes.begin()+std::min(_readyCount,_readyTimes.size()));
     std::vector<double> gpu(_gpuTimes.begin(),_gpuTimes.begin()+std::min(_gpuCount,_gpuTimes.size()));
-    NSDictionary* result=@{@"completed_frames":@(_completed),@"parser_rejected":@(_parserRejected),@"decode_failed":@(_decodeFailed),
+    NSMutableDictionary* result=[@{@"completed_frames":@(_completed),@"parser_rejected":@(_parserRejected),@"decode_failed":@(_decodeFailed),
         @"profile_rejected":@(_profileRejected),@"pending_replacements":@(_mailbox.pendingReplacements),@"drawable_dropped":@(_drawableDropped),
         @"gpu_in_flight":@(_mailbox.inFlight()),@"pending_frames":@(_mailbox.pending()?1:0),
-        @"client_ready_completion_proxy_ms":distribution(ready),
-        @"decode_and_color_gpu_ms":distribution(gpu),
         @"gpu_decode_ms":NSNull.null,@"auto_qualified":@NO,
-        @"decoder_backend":@(pw_decoder_backend_name(_runtime ? _runtime->device : nullptr))};
-    [_lock unlock]; return result;
+        @"decoder_backend":@(pw_decoder_backend_name(_runtime ? _runtime->device : nullptr))} mutableCopy];
+    [_lock unlock];
+    // Sorting a diagnostic snapshot must not block arriving frames or GPU
+    // completion handlers on the submission lock.
+    result[@"client_ready_completion_proxy_ms"]=distribution(std::move(ready));
+    result[@"decode_and_color_gpu_ms"]=distribution(std::move(gpu));
+    return result;
 }
 @end

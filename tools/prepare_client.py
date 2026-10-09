@@ -28,6 +28,19 @@ def prepare(destination: Path) -> Path:
     # a source submodule, or a user-owned directory.
     if not destination.is_relative_to(ROOT/'build') or destination == ROOT/'build':
         raise RuntimeError('Prepared client must be a new directory below build/.')
+    # A matching cache record never excuses drift of the upstream checkouts.
+    # Verify before returning an existing directory, including nested gitlinks.
+    for path, pin in PINS.items():
+        revision = subprocess.check_output(['git', '-C', str(ROOT/path), 'rev-parse', 'HEAD'], text=True).strip()
+        if revision != pin:
+            raise RuntimeError('Initialize the exact upstream pins with tools/bootstrap.py first.')
+    nested = subprocess.check_output(['git','-C',str(ROOT/'app/Moonlight'),
+                                     'submodule','status','--recursive'],text=True)
+    if any(line and line[0] != ' ' for line in nested.splitlines()):
+        raise RuntimeError('Nested Moonlight dependencies differ or are not initialized; run tools/bootstrap.py.')
+    for path in PINS:
+        subprocess.run(['git','-C',str(ROOT/path),'-c','diff.ignoreSubmodules=none',
+                        'diff','--quiet','HEAD','--'],check=True)
     digest = hashlib.sha256()
     for path in inputs():
         digest.update(str(path.relative_to(ROOT)).encode()); digest.update(path.read_bytes())
@@ -37,17 +50,14 @@ def prepare(destination: Path) -> Path:
         if record.is_file() and json.loads(record.read_text()) == manifest:
             return destination
         raise RuntimeError('Prepared directory exists with different inputs. Choose a fresh --client-dir; existing edits are preserved.')
-    for path, pin in PINS.items():
-        revision = subprocess.check_output(['git', '-C', str(ROOT/path), 'rev-parse', 'HEAD'], text=True).strip()
-        if revision != pin:
-            raise RuntimeError('Initialize the exact upstream pins with tools/bootstrap.py first.')
-        subprocess.run(['git','-C',str(ROOT/path),'diff','--quiet','HEAD','--'],check=True)
     shutil.copytree(ROOT/'app/Moonlight', destination, ignore=shutil.ignore_patterns('.git', 'DerivedData', '__pycache__'))
     try:
         # Local metadata makes git apply independent of the enclosing repository.
         subprocess.run(['git','init','--quiet',str(destination)],check=True)
         for patch, directory in [('moonlight-ios.patch', destination),
-                                  ('moonlight-common-c.patch', destination/'moonlight-common/moonlight-common-c')]:
+                                  ('moonlight-cleanup.patch', destination),
+                                  ('moonlight-common-c.patch', destination/'moonlight-common/moonlight-common-c'),
+                                  ('common-c-cleanup.patch', destination/'moonlight-common/moonlight-common-c')]:
             command = ['git','-C',str(destination),'apply','--unsafe-paths','--directory='+str(directory),str(ROOT/'integration/patches'/patch)]
             subprocess.run([*command[:4], '--check', *command[4:]],check=True)
             subprocess.run(command,check=True)

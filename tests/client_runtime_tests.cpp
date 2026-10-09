@@ -4,6 +4,7 @@
 #include "color_conversion.hpp"
 #include <cmath>
 #include <iostream>
+#include <memory>
 #include <stdexcept>
 static unsigned checks;
 static void require(bool success) { ++checks; if(!success) throw std::runtime_error("client runtime check failed"); }
@@ -31,6 +32,17 @@ int main() {
     for(int i=2;i<100002;++i) require(stress.submit(i) && stress.inFlight()==2 && !stress.take());
     require(stress.pendingReplacements==99999); require(stress.complete(a->slot));
     require(stress.take()->frame==100001); require(stress.complete(b->slot));
+    // Stopping releases pending ownership, while work already taken retains
+    // its payload until the GPU owner releases it after completion.
+    PWClient::LatestFrameQueue<std::shared_ptr<int>> lifetime;
+    auto payload=std::make_shared<int>(42); std::weak_ptr<int> observed=payload;
+    require(lifetime.submit(std::move(payload))); auto retained=lifetime.take();
+    require(retained && !observed.expired());
+    auto pendingPayload=std::make_shared<int>(43); std::weak_ptr<int> pendingObserved=pendingPayload;
+    require(lifetime.submit(std::move(pendingPayload)));
+    require(lifetime.submit(std::make_shared<int>(44)) && pendingObserved.expired());
+    lifetime.stop(); require(!observed.expired() && !lifetime.pending());
+    require(lifetime.complete(retained->slot)); retained.reset(); require(observed.expired());
     for(int space:{0,1}) for(bool full:{false,true}) {
         auto conversion=PWClient::colorConversion(space,full);
         const float black=(full?0.f:16.f)/255.f, white=(full?255.f:235.f)/255.f, chroma=128.f/255.f;

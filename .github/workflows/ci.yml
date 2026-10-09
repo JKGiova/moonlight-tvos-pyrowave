@@ -29,6 +29,8 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y ffmpeg
       - name: Encode generated motion/gradient/text video with baseline codecs
         run: python3 tools/encode_test_video.py --codecs h264,hevc --width 320 --height 180 --fps 30 --frames 12
+      - name: Check baseline encoding and reconstruction at 720p60
+        run: python3 tools/encode_test_video.py --codecs h264,hevc --width 1280 --height 720 --fps 60 --frames 30 --output-dir benchmarks/local/720p60-smoke
   metal-build:
     runs-on: macos-latest
     steps:
@@ -45,9 +47,9 @@ jobs:
         run: |
           python3 tools/embed_apple5_shader.py --check
           python3 tools/build_decoder_check.py --run
-      - name: Compile the actual live presenter shader and render pipeline
+      - name: Execute the actual presenter and check color, range and image orientation
         run: |
-          xcrun clang++ -std=c++17 -fobjc-arc -I native/apple tools/check_presenter_shader.mm -framework Metal -framework Foundation -o build/metal/check-presenter
+          xcrun clang++ -std=c++17 -fobjc-arc -Wall -Wextra -Werror -I native/apple -I native/client tools/check_presenter_shader.mm -framework Metal -framework Foundation -o build/metal/check-presenter
           build/metal/check-presenter
       - name: Inspect available Metal backend
         id: gpu
@@ -73,7 +75,32 @@ jobs:
       # A Mac GPU test is not physical Apple TV qualification.
   tvos-client:
     runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - configuration: Debug
+            sdk: appletvos
+          - configuration: Release
+            sdk: appletvos
+          - configuration: Debug
+            sdk: appletvsimulator
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - name: Build the integrated Moonlight TV device target without signing
-        run: python3 tools/build_tvos.py --sdk appletvos
+      - name: Record the selected Xcode and SDK
+        run: |
+          xcodebuild -version
+          xcrun --sdk ${{ matrix.sdk }} --show-sdk-version
+      - name: Build the integrated Moonlight TV target without signing
+        run: python3 tools/build_tvos.py --sdk ${{ matrix.sdk }} --configuration ${{ matrix.configuration }}
+      - name: Analyze the integrated device target for memory and control-flow issues
+        if: matrix.configuration == 'Debug' && matrix.sdk == 'appletvos'
+        run: python3 tools/build_tvos.py --sdk appletvos --configuration Debug --action analyze
+      - name: Retain Xcode logs, diagnostics and result bundles even after failure
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: xcode-${{ matrix.configuration }}-${{ matrix.sdk }}
+          path: build/xcode/
+          if-no-files-found: warn
+          retention-days: 14

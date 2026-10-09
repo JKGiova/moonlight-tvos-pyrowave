@@ -1,0 +1,22 @@
+--- a/src/ControlStream.c
++++ b/src/ControlStream.c
+@@ -1111,7 +1111,7 @@
+ 
+     while (!PltIsThreadInterrupted(&controlReceiveThread)) {
+         ENetEvent event;
+-        enet_uint32 waitTimeMs;
++        enet_uint32 waitTimeMs = 0;
+ 
+         PltLockMutex(&enetMutex);
+ 
+@@ -1584,8 +1584,8 @@
+ 
+     while (!PltIsThreadInterrupted(&invalidateRefFramesThread)) {
+         PQUEUED_REFERENCE_FRAME_CONTROL qfit;
+-        uint32_t invalidateStartFrame;
+-        uint32_t invalidateEndFrame;
++        uint32_t invalidateStartFrame = 0;
++        uint32_t invalidateEndFrame = 0;
+         bool invalidate = false;
+ 
+         // Wait for a reference frame control message or a request to shutdown

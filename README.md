@@ -26,6 +26,7 @@ The encoder runs on the host PC. The client chooses the codec/profile, negotiate
 | [Device manifest](configs/devices.json) | Reviewed hardware scope; not a runtime allowlist |
 | [Apple5 decoder](docs/apple5-decoder.md) | Portable shader, candidate selection and correctness checks |
 | [Development status](docs/development-status.md) | Implemented code, actual checks and remaining work |
+| [Reliability and Xcode review](docs/reliability-and-xcode.md) | Regression coverage, compiler warnings and prioritized fixes |
 | [Build and encoding tests](docs/build-and-test.md) | Initialize sources, build genuine targets, encode the chosen video |
 | [Implementation plan](docs/PLAN.md) | Milestones and source integration points |
 | [Decode performance](docs/decoding-performance.md) | Metrics, optimization priorities and benchmark protocol |

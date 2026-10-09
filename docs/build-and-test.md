@@ -60,4 +60,18 @@ python3 tools/build_tvos.py --sdk appletvos
 
 This prepares selective patches and builds the actual `Moonlight TV` target without signing. Open `build/client/Moonlight/Moonlight.xcodeproj` in Xcode to configure your local team, unique persistent bundle ID and physical Apple TV deployment. Standard startup/streaming and PIN pairing come first. The standard renderer remains the fallback; the persistent PyroWave (Experimental SDR) codec preference can select the experimental live renderer. The Debug launch argument remains available for development. See [experimental client testing](experimental-client.md). Add `--baseline` to build the pristine upstream source instead. A changed integration requires a fresh `--client-dir`; existing generated checkouts are preserved.
 
-CI compiles native Metal and the unsigned tvOS device target and runs portable/smoke checks. It also executes the actual portable dequantizer on an available Mac Metal GPU against known coefficient fixtures and compiles all six iDWT variants; this does not qualify an Apple TV. See [Apple5 checks](apple5-decoder.md). The Mac job probes actual GPU availability and performs a native encode/decode smoke test only when the backend is supported; otherwise those steps are explicitly skipped. No CI job claims physical GPU latency or accesses the user’s Vibeshine PC. See [development status](development-status.md) and [the live-test setup](vibeshine-testing.md).
+CI builds unsigned Debug/Release tvOS device targets and the Debug simulator,
+and runs the device static analyzer. Each invocation keeps complete Xcode output,
+structured diagnostics and a result bundle under `build/xcode/`; CI retains
+these as artifacts even on failure. Use `--action analyze` to reproduce analysis.
+See [reliability and Xcode diagnostics](reliability-and-xcode.md) for the warning
+review and fix plan.
+
+CI also compiles native Metal and runs portable/smoke checks, executes the actual
+portable dequantizer against known coefficient fixtures, compiles six iDWT
+variants and checks the actual presenter's offscreen color/orientation output.
+These tests do not qualify an Apple TV. See [Apple5 checks](apple5-decoder.md).
+The Mac job probes GPU availability and performs a native encode/decode smoke
+test only when supported; otherwise those steps are explicitly skipped. No CI
+job measures physical TV latency or accesses the user's Vibeshine PC. See
+[development status](development-status.md) and [live-test setup](vibeshine-testing.md).

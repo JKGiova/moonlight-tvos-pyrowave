@@ -1,0 +1,54 @@
+--- a/Limelight/Network/WakeOnLanManager.m
++++ b/Limelight/Network/WakeOnLanManager.m
+@@ -16,12 +16,12 @@
+ 
+ @implementation WakeOnLanManager
+ 
+-static const int numStaticPorts = 2;
++enum { numStaticPorts = 2 };
+ static const int staticPorts[numStaticPorts] = {
+     9, // Standard WOL port (privileged port)
+     47009, // Port opened by Moonlight Internet Hosting Tool for WoL (non-privileged port)
+ };
+-static const int numDynamicPorts = 5;
++enum { numDynamicPorts = 5 };
+ static const int dynamicPorts[numDynamicPorts] = {
+     47998, 47999, 48000, 48002, 48010, // Ports opened by GFE/Sunshine
+ };
+--- a/Limelight/Crypto/CryptoManager.m
++++ b/Limelight/Crypto/CryptoManager.m
+@@ -15,8 +15,8 @@
+ #include <openssl/evp.h>
+ 
+ @implementation CryptoManager
+-static const int SHA1_HASH_LENGTH = 20;
+-static const int SHA256_HASH_LENGTH = 32;
++enum { SHA1_HASH_LENGTH = 20 };
++enum { SHA256_HASH_LENGTH = 32 };
+ static NSData* key = nil;
+ static NSData* cert = nil;
+ static NSData* p12 = nil;
+--- a/Limelight/UIComputerView.m
++++ b/Limelight/UIComputerView.m
+@@ -54,7 +54,8 @@
+     _hostLabel.textColor = [UIColor whiteColor];
+     
+     _hostOverlay = [[UIImageView alloc] initWithFrame:CGRectMake(self.frame.size.width / 3, _hostIcon.frame.size.height / 4, _hostIcon.frame.size.width / 3, self.frame.size.height / 3)];
+-    _hostSpinner = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleWhiteLarge];
++    _hostSpinner = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleLarge];
++    _hostSpinner.color = UIColor.whiteColor;
+     [_hostSpinner setFrame:_hostOverlay.frame];
+     _hostSpinner.userInteractionEnabled = NO;
+     _hostSpinner.hidesWhenStopped = YES;
+--- a/Limelight/ViewControllers/StreamFrameViewController.m
++++ b/Limelight/ViewControllers/StreamFrameViewController.m
+@@ -96,7 +96,8 @@
+     _spinner = [[UIActivityIndicatorView alloc] init];
+     [_spinner setUserInteractionEnabled:NO];
+ #if TARGET_OS_TV
+-    [_spinner setActivityIndicatorViewStyle:UIActivityIndicatorViewStyleWhiteLarge];
++    [_spinner setActivityIndicatorViewStyle:UIActivityIndicatorViewStyleLarge];
++    _spinner.color = UIColor.whiteColor;
+ #else
+     [_spinner setActivityIndicatorViewStyle:UIActivityIndicatorViewStyleWhite];
+ #endif
