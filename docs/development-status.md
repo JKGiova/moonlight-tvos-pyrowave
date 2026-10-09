@@ -37,3 +37,13 @@ compiler warnings disappeared (28 to 19). Static analysis is not clean: twenty
 findings remain in existing upstream code, with a concrete investigation/fix
 plan in [reliability and Xcode diagnostics](reliability-and-xcode.md). No physical
 TV, real-video PyroWave round trip or thermal/latency qualification is claimed.
+
+The final [reliability CI run](https://github.com/JKGiova/moonlight-tvos-pyrowave/actions/runs/37894111446)
+passed all five jobs for `9c9899dd2b9b7f7a85d5d62d847aaa059c4c4081`, after
+the per-frame autorelease-pool and bounded CI dependency-install corrections.
+The [final check record](../benchmarks/results/2026-10-09-reliability-ci-checks.json)
+includes the exact results: 100,075 runtime checks, 16 Python tests, four CTest
+cases, the malformed/mutated parser corpus, 32,768 GPU coefficients and 3,200
+presenter pixels. Device Debug/Release and both simulator architectures compile
+without errors. The 20 upstream analyzer findings remain unresolved under the
+documented fix plan; physical Apple TV testing and qualified Auto remain pending.

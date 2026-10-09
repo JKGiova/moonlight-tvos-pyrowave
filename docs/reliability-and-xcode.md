@@ -4,6 +4,15 @@ This review concerns the experimental implementation, not an Apple TV release
 qualification. A compiler pass cannot establish latency, stability or thermal
 behavior on a physical A12/A15. Normal Auto remains the standard hardware path.
 
+The final [CI run](https://github.com/JKGiova/moonlight-tvos-pyrowave/actions/runs/37894111446)
+passed all five jobs for implementation commit
+`9c9899dd2b9b7f7a85d5d62d847aaa059c4c4081`, including the per-frame
+autorelease-pool correction. The [sanitized check record](../benchmarks/results/2026-10-09-reliability-ci-checks.json)
+records the exact builds, sanitizer/parser tests, GPU checks and limitations.
+Debug/Release device builds have zero errors and 19 warning occurrences each;
+the simulator has zero errors and 35 warnings. The analyzer still reports the
+20 upstream findings planned below. These results do not qualify PyroWave Auto.
+
 ## Changes and regression coverage
 
 - Publish the initialized renderer under its submission/statistics/stop lock;

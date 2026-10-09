@@ -1,0 +1,245 @@
+{
+  "schema_version": 1,
+  "kind": "reliability-build-sanitizer-synthetic-gpu-and-xcode-checks",
+  "date": "2026-10-09",
+  "implementation_commit": "9c9899dd2b9b7f7a85d5d62d847aaa059c4c4081",
+  "ci_run_url": "https://github.com/JKGiova/moonlight-tvos-pyrowave/actions/runs/37894111446",
+  "conclusion": "success",
+  "jobs": [
+    {
+      "name": "metal-build",
+      "id": 113701563090,
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "tvos-client (Release, appletvos)",
+      "id": 113701563247,
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "tvos-client (Debug, appletvos)",
+      "id": 113701563262,
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "portable",
+      "id": 113701563340,
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "tvos-client (Debug, appletvsimulator)",
+      "id": 113701563423,
+      "status": "completed",
+      "conclusion": "success"
+    }
+  ],
+  "source_pins": {
+    "moonlight-ios": "02dc9780496eeeac6d01c8bbdccb8b6fe71ef28a",
+    "moonlight-common-c": "f900dd4767759c7b9d0e93bcea666b55c69ea62f",
+    "pyrowave": "186f0393b77f7755953b5ecde994bb1cec2e4155"
+  },
+  "checks": {
+    "portable": {
+      "status": "passed",
+      "asan_ubsan": true,
+      "ci_leak_detection_disabled": false,
+      "runtime_checks": 100075,
+      "framing_directed_checks": 71,
+      "malformed_fuzz_inputs": 10000,
+      "synthetic_dequant_fixtures": 8,
+      "valid_record_mutations": 10000,
+      "accepted_mutations_checked_by_pinned_cpu_parser": 5739,
+      "real_codec_cpu_profiles": 12,
+      "python_tests": 16,
+      "python_test_groups": {
+        "video_runner": 7,
+        "source_preparation": 5,
+        "xcode_diagnostics": 4
+      },
+      "cmake_ctest_tests": 4,
+      "ffmpeg_video_encode_decode": [
+        {
+          "codecs": [
+            "h264",
+            "hevc"
+          ],
+          "width": 320,
+          "height": 180,
+          "fps": 30,
+          "frames": 12,
+          "status": "passed"
+        },
+        {
+          "codecs": [
+            "h264",
+            "hevc"
+          ],
+          "width": 1280,
+          "height": 720,
+          "fps": 60,
+          "frames": 30,
+          "status": "passed"
+        }
+      ]
+    },
+    "xcode": {
+      "version": "26.6",
+      "build": "17F113",
+      "sdk": "tvOS 26.5",
+      "minimum_deployment_target": "15.0",
+      "signed": false,
+      "builds": [
+        {
+          "configuration": "Debug",
+          "sdk": "appletvos",
+          "architectures": [
+            "arm64"
+          ],
+          "status": "compiled",
+          "errors": 0,
+          "warning_occurrences": 19,
+          "owned_runtime_warning_occurrences": 0
+        },
+        {
+          "configuration": "Release",
+          "sdk": "appletvos",
+          "architectures": [
+            "arm64"
+          ],
+          "status": "compiled",
+          "errors": 0,
+          "warning_occurrences": 19,
+          "owned_runtime_warning_occurrences": 0
+        },
+        {
+          "configuration": "Debug",
+          "sdk": "appletvsimulator",
+          "architectures": [
+            "arm64",
+            "x86_64"
+          ],
+          "status": "compiled",
+          "errors": 0,
+          "warning_occurrences": 35,
+          "owned_runtime_warning_occurrences": 0
+        }
+      ],
+      "device_warning_baseline": 28,
+      "device_warnings_eliminated": 9,
+      "diagnostic_artifacts": [
+        "xcodebuild.log",
+        "diagnostics.json",
+        "result.xcresult"
+      ],
+      "analyze": {
+        "configuration": "Debug",
+        "sdk": "appletvos",
+        "command_status": "succeeded",
+        "errors": 0,
+        "warning_occurrences": 39,
+        "compiler_warning_occurrences": 19,
+        "analyzer_findings": 20,
+        "owned_runtime_warning_occurrences": 0,
+        "analyzer_clean": false,
+        "findings_confirmed_as_runtime_bugs": false,
+        "unresolved_upstream_findings": [
+          "moonlight-common/moonlight-common-c/src/VideoDepacketizer.c:308:9: warning: Argument to 'free()' is the address of the local variable 'qduDS', which is not memory allocated by 'malloc()' [unix.Malloc]",
+          "moonlight-common/moonlight-common-c/src/VideoDepacketizer.c:526:21: warning: Argument to 'free()' is the address of the local variable 'qduDS', which is not memory allocated by 'malloc()' [unix.Malloc]",
+          "moonlight-common/moonlight-common-c/src/RtspParser.c:175:36: warning: Potential leak of memory pointed to by 'newOpt' [unix.Malloc]",
+          "moonlight-common/moonlight-common-c/src/RtpVideoQueue.c:357:37: warning: Access to field 'packet' results in a dereference of a null pointer (loaded from field 'head') [core.NullDereference]",
+          "moonlight-common/moonlight-common-c/src/PlatformSockets.c:554:38: warning: An undefined value may be read from 'errno' [unix.Errno]",
+          "moonlight-common/moonlight-common-c/src/ControlStream.c:1437:56: warning: An undefined value may be read from 'errno' [unix.Errno]",
+          "moonlight-common/moonlight-common-c/src/ControlStream.c:1478:56: warning: An undefined value may be read from 'errno' [unix.Errno]",
+          "moonlight-common/moonlight-common-c/src/ControlStream.c:1517:52: warning: An undefined value may be read from 'errno' [unix.Errno]",
+          "moonlight-common/moonlight-common-c/src/ControlStream.c:1530:52: warning: An undefined value may be read from 'errno' [unix.Errno]",
+          "moonlight-common/moonlight-common-c/src/ControlStream.c:1555:48: warning: An undefined value may be read from 'errno' [unix.Errno]",
+          "moonlight-common/moonlight-common-c/src/ControlStream.c:1577:48: warning: An undefined value may be read from 'errno' [unix.Errno]",
+          "moonlight-common/moonlight-common-c/src/ControlStream.c:1877:15: warning: An undefined value may be read from 'errno' [unix.Errno]",
+          "moonlight-common/moonlight-common-c/src/ControlStream.c:1911:15: warning: An undefined value may be read from 'errno' [unix.Errno]",
+          "moonlight-common/moonlight-common-c/enet/unix.c:521:13: warning: Value stored to 'result' is never read [deadcode.DeadStores]",
+          "moonlight-common/moonlight-common-c/enet/unix.c:526:13: warning: Value stored to 'result' is never read [deadcode.DeadStores]",
+          "moonlight-common/moonlight-common-c/enet/unix.c:867:60: warning: Dereference of null pointer [core.NullDereference]",
+          "moonlight-common/moonlight-common-c/enet/compress.c:320:9: warning: Value stored to 'parent' is never read [deadcode.DeadStores]",
+          "Limelight/UIAppView.m:176:5: warning: nil passed to a callee that requires a non-null 1st parameter [nullability.NullPassedToNonnull]",
+          "Limelight/UIAppView.m:177:5: warning: nil passed to a callee that requires a non-null 1st parameter [nullability.NullPassedToNonnull]",
+          "Limelight/Input/OnScreenControls.m:852:13: warning: nil passed to a callee that requires a non-null 1st parameter [nullability.NullPassedToNonnull]"
+        ],
+        "fix_plan": "docs/reliability-and-xcode.md"
+      },
+      "physical_pyrowave_streaming": "not-tested"
+    },
+    "metal": {
+      "native_offline_harness": "compiled",
+      "cmake_staged_harness": "compiled",
+      "probe": {
+        "device_available": true,
+        "native_backend_supported": false,
+        "decoder_backend_candidate": true,
+        "auto_qualified": false
+      },
+      "portable_gpu_checker": {
+        "device_available": true,
+        "portable_pipeline_compiled": true,
+        "idwt_pipelines_compiled": 6,
+        "gpu_execution_tested": true,
+        "fixture_cases": 8,
+        "coefficients_checked": 32768,
+        "max_absolute_error": 0,
+        "native_reference_tested": false,
+        "full_decoder_zero_profiles": 2,
+        "full_decoder_backend": "metal-portable-apple5",
+        "physical_apple_tv_tested": false,
+        "auto_qualified": false
+      },
+      "presenter_gpu_checker": {
+        "device_available": true,
+        "presenter_pipeline_compiled": true,
+        "gpu_execution_tested": true,
+        "color_orientation_cases": 25,
+        "pixels_checked": 3200,
+        "max_channel_error": 1,
+        "channel_tolerance": 2,
+        "physical_apple_tv_tested": false,
+        "display_presentation_tested": false,
+        "auto_qualified": false
+      },
+      "full_decoder_zero_frame_profiles": [
+        {
+          "width": 128,
+          "height": 128,
+          "chroma": "420"
+        },
+        {
+          "width": 320,
+          "height": 180,
+          "chroma": "420"
+        }
+      ],
+      "full_decoder_zero_frame_reference": "uniform-normalized-0.5-per-plane; R8 UNORM 127-or-128",
+      "gpu_encoded_video_roundtrip": "skipped-upstream-encoder-support-gate",
+      "native_portable_real_video_comparison": "not-tested"
+    }
+  },
+  "limitations": [
+    "Hosted Mac GPU checks use synthetic frames and offscreen textures; they do not validate a physical Apple TV or display presentation.",
+    "Xcode analyze completed successfully but left 20 upstream findings requiring the documented investigation and fix plan.",
+    "Local Linux LeakSanitizer cannot inspect the sandbox process tree; local ASan/UBSan runs disable leak detection. CI sanitizer runs retain default leak detection.",
+    "No real-video PyroWave GPU encoding/decoding round trip or native/portable equivalence was tested.",
+    "No physical A12/A15 latency, thermal, sustained memory, reconnect, backgrounding or drawable-loss qualification was performed."
+  ],
+  "physical_apple_tv_tested": false,
+  "display_presentation_tested": false,
+  "apple_tv_benchmark": false,
+  "gpu_decode_ms": null,
+  "physical_decoder_latency_ms": null,
+  "thermal_soak_minutes": null,
+  "physical_pyrowave_testing": "pending",
+  "auto_qualified": false,
+  "qualified_auto": "pending",
+  "host_monitor": "pending",
+  "partial_transport_recovery": "pending"
+}
