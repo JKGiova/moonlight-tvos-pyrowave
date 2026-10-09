@@ -28,7 +28,11 @@ static BOOL MLConnectionRefused(NSError *error) {
     nw_path_monitor_t _pathMonitor;
     BOOL _sawPath, _stopped, _busy, _started, _supportsBandwidth, _automaticTestAttempted;
     BOOL _triedHTTP, _triedHTTPS;
-    NSUInteger _routeEpoch, _addressIndex, _failures;
+    NSUInteger _routeEpoch, _addressIndex, _failures, _addressesRemaining, _respondingIndex;
+    BOOL _receivedResponse;
+    MLHostDashboardState _responseState;
+    NSString *_responseSource, *_responseMessage;
+    double _responseLatency;
     NSArray<NSString *> *_addresses;
     NSString *_address, *_latencySource, *_message, *_bandwidthStatus;
     MLHostDashboardState _state;
@@ -136,8 +140,46 @@ static BOOL MLConnectionRefused(NSError *error) {
         [self publish:nil]; return;
     }
     _lastRefresh = MLNow(); _busy = YES;
+    _addressesRemaining = _addresses.count;
+    _receivedResponse = NO;
     _triedHTTP = _triedHTTPS = NO;
     [self requestServerInfoSecure:_host.serverCert != nil && _host.httpsPort != 0];
+}
+- (void)selectAddressAtIndex:(NSUInteger)index {
+    if (index == _addressIndex) return;
+    _addressIndex = index; _address = _addresses[index];
+    _window.clear(); _latencyAt = _bandwidthAt = 0; _lastApps = 0;
+    _bandwidthStatus = @"not measured on this route";
+}
+- (void)recordResponse:(double)milliseconds source:(NSString *)source
+                 state:(MLHostDashboardState)state message:(NSString *)message {
+    // Keep the strongest evidence while checking every saved address. A later
+    // timeout must not turn a responding PC into an offline result.
+    if (_receivedResponse && _responseState == MLHostDashboardPairRequired) return;
+    _receivedResponse = YES; _respondingIndex = _addressIndex;
+    _responseLatency = milliseconds; _responseSource = source;
+    _responseState = state; _responseMessage = message;
+}
+- (void)finishUnavailableAddress {
+    _serverInfo = nil; _supportsBandwidth = NO;
+    if (--_addressesRemaining > 0) {
+        [self selectAddressAtIndex:(_addressIndex + 1) % _addresses.count];
+        _triedHTTP = _triedHTTPS = NO;
+        [self requestServerInfoSecure:_host.serverCert != nil && _host.httpsPort != 0];
+        return;
+    }
+    if (_receivedResponse) {
+        _failures = 0;
+        [self selectAddressAtIndex:_respondingIndex];
+        _state = _responseState; _message = _responseMessage;
+        [self recordLatency:_responseLatency source:_responseSource];
+    } else {
+        ++_failures;
+        _state = _failures >= 3 ? MLHostDashboardUnreachable : MLHostDashboardChecking;
+        _message = _state == MLHostDashboardUnreachable ?
+            @"PC unreachable. It may be off, disconnected, or blocking probes." : @"No response yet. Checking saved routes…";
+    }
+    [self finishRefresh];
 }
 - (void)requestServerInfoSecure:(BOOL)secure {
     if (secure) _triedHTTPS = YES; else _triedHTTP = YES;
@@ -180,23 +222,21 @@ static BOOL MLConnectionRefused(NSError *error) {
             if (!owner->_supportsBandwidth) owner->_bandwidthStatus = @"unavailable from this service";
             if (authenticated && MLNow() - owner->_lastApps >= 15) { [owner requestApps]; return; }
             [owner finishRefresh];
-        } else if (secure && (result.error.code == NSURLErrorServerCertificateUntrusted ||
-                             result.error.code == NSURLErrorClientCertificateRejected ||
+        } else if (secure && (([result.error.domain isEqualToString:NSURLErrorDomain] &&
+                              (result.error.code == NSURLErrorServerCertificateUntrusted ||
+                               result.error.code == NSURLErrorClientCertificateRejected)) ||
                              result.response.statusCode == 401 || result.response.statusCode == 403 || info.statusCode == 401)) {
             // Only expose pairing UI. Never use HTTP capability data for the bulk probe.
-            owner->_state = MLHostDashboardPairRequired;
-            owner->_message = @"Pairing needs attention. Pair this PC again.";
-            owner->_supportsBandwidth = NO; owner->_serverInfo = nil;
-            [owner finishRefresh];
+            [owner recordResponse:result.duration * 1000 source:@"Connection response"
+                            state:MLHostDashboardPairRequired message:@"Pairing needs attention. Pair this PC again."];
+            [owner finishUnavailableAddress];
         } else if (secure && !owner->_triedHTTP) {
             [owner requestServerInfoSecure:NO];
         } else if (result.response || MLConnectionRefused(result.error)) {
-            owner->_failures = 0;
-            owner->_state = MLHostDashboardServiceUnavailable;
-            owner->_message = @"PC responded, but the streaming service is unavailable. Check Vibeshine and the PC firewall.";
-            owner->_serverInfo = nil; owner->_supportsBandwidth = NO;
-            [owner recordLatency:result.duration * 1000 source:@"Connection response"];
-            [owner finishRefresh];
+            [owner recordResponse:result.duration * 1000 source:@"Connection response"
+                            state:MLHostDashboardServiceUnavailable
+                          message:@"A saved address responded, but this PC's streaming service was not verified. Check Vibeshine and the saved addresses."];
+            [owner finishUnavailableAddress];
         } else [owner checkReachability];
     }];
 }
@@ -218,6 +258,12 @@ static BOOL MLConnectionRefused(NSError *error) {
         if ([apps isStatusOk] && [apps getAppList] != nil) {
             owner->_lastApps = MLNow();
             [owner publish:apps];
+        } else if (result.response.statusCode == 401 || result.response.statusCode == 403 || apps.statusCode == 401 ||
+                   ([result.error.domain isEqualToString:NSURLErrorDomain] &&
+                    (result.error.code == NSURLErrorServerCertificateUntrusted || result.error.code == NSURLErrorClientCertificateRejected))) {
+            owner->_state = MLHostDashboardPairRequired;
+            owner->_message = @"Pairing needs attention. Pair this PC again.";
+            owner->_supportsBandwidth = NO; owner->_serverInfo = nil;
         } else {
             owner->_message = @"Unable to refresh apps. Retrying…";
             if (owner->_host.appList.count == 0) owner->_state = MLHostDashboardServiceUnavailable;
@@ -236,22 +282,10 @@ static BOOL MLConnectionRefused(NSError *error) {
         owner->_ping = nil;
         if (epoch != owner->_routeEpoch) { owner->_busy = NO; return; }
         if (replied) {
-            owner->_failures = 0; owner->_state = MLHostDashboardServiceUnavailable;
-            owner->_message = @"PC is reachable. Start Vibeshine or check its firewall settings.";
-            [owner recordLatency:milliseconds source:@"Ping RTT"];
-        } else {
-            ++owner->_failures;
-            owner->_state = owner->_failures >= MAX((NSUInteger)3, owner->_addresses.count) ? MLHostDashboardUnreachable : MLHostDashboardChecking;
-            owner->_message = owner->_state == MLHostDashboardUnreachable ?
-                @"PC unreachable. It may be off, disconnected, or blocking probes." : @"No response yet. Checking saved routes…";
-            if (owner->_addresses.count > 1) {
-                owner->_addressIndex = (owner->_addressIndex + 1) % owner->_addresses.count;
-                owner->_address = owner->_addresses[owner->_addressIndex];
-                owner->_window.clear(); owner->_latencyAt = owner->_bandwidthAt = 0;
-                owner->_lastApps = 0;
-            }
+            [owner recordResponse:milliseconds source:@"Ping RTT" state:MLHostDashboardServiceUnavailable
+                          message:@"PC is reachable. Start Vibeshine or check its firewall settings."];
         }
-        [owner finishRefresh];
+        [owner finishUnavailableAddress];
     }];
 }
 - (void)finishRefresh {

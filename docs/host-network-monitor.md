@@ -65,14 +65,24 @@ result's original timestamp. The displayed raw rate has no Auto headroom applied
 Lightweight responses are capped at 64 KiB and two seconds. App-list loads have a
 separate 2 MiB cap. Only one request/probe sequence is active; slow work skips a
 tick instead of queuing another. Optional echo has a 1.5-second deadline including
-DNS. Failed checks rotate through the saved endpoint candidates.
+DNS. Each refresh checks the unique saved endpoint candidates until the matching
+service is found. Refused connections, a different host identity, pairing errors
+and an echo reply do not prevent trying the remaining addresses. If none provides
+the service, retain the strongest reachability evidence from that refresh; a later
+timeout must not overwrite an earlier response with an offline result. A full
+cycle can exceed five seconds on unresponsive routes; timer ticks still refresh
+sample ages without starting overlapping requests.
 
 ## Cancellation
 
 Back to PCs, background, pairing and controller exit stop the monitor.
 Launch/resume cancels the timer, path observer, HTTP transfers, DNS and ICMP;
 it waits for URLSession invalidation and socket closure, then drains existing
-discovery workers before creating the stream. Dashboard identity/generation
+discovery workers before creating the stream. A controller-owned cancellation
+barrier retains pending stops across Back/re-entry and host changes, including
+when there is no current monitor. Background/disappearance invalidates a pending
+launch immediately, allowing a subsequent foreground visit to restart monitoring.
+Dashboard identity/generation
 rejects late callbacks. No monitor or bandwidth probe runs during streaming.
 Passive stream telemetry is outside this update.
 
@@ -81,6 +91,7 @@ Passive stream telemetry is outside this update.
 - `native/apple/MLHostNetworkMonitor.*`: cadence, identity/admission, states and capacity adapter.
 - `native/apple/MLHostProbeSession.*`: bounded URL loading, authentication delegation and cancellation.
 - `native/apple/MLHostPing.*`: optional bounded DNS/ICMP fallback.
+- `native/apple/MLHostMonitorBarrier.*`: waits for current and historical monitor stops.
 - `native/apple/MLHostDashboardView.*`: footer and centered panel.
 - `native/client/host_monitor_policy.hpp`: freshness, statistics, calibration and ICMP validation.
 - `integration/patches/moonlight-host-dashboard.patch`: selective tvOS integration. Pristine upstream pins are unchanged.
@@ -88,10 +99,15 @@ Passive stream telemetry is outside this update.
 Portable sanitizer tests cover freshness, statistics, calibration and malformed
 ICMP parsing, including 10,000 randomized packets. Mac fixtures execute the real
 URL loader and monitor for normal/service/pairing/unreachable states, recovery,
-wrong identities, response limits, partial transfer, quota, HTTP 429 and the stop
-barrier. They substitute upstream models/parsers/authentication and ping results;
+wrong identities, alternate-address recovery, response limits, hard deadlines,
+partial transfer, quota, HTTP 429 and app-list authentication revocation. Tests
+also cover historical/reentrant cancellation barriers and absence of timer probes
+after stop. Native network checks run under AddressSanitizer/UndefinedBehaviorSanitizer.
+They substitute upstream models/parsers/authentication and ping results;
 they do not validate TLS pairing or physical network speed. Separate Mac loopback
-tests execute the actual IPv4/IPv6/DNS ping helper. CI also compiles the integrated
+tests execute the actual IPv4/IPv6/DNS ping helper, DNS deadline and repeated
+cancellation. Apple targets use the SDK's default system-library linkage for DNS
+services; no standalone `libdns_sd.tbd` dependency is added. CI also compiles the integrated
 Debug/Release device and Debug simulator targets and runs Xcode static analysis.
 
 ## Physical acceptance checklist

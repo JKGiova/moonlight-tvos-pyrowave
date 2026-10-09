@@ -45,9 +45,11 @@ jobs:
       - run: python3 tools/build_engine.py
       - name: Exercise host dashboard transport, state transitions and cancellation
         run: |
-          xcrun clang++ -x objective-c++ -std=c++17 -fobjc-arc -Wall -Wextra -Werror -Wno-unused-parameter -I tests/host_support -I native/apple -I native/client tests/host_network_tests.mm tests/host_support/HostFixtures.mm native/apple/MLHostProbeSession.m native/apple/MLHostNetworkMonitor.mm -framework Foundation -framework Network -o build/metal/host-network-tests
+          xcrun clang++ -x objective-c++ -std=c++17 -fobjc-arc -Wall -Wextra -Werror -Wno-unused-parameter -fsanitize=address,undefined -fno-omit-frame-pointer -I tests/host_support -I native/apple -I native/client tests/host_network_tests.mm tests/host_support/HostFixtures.mm native/apple/MLHostProbeSession.m native/apple/MLHostMonitorBarrier.m native/apple/MLHostNetworkMonitor.mm -framework Foundation -framework Network -o build/metal/host-network-tests
           build/metal/host-network-tests
-          xcrun clang++ -std=c++17 -fobjc-arc -Wall -Wextra -Werror -Wno-unused-parameter -I native/apple -I native/client tests/host_ping_tests.mm native/apple/MLHostPing.mm -framework Foundation -ldns_sd -o build/metal/host-ping-tests
+      - name: Check real DNS and ICMP loopback, deadline and cancellation
+        run: |
+          xcrun clang++ -std=c++17 -fobjc-arc -Wall -Wextra -Werror -Wno-unused-parameter -fsanitize=address,undefined -fno-omit-frame-pointer -I native/apple -I native/client tests/host_ping_tests.mm native/apple/MLHostPing.mm -framework Foundation -o build/metal/host-ping-tests
           build/metal/host-ping-tests
       - run: build/metal/pyrowave-video --version
       - name: Verify the staged Metal source also builds through CMake

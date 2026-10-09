@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 #import <Foundation/Foundation.h>
+#import "MLHostMonitorBarrier.h"
 @class TemporaryHost, ServerInfoResponse, AppListResponse;
 
 typedef NS_ENUM(NSInteger, MLHostDashboardState) {
@@ -15,7 +16,7 @@ NS_ASSUME_NONNULL_BEGIN
 @end
 
 // Foreground dashboard only; never instantiate for an active stream.
-@interface MLHostNetworkMonitor : NSObject
+@interface MLHostNetworkMonitor : NSObject <MLHostMonitorStopping>
 - (instancetype)initWithHost:(TemporaryHost *)host
                        update:(void (^)(MLHostNetworkSnapshot *, ServerInfoResponse * _Nullable,
                                         AppListResponse * _Nullable))update;

@@ -9,11 +9,12 @@
  #endif
  
  #import <VideoToolbox/VideoToolbox.h>
-@@ -58,6 +60,15 @@
+@@ -58,6 +60,16 @@
      bool _background;
  #if TARGET_OS_TV
      UITapGestureRecognizer* _menuRecognizer;
 +    MLHostNetworkMonitor *_hostMonitor;
++    MLHostMonitorBarrier *_hostMonitorBarrier;
 +    MLHostDashboardView *_hostDashboard;
 +    NSLayoutConstraint *_dashboardCenter, *_dashboardBottom;
 +    NSArray<NSLayoutConstraint *> *_dashboardConstraints;
@@ -25,7 +26,7 @@
  #endif
  }
  static NSMutableSet* hostList;
-@@ -114,8 +125,13 @@
+@@ -114,8 +126,13 @@
          [self->_pairAlert dismissViewControllerAnimated:YES completion:nil];
          self->_pairAlert = nil;
          
@@ -39,7 +40,7 @@
      });
  }
  
-@@ -292,6 +308,16 @@
+@@ -292,6 +309,16 @@
  
  - (void)showHostSelectionView {
  #if TARGET_OS_TV
@@ -56,7 +57,7 @@
      // Remove the menu button intercept to allow the app to exit
      // when at the host selection view.
      [self.navigationController.view removeGestureRecognizer:_menuRecognizer];
-@@ -328,7 +354,169 @@
+@@ -328,7 +355,180 @@
      [[self activeViewController] presentViewController:alert animated:YES completion:nil];
  }
  
@@ -64,14 +65,21 @@
 +#if TARGET_OS_TV
 +- (void)suspendHostMonitor {
 +    ++_dashboardEpoch;
-+    [_hostMonitor stopWithCompletion:nil];
++    _dashboardLaunching = NO;
++    [self stopHostMonitorWithCompletion:nil];
++}
++
++- (void)stopHostMonitorWithCompletion:(void (^)(void))completion {
++    if (!_hostMonitorBarrier) _hostMonitorBarrier = [MLHostMonitorBarrier new];
++    MLHostNetworkMonitor *monitor = _hostMonitor;
 +    _hostMonitor = nil;
++    [_hostMonitorBarrier stopMonitor:monitor completion:completion];
 +}
 +
 +- (void)openHostDashboard:(TemporaryHost *)host {
-+    MLHostNetworkMonitor *previous = _hostMonitor;
-+    _hostMonitor = nil;
-+    NSUInteger epoch = ++_dashboardEpoch;
++    if (!host || _background || !_dashboardVisible) return;
++    [self suspendHostMonitor];
++    NSUInteger epoch = _dashboardEpoch;
 +    _selectedHost = host;
 +    _dashboardState = MLHostDashboardChecking;
 +    _dashboardGame = nil;
@@ -111,9 +119,13 @@
 +            if (!owner || owner->_dashboardPairing || !owner->_selectedHost) return;
 +            owner->_dashboardPairing = YES;
 +            TemporaryHost *target = owner->_selectedHost;
-+            MLHostNetworkMonitor *monitor = owner->_hostMonitor;
-+            [monitor stopWithCompletion:^{
-+                if (target != owner->_selectedHost || owner->_background) { owner->_dashboardPairing = NO; return; }
++            MLHostDashboardView *dashboard = owner->_hostDashboard;
++            [owner stopHostMonitorWithCompletion:^{
++                if (target != owner->_selectedHost || owner->_background || !owner->_dashboardVisible || dashboard != owner->_hostDashboard) {
++                    owner->_dashboardPairing = NO;
++                    [owner beginForegroundRefresh];
++                    return;
++                }
 +                target.state = StateOnline;
 +                target.pairState = PairStateUnpaired;
 +                // A real user action permits the original PIN/pairing workflow.
@@ -164,7 +176,7 @@
 +        }];
 +        [owner->_hostMonitor start];
 +    };
-+    if (previous) [previous stopWithCompletion:start]; else start();
++    [self stopHostMonitorWithCompletion:start];
 +}
 +
 +- (BOOL)dashboardCanWake {
@@ -187,10 +199,10 @@
 +
 +- (void)launchAppAfterMonitorStops:(TemporaryApp *)app {
 +#if TARGET_OS_TV
-+    if (_dashboardLaunching || app.host != _selectedHost || _background) return;
++    if (_dashboardLaunching || _dashboardPairing || _dashboardState != MLHostDashboardReady ||
++        app.host != _selectedHost || _background || !_dashboardVisible) return;
 +    _dashboardLaunching = YES;
 +    NSUInteger epoch = _dashboardEpoch;
-+    MLHostNetworkMonitor *monitor = _hostMonitor;
 +    __weak MainFrameViewController *weakSelf = self;
 +    void (^drainDiscovery)(void) = ^{
 +        dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
@@ -200,7 +212,7 @@
 +            dispatch_async(dispatch_get_main_queue(), ^{
 +                if (!owner) return;
 +                if (epoch != owner->_dashboardEpoch || app.host != owner->_selectedHost || owner->_background || !owner->_dashboardVisible) {
-+                    owner->_dashboardLaunching = NO; return;
++                    return; // Suspension already canceled this launch. Do not clear a newer launch.
 +                }
 +                [owner prepareToStreamApp:app];
 +                [owner performSegueWithIdentifier:@"createStreamFrame" sender:nil];
@@ -208,7 +220,7 @@
 +        });
 +    };
 +    [_appManager stopRetrieving];
-+    if (monitor) [monitor stopWithCompletion:drainDiscovery]; else drainDiscovery();
++    [self stopHostMonitorWithCompletion:drainDiscovery];
 +#else
 +    [self prepareToStreamApp:app];
 +    [self performSegueWithIdentifier:@"createStreamFrame" sender:nil];
@@ -227,7 +239,7 @@
      // Treat clicks on offline hosts to be long clicks
      // This shows the context menu with wake, delete, etc. rather
      // than just hanging for a while and failing as we would in this
-@@ -728,6 +916,9 @@
+@@ -728,6 +928,9 @@
  }
  
  - (void)appLongClicked:(TemporaryApp *)app view:(UIView *)view {
@@ -237,7 +249,7 @@
      Log(LOG_D, @"Long clicked app: %@", app.name);
      
      [_appManager stopRetrieving];
-@@ -764,16 +955,7 @@
+@@ -764,16 +967,7 @@
      
      [alertController addAction:[UIAlertAction
                                  actionWithTitle:currentApp == nil ? @"Launch App" : ([app.id isEqualToString:currentApp.id] ? @"Resume App" : @"Resume Running App") style:UIAlertActionStyleDefault handler:^(UIAlertAction* action){
@@ -255,7 +267,7 @@
      }]];
      
      if (currentApp != nil) {
-@@ -825,9 +1007,8 @@
+@@ -825,9 +1019,8 @@
                                                      dispatch_async(dispatch_get_main_queue(), ^{
                                                          // If it succeeds and we're to start streaming, segue to the stream
                                                          if (![app.id isEqualToString:currentApp.id]) {
@@ -266,7 +278,7 @@
                                                              }];
                                                          }
                                                          else {
-@@ -864,6 +1045,9 @@
+@@ -864,6 +1057,9 @@
  }
  
  - (void) appClicked:(TemporaryApp *)app view:(UIView *)view {
@@ -276,7 +288,7 @@
      Log(LOG_D, @"Clicked app: %@", app.name);
      
      [_appManager stopRetrieving];
-@@ -881,8 +1065,7 @@
+@@ -881,8 +1077,7 @@
          // If there's a running app, display a menu
          [self appLongClicked:app view:view];
      } else {
@@ -286,7 +298,7 @@
      }
  }
  
-@@ -1055,6 +1238,13 @@
+@@ -1055,6 +1250,13 @@
  
  -(void)beginForegroundRefresh
  {
@@ -300,7 +312,7 @@
      if (!_background) {
          // This will kick off box art caching
          [self updateHosts];
-@@ -1113,7 +1303,9 @@
+@@ -1113,7 +1315,9 @@
  -(void)handleEnterBackground
  {
      _background = YES;
@@ -311,7 +323,7 @@
      [_discMan stopDiscovery];
  }
  
-@@ -1149,7 +1341,10 @@
+@@ -1149,7 +1353,10 @@
  - (void)viewWillAppear:(BOOL)animated
  {
      [super viewWillAppear:animated];
@@ -323,7 +335,7 @@
      // We can get here on home press while streaming
      // since the stream view segues to us just before
      // entering the background. We can't check the app
-@@ -1167,7 +1362,10 @@
+@@ -1167,7 +1374,10 @@
  - (void)viewDidDisappear:(BOOL)animated
  {
      [super viewDidDisappear:animated];
@@ -346,7 +358,7 @@
 +		484F53420000000000000002 /* MLHostNetworkMonitor.mm in Sources */ = {isa = PBXBuildFile; fileRef = 484F53540000000000000002; };
 +		484F53420000000000000003 /* MLHostDashboardView.m in Sources */ = {isa = PBXBuildFile; fileRef = 484F53540000000000000003; };
 +		484F53420000000000000004 /* Network.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 484F53540000000000000004; };
-+		484F53420000000000000005 /* libdns_sd.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 484F53540000000000000005; };
++		484F53420000000000000005 /* MLHostMonitorBarrier.m in Sources */ = {isa = PBXBuildFile; fileRef = 484F53540000000000000005; };
  /* End PBXBuildFile section */
  
  /* Begin PBXContainerItemProxy section */
@@ -359,20 +371,19 @@
 +		484F53540000000000000002 /* MLHostNetworkMonitor.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = "PyroWaveRuntime/apple/MLHostNetworkMonitor.mm"; sourceTree = SOURCE_ROOT; };
 +		484F53540000000000000003 /* MLHostDashboardView.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "PyroWaveRuntime/apple/MLHostDashboardView.m"; sourceTree = SOURCE_ROOT; };
 +		484F53540000000000000004 /* Network.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = System/Library/Frameworks/Network.framework; sourceTree = SDKROOT; };
-+		484F53540000000000000005 /* libdns_sd.tbd */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.text-based-dylib-definition; path = usr/lib/libdns_sd.tbd; sourceTree = SDKROOT; };
++		484F53540000000000000005 /* MLHostMonitorBarrier.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "PyroWaveRuntime/apple/MLHostMonitorBarrier.m"; sourceTree = SOURCE_ROOT; };
  /* End PBXFileReference section */
  
  /* Begin PBXFrameworksBuildPhase section */
-@@ -343,6 +355,8 @@
+@@ -343,6 +355,7 @@
  			isa = PBXFrameworksBuildPhase;
  			buildActionMask = 2147483647;
  			files = (
 +				484F53420000000000000004 /* Network.framework in Frameworks */,
-+				484F53420000000000000005 /* libdns_sd.tbd in Frameworks */,
  				505742440000000000000005 /* Metal.framework in Frameworks */,
  				505742440000000000000006 /* QuartzCore.framework in Frameworks */,
  				505742440000000000000007 /* IOSurface.framework in Frameworks */,
-@@ -851,6 +865,10 @@
+@@ -851,6 +864,11 @@
  			isa = PBXSourcesBuildPhase;
  			buildActionMask = 2147483647;
  			files = (
@@ -380,6 +391,7 @@
 +				484F53420000000000000001 /* MLHostPing.mm in Sources */,
 +				484F53420000000000000002 /* MLHostNetworkMonitor.mm in Sources */,
 +				484F53420000000000000003 /* MLHostDashboardView.m in Sources */,
++				484F53420000000000000005 /* MLHostMonitorBarrier.m in Sources */,
  				505742440000000000000000 /* PyroWaveVideoRenderer.mm in Sources */,
  				505742440000000000000001 /* pyrowaveframing.cpp in Sources */,
  				505742440000000000000002 /* pyrowave_common.mm in Sources */,

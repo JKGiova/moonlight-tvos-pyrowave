@@ -4,7 +4,7 @@ This review concerns the experimental implementation, not an Apple TV release
 qualification. A compiler pass cannot establish latency, stability or thermal
 behavior on a physical A12/A15. Normal Auto remains the standard hardware path.
 
-The final [CI run](https://github.com/JKGiova/moonlight-tvos-pyrowave/actions/runs/37894111446)
+The preceding decoder-polish [CI run](https://github.com/JKGiova/moonlight-tvos-pyrowave/actions/runs/37894111446)
 passed all five jobs for implementation commit
 `9c9899dd2b9b7f7a85d5d62d847aaa059c4c4081`, including the per-frame
 autorelease-pool correction. The [sanitized check record](../benchmarks/results/2026-10-09-reliability-ci-checks.json)
@@ -12,6 +12,25 @@ records the exact builds, sanitizer/parser tests, GPU checks and limitations.
 Debug/Release device builds have zero errors and 19 warning occurrences each;
 the simulator has zero errors and 35 warnings. The analyzer still reports the
 20 upstream findings planned below. These results do not qualify PyroWave Auto.
+
+## Host-dashboard regression and regression coverage
+
+The first dashboard commit, `e7f60fc`, failed four Apple jobs in
+[its CI run](https://github.com/JKGiova/moonlight-tvos-pyrowave/actions/runs/37908395555):
+`ld: library 'dns_sd' not found`. The explicit standalone DNS library reference
+was a build-configuration regression; the portable tests and 60 native fixture
+checks passed, but later GPU tests and static analysis did not execute in that run.
+
+The correction removes that explicit linker input and exercises actual DNS/ICMP
+linkage and loopback on the Mac runner, together with all three integrated tvOS
+builds. It also tests alternate saved addresses after wrong-host/refusal/ping/auth
+responses, preservation of reachability evidence, app-list authentication
+revocation, request deadlines and stop barriers across dashboard visits.
+The monitor retains no permission to probe after the launch cancellation barrier.
+Native transport and real-ping checks use ASan/UBSan. See the exact current commit's
+Actions run for its outcome; the older green decoder-polish run above is not
+evidence that a later dashboard revision passed. Physical acceptance remains in
+[the dashboard checklist](host-network-monitor.md#physical-acceptance-checklist).
 
 ## Changes and regression coverage
 

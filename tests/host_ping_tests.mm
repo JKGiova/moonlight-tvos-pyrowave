@@ -18,9 +18,20 @@ int main() { @autoreleasepool {
         __block BOOL stopped = NO; [ping stopWithCompletion:^{ stopped = YES; }];
         waitFor(^BOOL { return stopped; });
     }
-    MLHostPing *pending = [MLHostPing new]; __block BOOL canceled = NO;
-    [pending startHost:@"localhost" completion:^(BOOL replied, double ms) { std::abort(); }];
-    [pending stopWithCompletion:^{ canceled = YES; }]; waitFor(^BOOL { return canceled; });
-    std::printf("ICMP cancellation passed; %u/3 Mac loopback replies (no physical TV result)\n", replies);
+    for (NSString *address in @[@"localhost", @"127.0.0.1", @"::1"]) {
+        MLHostPing *pending = [MLHostPing new]; __block unsigned canceled = 0;
+        [pending startHost:address completion:^(BOOL replied, double ms) { std::abort(); }];
+        [pending stopWithCompletion:^{ ++canceled; }];
+        [pending stopWithCompletion:^{ ++canceled; }];
+        waitFor(^BOOL { return canceled == 2; });
+    }
+    MLHostPing *unresolved = [MLHostPing new]; __block BOOL expired = NO;
+    double started = NSProcessInfo.processInfo.systemUptime;
+    [unresolved startHost:@"moonlight-probe-fixture.invalid" completion:^(BOOL replied, double ms) {
+        if (replied) std::abort(); expired = YES;
+    }];
+    waitFor(^BOOL { return expired; });
+    if (NSProcessInfo.processInfo.systemUptime - started > 2.5) std::abort();
+    std::printf("DNS deadline and repeated DNS/IPv4/IPv6 cancellation passed; %u/3 Mac loopback replies (no physical TV result)\n", replies);
     if (replies != 3) return 1;
 } }
