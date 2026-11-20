@@ -51,26 +51,34 @@ def prepare(destination: Path) -> Path:
             return destination
         raise RuntimeError('Prepared directory exists with different inputs. Choose a fresh --client-dir; existing edits are preserved.')
     shutil.copytree(ROOT/'app/Moonlight', destination, ignore=shutil.ignore_patterns('.git', 'DerivedData', '__pycache__'))
-    try:
-        # Local metadata makes git apply independent of the enclosing repository.
-        subprocess.run(['git','init','--quiet',str(destination)],check=True)
-        for patch, directory in [('moonlight-ios.patch', destination),
-                                  ('moonlight-cleanup.patch', destination),
-                                  ('moonlight-host-dashboard.patch', destination),
-                                  ('moonlight-common-c.patch', destination/'moonlight-common/moonlight-common-c'),
-                                  ('common-c-cleanup.patch', destination/'moonlight-common/moonlight-common-c')]:
-            command = ['git','-C',str(destination),'apply','--unsafe-paths','--directory='+str(directory),str(ROOT/'integration/patches'/patch)]
-            subprocess.run([*command[:4], '--check', *command[4:]],check=True)
-            subprocess.run(command,check=True)
-        runtime = destination/'PyroWaveRuntime'
-        for name in ['apple','client','protocol']:
-            shutil.copytree(ROOT/'native'/name, runtime/name)
-        prepare_metal(runtime/'metal')
-        shutil.copy2(ROOT/'native/client/bitstream_identity.h',destination/'moonlight-common/moonlight-common-c/src/bitstream_identity.h')
-        (destination/'pyrowave-preparation.json').write_text(json.dumps(manifest,indent=2)+'\n')
-    except Exception:
-        # A failed copy is deliberately retained for diagnosis; never reused as a success.
-        raise
+    # A local Git root keeps relative patch paths inside the generated client.
+    subprocess.run(['git', 'init', '--quiet', str(destination)], check=True)
+    common_c = 'moonlight-common/moonlight-common-c'
+    patches = [
+        ('moonlight-ios.patch', '.'),
+        ('moonlight-cleanup.patch', '.'),
+        ('moonlight-tvos-bitrate.patch', '.'),
+        ('moonlight-common-c.patch', common_c),
+        ('common-c-cleanup.patch', common_c),
+        ('common-c-bitrate.patch', common_c),
+    ]
+    for patch, directory in patches:
+        patch_path = ROOT / 'integration/patches' / patch
+        command = ['git', '-C', str(destination), 'apply']
+        arguments = [str(patch_path)]
+        if directory != '.':
+            arguments.insert(0, f'--directory={directory}')
+        subprocess.run([*command, '--check', *arguments], check=True)
+        subprocess.run([*command, *arguments], check=True)
+
+    runtime = destination / 'PyroWaveRuntime'
+    for name in ['apple', 'client', 'protocol']:
+        shutil.copytree(ROOT / 'native' / name, runtime / name)
+    prepare_metal(runtime / 'metal')
+    shutil.copy2(ROOT / 'native/client/bitstream_identity.h',
+                 destination / common_c / 'src/bitstream_identity.h')
+    # The manifest marks a complete checkout. Keep failures available for inspection.
+    (destination / 'pyrowave-preparation.json').write_text(json.dumps(manifest, indent=2) + '\n')
     return destination
 
 

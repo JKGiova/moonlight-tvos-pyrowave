@@ -1,8 +1,8 @@
 # Experimental live tvOS client
 
-The implementation connects PyroWave to the genuine Moonlight TV target through selective, reviewable patches. It is not a release-qualified codec. The earlier integrated unsigned ARM64 target and presenter pipeline compiled in [CI](https://github.com/JKGiova/moonlight-tvos-pyrowave/actions/runs/37654083647). The user reports standard streaming working on A12/tvOS 27 with Xcode 26.6/SDK 26.5. Physical PyroWave streaming, visual correctness and latency remain untested. The new app is named **Moonlight Pyro** and includes an experimental Apple5 decoder.
+The implementation connects PyroWave to the genuine Moonlight TV target through selective, reviewable patches. It is not a release-qualified codec. The earlier integrated unsigned ARM64 target and presenter pipeline compiled in [CI](https://github.com/JKGiova/moonlight-tvos-pyrowave/actions/runs/37654083647). The user reports standard streaming working on A12/tvOS 27 with Xcode 26.6/SDK 26.5. A reported A12 smoke test streamed PyroWave at 4K60 and 150 Mbps for 30 minutes with zero queue drops and a Ready p95 of about 60 ms. Controlled visual and latency measurements are still pending. The new app is named **Moonlight Pyro** and includes an experimental Apple5 decoder.
 
-The new [Apple5 CI run](https://github.com/JKGiova/moonlight-tvos-pyrowave/actions/runs/37809452393) also passed unsigned tvOS compilation, GPU coefficient checks and full synthetic decoder reconstruction. Your next run will be the first physical-TV test of this decoder; use the fresh project below.
+The new [Apple5 CI run](https://github.com/JKGiova/moonlight-tvos-pyrowave/actions/runs/37809452393) also passed unsigned tvOS compilation, GPU coefficient checks and full synthetic decoder reconstruction. Prepare a fresh project before repeating the device test.
 
 ## Build and select a development session
 
@@ -24,7 +24,7 @@ The decoder-only factory chooses `metal-portable-apple5` on A12 and `metal-nativ
 
 For native/portable comparison on A15, add the Debug arguments `-PyroWavePortable YES` while explicitly requesting PyroWave. A12 already chooses the portable backend and needs no such argument. See [Apple5 decoder checks](apple5-decoder.md).
 
-Start with 720p60 and record the actual configured host bitrate. The app preserves the selected bitrate; it does not inflate it or reduce resolution/quality to admit PyroWave. The generated-video script is still available for real offline encoding and reconstruction checks before live testing.
+Start with 720p60 and record the bitrate applied by the host. The Bitrate menu supports manual requests through 500 Mbps. Auto (by stream profile) selects an initial target from resolution, frame rate and negotiated codec. For PyroWave SDR it uses a 1.6-bit-per-pixel heuristic, capped at 500 Mbps. This is an initial request and the required bitrate varies with the content and desired quality. The reported 4K60 smoke test used a manual 150 Mbps setting. For standard codecs it uses the conventional Moonlight targets. The host applies its own rate control. The tvOS app list uses the standard Moonlight layout and Statistics Overlay remains available during streaming. The generated-video script is still available for real offline encoding and reconstruction checks before live testing.
 
 ## Memory and scheduling
 
@@ -44,4 +44,4 @@ The statistics overlay exposes queue occupancy/replacements, parser rejects, GPU
 
 The overlay now also names the backend; on A12 it must show **PyroWave metal-portable-apple5**. If it shows HEVC/H.264, the PyroWave decoder is not being tested. Record the scene, TV model/OS, host version/settings, profile/bitrate and the counters after warm-up; start with five minutes at 720p60 before moving to 1080p60.
 
-Still required: physical A12/A15 visual/live tests, full saved-frame native/portable comparison, partial-frame recovery, separate GPU-stage measurements and observed presentation timing, qualified normal Auto, one-shot session fallback and the five-second host monitor. A passing build or Mac coefficient test does not establish those results.
+Still required: physical A12/A15 visual/live tests, full saved-frame native/portable comparison, partial-frame recovery, separate GPU-stage measurements and observed presentation timing, qualified normal codec Auto and one-shot session fallback. A passing build or Mac coefficient test does not establish those results.

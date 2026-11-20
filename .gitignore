@@ -22,6 +22,9 @@ xcuserdata/
 benchmarks/local/
 captures/
 
+# Generated code graph
+/graphify-out/
+
 # Python cache and local compilation
 __pycache__/
 *.pyc

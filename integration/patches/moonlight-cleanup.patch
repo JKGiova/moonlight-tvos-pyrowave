@@ -52,3 +52,32 @@
  #else
      [_spinner setActivityIndicatorViewStyle:UIActivityIndicatorViewStyleWhite];
  #endif
+--- a/Limelight/ViewControllers/MainFrameViewController.m
++++ b/Limelight/ViewControllers/MainFrameViewController.m
+@@ -1317,7 +1317,7 @@
+     
+     CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
+     CGContextRef imageContext =  CGBitmapContextCreate(NULL, width, height, 8, width * 4, colorSpace,
+-                                                       kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little);
++                                                       (CGBitmapInfo)kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little);
+     CGColorSpaceRelease(colorSpace);
+ 
+     CGContextDrawImage(imageContext, CGRectMake(0, 0, width, height), cgImage);
+--- a/moonlight-common/moonlight-common.xcodeproj/project.pbxproj
++++ b/moonlight-common/moonlight-common.xcodeproj/project.pbxproj
+@@ -72,7 +72,6 @@
+ 		FB1A680F21324F4900507771 /* peer.c in Sources */ = {isa = PBXBuildFile; fileRef = 98AB2E131CAD422B0089BB98 /* peer.c */; };
+ 		FB1A681021324F4900507771 /* protocol.c in Sources */ = {isa = PBXBuildFile; fileRef = 98AB2E151CAD422B0089BB98 /* protocol.c */; };
+ 		FB1A681121324F4900507771 /* unix.c in Sources */ = {isa = PBXBuildFile; fileRef = 98AB2E171CAD422B0089BB98 /* unix.c */; };
+-		FB1A681221324F4900507771 /* win32.c in Sources */ = {isa = PBXBuildFile; fileRef = 98AB2E181CAD422B0089BB98 /* win32.c */; };
+ /* End PBXBuildFile section */
+ 
+ /* Begin PBXCopyFilesBuildPhase section */
+@@ -450,7 +449,6 @@
+ 				FB1A680F21324F4900507771 /* peer.c in Sources */,
+ 				FB1A681021324F4900507771 /* protocol.c in Sources */,
+ 				FB1A681121324F4900507771 /* unix.c in Sources */,
+-				FB1A681221324F4900507771 /* win32.c in Sources */,
+ 			);
+ 			runOnlyForDeploymentPostprocessing = 0;
+ 		};

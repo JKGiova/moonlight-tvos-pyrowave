@@ -1,6 +1,6 @@
 # Host dashboard and pre-stream network monitor
 
-Implemented for the generated tvOS client. A saved PC always opens its dashboard.
+The dashboard integration is retained as a reference patch. The generated tvOS client uses the standard Moonlight app list. The sections below describe the optional dashboard implementation.
 The five-second monitor runs only while that dashboard is in the foreground.
 Physical Apple TV layout, focus and LAN/WAN behavior still need device tests.
 

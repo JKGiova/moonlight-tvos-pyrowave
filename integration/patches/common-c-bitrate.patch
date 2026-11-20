@@ -1,0 +1,61 @@
+--- a/src/RtspConnection.c
++++ b/src/RtspConnection.c
+@@ -939,6 +939,35 @@
+     *val = strtol(valst + 1, NULL, 0);
+ 
+     return true;
++}
++
++static int selectAutomaticBitrate(void) {
++    if (NegotiatedVideoFormat & VIDEO_FORMAT_MASK_PYROWAVE) {
++        // Vibeshine recommends about 1.6 bits per pixel for PyroWave 8-bit 4:2:0.
++        // Divide pixels per second by 625 to obtain kilobits per second.
++        int64_t targetKbps = (int64_t)StreamConfig.width * StreamConfig.height * StreamConfig.fps / 625;
++        if (targetKbps < 500) {
++            return 500;
++        }
++        return targetKbps > 500000 ? 500000 : (int)targetKbps;
++    }
++
++    // Match Moonlight's standard recommendations for the tvOS stream resolutions.
++    int64_t pixels = (int64_t)StreamConfig.width * StreamConfig.height;
++    int mbpsAt30Fps;
++    if (pixels >= 3840 * 2160) {
++        mbpsAt30Fps = 40;
++    }
++    else if (pixels >= 2560 * 1440) {
++        mbpsAt30Fps = 20;
++    }
++    else if (pixels >= 1920 * 1080) {
++        mbpsAt30Fps = 10;
++    }
++    else {
++        mbpsAt30Fps = 5;
++    }
++    return mbpsAt30Fps * 1000 * (StreamConfig.fps > 60 ? 60 : StreamConfig.fps) / 30;
+ }
+ 
+ // Perform RTSP Handshake with the streaming server machine as part of the connection process
+@@ -1142,6 +1171,11 @@
+             }
+         }
+ 
++        if (StreamConfig.bitrate == 0) {
++            StreamConfig.bitrate = selectAutomaticBitrate();
++            Limelog("Automatic bitrate selected: %d Kbps\n", StreamConfig.bitrate);
++        }
++
+         // Look for the SDP attribute that indicates we're dealing with a server that supports RFI
+         ReferenceFrameInvalidationSupported = strstr(response.payload, "x-nv-video[0].refPicInvalidation") != NULL;
+         if (!ReferenceFrameInvalidationSupported) {
+--- a/src/Limelight.h
++++ b/src/Limelight.h
+@@ -52,7 +52,7 @@
+     // Bitrate of the desired video stream (audio adds another ~1 Mbps). This
+     // includes error correction data, so the actual encoder bitrate will be
+     // about 20% lower when using the standard 20% FEC configuration.
+-    int bitrate;
++    int bitrate; // Kbps, or 0 to select a target after codec negotiation
+ 
+     // Max video packet size in bytes (use 1024 if unsure). If STREAM_CFG_AUTO
+     // determines the stream is remote (see below), it will cap this value at

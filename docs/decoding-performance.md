@@ -72,4 +72,4 @@ Host capture/encoding latency is recorded separately. Reducing client decode tim
 
 ## Monitor overhead
 
-The [five-second host monitor](host-network-monitor.md) runs only on the selected PC dashboard. All requests, DNS/ICMP work and timers are canceled before streaming; launch/resume waits for cancellation completion. Physical validation must check that no probe remains active during decoder measurements. The bounded HTTPS bandwidth test is pre-stream only; it includes connection setup and does not prove UDP capacity. Passive in-stream goodput is future work.
+The generated tvOS client uses the standard Moonlight app list. The [optional dashboard patch](host-network-monitor.md) limits monitoring to the selected PC and drains outstanding probes before starting a stream. The optional HTTPS test measures a bounded download including connection setup. UDP capacity and passive in-stream goodput require separate measurements.
