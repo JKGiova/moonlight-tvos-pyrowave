@@ -8,7 +8,7 @@
  				<string>0.5 Mbps</string>
  				<string>1 Mbps</string>
  				<string>2 Mbps</string>
-@@ -79,9 +80,18 @@
+@@ -79,9 +80,23 @@
  				<string>80 Mbps</string>
  				<string>100 Mbps</string>
  				<string>150 Mbps</string>
@@ -23,6 +23,11 @@
 +				<string>400 Mbps</string>
 +				<string>450 Mbps</string>
 +				<string>500 Mbps</string>
++				<string>600 Mbps</string>
++				<string>700 Mbps</string>
++				<string>800 Mbps</string>
++				<string>900 Mbps</string>
++				<string>1000 Mbps</string>
 +			</array>
 +			<key>Values</key>
 +			<array>
@@ -30,7 +35,7 @@
  				<string>500</string>
  				<string>1000</string>
  				<string>2000</string>
-@@ -94,6 +104,14 @@
+@@ -94,6 +109,19 @@
  				<string>80000</string>
  				<string>100000</string>
  				<string>150000</string>
@@ -42,6 +47,11 @@
 +				<string>400000</string>
 +				<string>450000</string>
 +				<string>500000</string>
++				<string>600000</string>
++				<string>700000</string>
++				<string>800000</string>
++				<string>900000</string>
++				<string>1000000</string>
  			</array>
  		</dict>
  		<dict>
@@ -60,7 +70,7 @@
 +        self.bitrate = @0;
 +    }
 +    else {
-+        self.bitrate = @(bitrate > 0 && bitrate <= 500000 ? bitrate : 20000);
++        self.bitrate = @(bitrate > 0 && bitrate <= 1000000 ? bitrate : 20000);
 +    }
      self.framerate = [NSNumber numberWithInteger:[[NSUserDefaults standardUserDefaults] integerForKey:@"framerate"]];
      assert([self.framerate intValue] != 0);
