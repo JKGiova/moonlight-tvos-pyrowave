@@ -58,7 +58,7 @@ For a signed install on an Apple TV, follow the [installation guide](experimenta
 python3 tools/build_tvos.py --sdk appletvos
 ```
 
-This prepares selective patches and builds the actual `Moonlight TV` target without signing. Open `build/client/Moonlight/Moonlight.xcodeproj` in Xcode to configure your local team, unique persistent bundle ID and physical Apple TV deployment. Standard startup/streaming and PIN pairing come first. The standard renderer remains the fallback; the persistent PyroWave (Experimental SDR) codec preference can select the experimental live renderer. The Debug launch argument remains available for development. See [experimental client testing](experimental-client.md). Add `--baseline` to build the pristine upstream source instead. A changed integration requires a fresh `--client-dir`; existing generated checkouts are preserved.
+This prepares selective patches and builds the actual `Moonlight TV` target without signing. Open `build/client/Moonlight/Moonlight.xcodeproj` in Xcode to configure your local team, unique persistent bundle ID and physical Apple TV deployment. Standard startup/streaming and PIN pairing come first. The standard renderer remains the fallback; the persistent PyroWave (SDR) codec preference can select the experimental live renderer. The Debug launch argument remains available for development. See [experimental client testing](experimental-client.md). Add `--baseline` to build the pristine upstream source instead. A changed integration requires a fresh `--client-dir`; existing generated checkouts are preserved.
 
 CI builds unsigned Debug/Release tvOS device targets and the Debug simulator,
 and runs the device static analyzer. Each invocation keeps complete Xcode output,

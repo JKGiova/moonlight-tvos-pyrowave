@@ -132,7 +132,7 @@
      switch (activeVideoFormat)
      {
 +        case VIDEO_FORMAT_PYROWAVE:
-+            return @"PyroWave (experimental SDR)";
++            return @"PyroWave (SDR)";
          case VIDEO_FORMAT_H264:
              return @"H.264";
          case VIDEO_FORMAT_H264_HIGH8_444:
@@ -410,7 +410,7 @@
  				<string>Auto</string>
  				<string>H.264</string>
  				<string>HEVC</string>
-+				<string>PyroWave (Experimental SDR)</string>
++				<string>PyroWave (SDR)</string>
  			</array>
  		</dict>
  		<dict>

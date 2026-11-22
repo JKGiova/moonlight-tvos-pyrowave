@@ -1,6 +1,6 @@
 # Moonlight tvOS PyroWave
 
-Moonlight Pyro is an experimental Moonlight client for tvOS with PyroWave decoding on the Apple TV’s GPU. Vibeshine encodes the stream on the host PC. The app uses the standard Moonlight host and app selection screens, with a persistent **PyroWave (Experimental SDR)** codec setting and an optional in-stream statistics overlay.
+Moonlight Pyro is an experimental Moonlight client for tvOS with PyroWave decoding on the Apple TV’s GPU. Vibeshine encodes the stream on the host PC. The app uses the standard Moonlight host and app selection screens, with a persistent **PyroWave (SDR)** codec setting and an optional in-stream statistics overlay.
 
 The project owner reported 30 minutes of 4K60 PyroWave on an A12 Apple TV at **150 Mbps** with **zero queue drops**. A separate 300 Mbps run on the newer build showed **1,299 queue drops** in a screenshot. Session duration for that screenshot is unknown. These are device observations. Formal performance qualification and automatic PyroWave codec admission are still pending. [Device observations](docs/development-status.md#apple-tv-device-observations)
 
@@ -22,7 +22,7 @@ You’ll need a Mac with Python 3.10+ and Xcode with the tvOS SDK, an Apple TV p
 
 2. In Xcode, select **Moonlight TV**. Under **Signing & Capabilities**, enable automatic signing, select your team and use a unique bundle identifier. Reuse your existing identifier and team when updating a local installation. Choose the paired Apple TV and press **⌘R**.
 3. Open **Moonlight Pyro** on the TV. Pair with the Vibeshine PC using the PIN flow if needed. Start a stream with the standard codec settings to check connectivity.
-4. In the app’s tvOS Settings entry, choose **Preferred Codec → PyroWave (Experimental SDR)**, turn off HDR, and turn on **Statistics Overlay**. Start at **720p60**. The overlay should show PyroWave and its backend, such as `metal-portable-apple5` on A12.
+4. In the app’s tvOS Settings entry, choose **Preferred Codec → PyroWave (SDR)**, turn off HDR, and turn on **Statistics Overlay**. Start at **720p60**. The overlay should show PyroWave and its backend, such as `metal-portable-apple5` on A12.
 5. Once that works, move to 1080p60 and 4K60. For a first comparison on A12, use **150 Mbps** manually as the 4K60 baseline and see whether **Queue drops** rises over a fixed interval.
 
 Manual bitrate requests go up to **1,000 Mbps**. **Auto (by stream profile)** in the Bitrate menu picks an initial request from the negotiated codec, resolution and frame rate. At 4K60 it requests 500 Mbps for PyroWave. The host controls the applied bitrate. **Auto** in the Preferred Codec menu still uses the standard Moonlight codec selection. [Full Apple TV guide](docs/experimental-client.md)
