@@ -1,0 +1,96 @@
+--- a/Limelight/Stream/VideoDecoderRenderer.m
++++ b/Limelight/Stream/VideoDecoderRenderer.m
+@@ -41,6 +41,7 @@
+     BOOL framePacing;
+ #if TARGET_OS_TV
+     PyroWaveVideoRenderer* _pyrowave;
++    dispatch_queue_t _pyroWavePullQueue;
+ #endif
+ }
+ 
+@@ -135,8 +136,29 @@
+ 
+ - (void)setVideoColorRange:(int)range { _colorRange=range; }
+ 
++int DrSubmitDecodeUnit(PDECODE_UNIT decodeUnit);
++
+ - (void)start
+ {
++#if TARGET_OS_TV
++    if (videoFormat == VIDEO_FORMAT_PYROWAVE) {
++        // Deliver complete frames when common-c signals them. Polling on the
++        // display link can deliver several frames together in one tick.
++        dispatch_queue_attr_t priority = dispatch_queue_attr_make_with_qos_class(
++            DISPATCH_QUEUE_SERIAL, QOS_CLASS_USER_INITIATED, 0);
++        _pyroWavePullQueue = dispatch_queue_create("org.moonlight.pyrowave.receive", priority);
++        dispatch_async(_pyroWavePullQueue, ^{
++            VIDEO_FRAME_HANDLE handle;
++            PDECODE_UNIT unit;
++            while (LiWaitForNextVideoFrame(&handle, &unit)) {
++                @autoreleasepool {
++                    LiCompleteVideoFrame(handle, DrSubmitDecodeUnit(unit));
++                }
++            }
++        });
++        return;
++    }
++#endif
+     _displayLink = [CADisplayLink displayLinkWithTarget:self selector:@selector(displayLinkCallback:)];
+     if (@available(iOS 15.0, tvOS 15.0, *)) {
+         _displayLink.preferredFrameRateRange = CAFrameRateRangeMake(self->frameRate, self->frameRate, self->frameRate);
+@@ -146,9 +168,6 @@
+     }
+     [_displayLink addToRunLoop:[NSRunLoop mainRunLoop] forMode:NSDefaultRunLoopMode];
+ }
+-
+-// TODO: Refactor this
+-int DrSubmitDecodeUnit(PDECODE_UNIT decodeUnit);
+ 
+ - (void)displayLinkCallback:(CADisplayLink *)sender
+ {
+@@ -158,7 +177,7 @@
+     while (LiPollNextVideoFrame(&handle, &du)) {
+         LiCompleteVideoFrame(handle, DrSubmitDecodeUnit(du));
+         
+-        if (framePacing && videoFormat != VIDEO_FORMAT_PYROWAVE) {
++        if (framePacing) {
+             // Calculate the actual display refresh rate
+             double displayRefreshRate = 1 / (_displayLink.targetTimestamp - _displayLink.timestamp);
+             
+@@ -181,6 +200,12 @@
+     [_displayLink invalidate];
+ #if TARGET_OS_TV
+     [_pyrowave stop];
++    if (_pyroWavePullQueue) {
++        // common-c stops its depacketizer after this callback returns.
++        LiWakeWaitForVideoFrame();
++        dispatch_sync(_pyroWavePullQueue, ^{});
++        _pyroWavePullQueue = nil;
++    }
+ #endif
+ }
+ 
+--- a/Limelight/Stream/StreamManager.m
++++ b/Limelight/Stream/StreamManager.m
+@@ -192,10 +192,19 @@
+             hostProcessingString];
+     NSDictionary* pyro=[_connection getPyroWaveStats];
+     if (pyro) {
+-        id ready=pyro[@"client_ready_completion_proxy_ms"];
++        id ready=pyro[@"client_ready_gpu_end_ms"];
+         NSString* p95=[ready isKindOfClass:NSDictionary.class] ? [NSString stringWithFormat:@"%.2f ms",[ready[@"p95"] doubleValue]] : @"N/A";
+-        text=[text stringByAppendingFormat:@"\nPyroWave %@\nReady p95 (completion proxy): %@\nGPU/pending: %@/%@  Queue drops: %@  Parser rejects: %@  Decode failures: %@  Present drops: %@",
++        text=[text stringByAppendingFormat:@"\nPyroWave %@\nReady p95 (GPU end): %@\nGPU/pending: %@/%@  Queue drops: %@  Parser rejects: %@  Decode failures: %@  Present drops: %@",
+             pyro[@"decoder_backend"],p95,pyro[@"gpu_in_flight"],pyro[@"pending_frames"],pyro[@"pending_replacements"],pyro[@"parser_rejected"],pyro[@"decode_failed"],pyro[@"drawable_dropped"]];
++        NSArray<NSString*>* timingKeys = @[@"submit_to_worker_ms", @"drawable_wait_ms", @"decode_and_color_gpu_ms", @"gpu_callback_delay_ms"];
++        NSMutableArray<NSString*>* stages = [NSMutableArray arrayWithCapacity:timingKeys.count];
++        for (NSString* key in timingKeys) {
++            id timing = pyro[key];
++            [stages addObject:[timing isKindOfClass:NSDictionary.class]
++                ? [NSString stringWithFormat:@"%.2f", [timing[@"p95"] doubleValue]] : @"N/A"];
++        }
++        text = [text stringByAppendingFormat:@"\np95 ms | Submit to worker / Drawable wait / GPU / Callback delay: %@",
++            [stages componentsJoinedByString:@" / "]];
+     }
+     return text;
+ }

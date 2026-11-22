@@ -55,8 +55,8 @@ id distribution(std::vector<double> values) {
     PyroWaveFraming::StreamGeometry _geometry;
     BOOL _pumpScheduled, _shown, _fatalReported, _fullRange;
     uint64_t _parserRejected, _profileRejected, _decodeFailed, _drawableDropped, _completed;
-    std::array<double,2048> _readyTimes, _gpuTimes;
-    size_t _readyCount, _gpuCount;
+    std::array<double,2048> _readyTimes, _gpuTimes, _callbackDelayTimes, _submitToWorkerTimes, _drawableWaitTimes;
+    size_t _stageCount, _gpuCount;
 }
 
 + (BOOL)isDecoderBackendCandidate {
@@ -181,6 +181,7 @@ id distribution(std::vector<double> values) {
             if (!work) { _pumpScheduled=NO; [_lock unlock]; return; }
             auto runtime=_runtime;
             [_lock unlock];
+            const double submitToWorkerMs = (CACurrentMediaTime() - work->frame.received) * 1000;
             auto& slot=runtime->slots[work->slot];
             std::string error;
             bool valid=PyroWaveFraming::parse(static_cast<const uint8_t*>(work->frame.data.bytes),work->frame.data.length,
@@ -196,7 +197,9 @@ id distribution(std::vector<double> values) {
                 [_lock lock]; ++_parserRejected; _mailbox.complete(work->slot); [_lock unlock]; continue;
             }
             // Drawable acquisition happens on this worker; never wait for GPU/UI on main.
+            const double drawableStart = CACurrentMediaTime();
             id<CAMetalDrawable> drawable=[_layer nextDrawable];
+            const double drawableWaitMs = (CACurrentMediaTime() - drawableStart) * 1000;
             if (!drawable) {
                 [_lock lock]; ++_drawableDropped; _mailbox.complete(work->slot); [_lock unlock]; continue;
             }
@@ -223,6 +226,7 @@ id distribution(std::vector<double> values) {
             [command presentDrawable:drawable];
             const size_t index=work->slot; const double received=work->frame.received;
             [command addCompletedHandler:^(id<MTLCommandBuffer> completed) {
+                const double callbackTime = CACurrentMediaTime();
                 // runtime retains decoders, upload buffers and texture slots until completion.
                 (void)runtime;
                 [self->_lock lock];
@@ -230,9 +234,21 @@ id distribution(std::vector<double> values) {
                 BOOL reveal=successful && !self->_shown && !self->_mailbox.stopped();
                 if (successful) {
                     ++self->_completed;
-                    self->_readyTimes[self->_readyCount++%self->_readyTimes.size()]=(CACurrentMediaTime()-received)*1000;
-                    const double gpu=(completed.GPUEndTime-completed.GPUStartTime)*1000;
-                    if (completed.GPUStartTime>0 && gpu>0 && std::isfinite(gpu)) self->_gpuTimes[self->_gpuCount++%self->_gpuTimes.size()]=gpu;
+                    const size_t sample = self->_stageCount++ % self->_submitToWorkerTimes.size();
+                    self->_submitToWorkerTimes[sample] = submitToWorkerMs;
+                    self->_drawableWaitTimes[sample] = drawableWaitMs;
+
+                    // Metal reports both GPU timestamps in host mach time, the
+                    // same clock used by CACurrentMediaTime(). Skip unavailable
+                    // timestamps and reject samples whose boundaries are out of order.
+                    const double gpuStart = completed.GPUStartTime;
+                    const double gpuEnd = completed.GPUEndTime;
+                    if (gpuStart > 0 && received <= gpuStart && gpuStart < gpuEnd && gpuEnd <= callbackTime) {
+                        const size_t gpuSample = self->_gpuCount++ % self->_gpuTimes.size();
+                        self->_readyTimes[gpuSample] = (gpuEnd - received) * 1000;
+                        self->_gpuTimes[gpuSample] = (gpuEnd - gpuStart) * 1000;
+                        self->_callbackDelayTimes[gpuSample] = (callbackTime - gpuEnd) * 1000;
+                    }
                     if (reveal) self->_shown=YES;
                 } else ++self->_decodeFailed;
                 self->_mailbox.complete(index); [self schedulePumpLocked]; [self->_lock unlock];
@@ -261,8 +277,13 @@ id distribution(std::vector<double> values) {
 
 - (NSDictionary*)statistics {
     [_lock lock];
-    std::vector<double> ready(_readyTimes.begin(),_readyTimes.begin()+std::min(_readyCount,_readyTimes.size()));
-    std::vector<double> gpu(_gpuTimes.begin(),_gpuTimes.begin()+std::min(_gpuCount,_gpuTimes.size()));
+    const size_t gpuSamples = std::min(_gpuCount, _gpuTimes.size());
+    std::vector<double> ready(_readyTimes.begin(), _readyTimes.begin() + gpuSamples);
+    std::vector<double> gpu(_gpuTimes.begin(), _gpuTimes.begin() + gpuSamples);
+    std::vector<double> callbackDelay(_callbackDelayTimes.begin(), _callbackDelayTimes.begin() + gpuSamples);
+    const size_t timed = std::min(_stageCount, _submitToWorkerTimes.size());
+    std::vector<double> submitToWorker(_submitToWorkerTimes.begin(), _submitToWorkerTimes.begin() + timed);
+    std::vector<double> drawableWait(_drawableWaitTimes.begin(), _drawableWaitTimes.begin() + timed);
     NSMutableDictionary* result=[@{@"completed_frames":@(_completed),@"parser_rejected":@(_parserRejected),@"decode_failed":@(_decodeFailed),
         @"profile_rejected":@(_profileRejected),@"pending_replacements":@(_mailbox.pendingReplacements),@"drawable_dropped":@(_drawableDropped),
         @"gpu_in_flight":@(_mailbox.inFlight()),@"pending_frames":@(_mailbox.pending()?1:0),
@@ -271,8 +292,11 @@ id distribution(std::vector<double> values) {
     [_lock unlock];
     // Sorting a diagnostic snapshot must not block arriving frames or GPU
     // completion handlers on the submission lock.
-    result[@"client_ready_completion_proxy_ms"]=distribution(std::move(ready));
+    result[@"client_ready_gpu_end_ms"]=distribution(std::move(ready));
+    result[@"gpu_callback_delay_ms"]=distribution(std::move(callbackDelay));
     result[@"decode_and_color_gpu_ms"]=distribution(std::move(gpu));
+    result[@"submit_to_worker_ms"]=distribution(std::move(submitToWorker));
+    result[@"drawable_wait_ms"]=distribution(std::move(drawableWait));
     return result;
 }
 @end

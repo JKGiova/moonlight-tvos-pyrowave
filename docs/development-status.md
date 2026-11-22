@@ -1,4 +1,21 @@
-# Development status — 2026-10-09
+# Development status
+
+The experimental Apple TV build uses the standard Moonlight app list, manual PyroWave SDR selection, per-profile bitrate Auto and manual requests through 1,000 Mbps. The pre-stream dashboard is retained as a [reference patch](host-network-monitor.md). The current integrated build passed all five [post-merge CI jobs](https://github.com/JKGiova/moonlight-tvos-pyrowave/actions/runs/44893326699) at `f57c5ab`.
+
+## Apple TV device observations
+
+The project owner tested 4K60 PyroWave on a physical A12 Apple TV with the portable Apple5 backend. The bitrate entries below are client settings. The on-wire rate and the 300 Mbps session duration are unknown.
+
+| Client setting | Playback and counters | Ready p95 |
+| --- | --- | ---: |
+| 150 Mbps | Earlier user-reported 30-minute 4K60 run with 0 queue drops | About 60 ms |
+| 300 Mbps | Newer-build overlay screenshot at 3840×2160 and 59.94 stream FPS. 1,299 queue drops, GPU/pending 1/1, and 0 parser rejects, decode failures or present drops. | 74.02 ms |
+
+The 300 Mbps screenshot also shows **0.00% network frame loss** in the displayed sample window and **6 ms RTT** with **3 ms variance**. Queue drops accumulate for the session. The two runs used different builds, so the evidence supports a 150 Mbps baseline for a controlled retest. The cause of the queue drops and the sustainable bitrate ceiling remain open. [How to read the overlay](experimental-client.md#statistics-overlay)
+
+Formal A12 and A15 qualification, decoder-stage timing, observed presentation, partial-frame recovery and PyroWave admission under **Preferred Codec → Auto** remain open.
+
+## October 2026 implementation and CI history
 
 Implementation has begun. The experimental live client path is now implemented; this is not a qualified PyroWave release.
 

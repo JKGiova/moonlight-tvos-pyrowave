@@ -1,6 +1,6 @@
 # Apple TV device support plan
 
-Status: scope checked on 2026-10-07; development update 2026-10-08. The user reports standard-client streaming working on their A12/tvOS 27 Apple TV. This is an unmeasured smoke test, not model/profile qualification. PyroWave is untested on every physical model.
+The device scope was checked on 2026-10-07. The project owner has smoke-tested 4K60 PyroWave on an A12 Apple TV 4K using the portable decoder. Formal model and profile qualification remains open. [Device observations](development-status.md#apple-tv-device-observations)
 
 ## Scope policy
 
@@ -8,7 +8,7 @@ Target every Apple TV compatible with the latest **stable** tvOS, excluding beta
 
 | Model | Model number | SoC / expected Metal family | Planned PyroWave path | Network validation | Qualification |
 | --- | --- | --- | --- | --- | --- |
-| Apple TV 4K, 2nd generation | A2169 | A12 / Apple5 | Experimental portable dequantizer implemented | Wi-Fi and Ethernet | Not tested |
+| Apple TV 4K, 2nd generation | A2169 | A12 / Apple5 | Portable Apple5 | Wi-Fi and Ethernet | Live 4K60 smoke test reported. Formal qualification pending |
 | Apple TV 4K, 3rd generation, Wi-Fi | A2737 | A15 / Apple8 | Native Apple7-or-later candidate | Wi-Fi | Not tested |
 | Apple TV 4K, 3rd generation, Wi-Fi + Ethernet | A2843 | A15 / Apple8 | Native Apple7-or-later candidate | Wi-Fi and Ethernet | Not tested |
 

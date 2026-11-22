@@ -1,6 +1,6 @@
 # Client decode performance specification
 
-Status: experimental targets and planned measurement protocol. No device result is populated.
+This guide defines experimental targets and controlled measurement procedures. See the [reported A12 smoke tests](development-status.md#apple-tv-device-observations) and the [current overlay definitions](experimental-client.md#statistics-overlay).
 
 ## Optimize latency and throughput separately
 

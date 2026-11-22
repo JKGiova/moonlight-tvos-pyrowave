@@ -1,12 +1,12 @@
 # Piano v3 — Tutte le Apple TV con tvOS attuale, decode veloce e Auto
 
-Stato: sviluppo autorizzato e iniziato il 7 ottobre 2026. Baseline Moonlight e PyroWave importati come submodule; parser, test CPU e harness video offline implementati. Il primo percorso live sperimentale complete-frame è collegato tramite patch selettive a RTSP/SDP e al renderer Metal, con coda limitata e richiesta sperimentale esplicita. Lo shader Apple5 per A12, la factory decoder con controlli sui pipeline e la scelta manuale persistente PyroWave sono implementati sperimentalmente. Il monitor pre-stream nella dashboard host è implementato; qualificazione fisica, selettore Auto qualificato e recupero parziale restano da completare. Vedere [stato sviluppo](development-status.md). PyroWave è una scelta manuale sperimentale e sarà il candidato preferito in modalità Auto dopo la qualificazione; copertura di tutti i modelli compatibili con tvOS stabile e monitoraggio host ogni 5 secondi.
+Il client sperimentale integra PyroWave SDR, il decoder Metal portabile Apple5 e la scelta manuale persistente. Il menu bitrate offre valori manuali fino a 1.000 Mbps e un calcolo automatico per profilo. La build standard usa la lista app di Moonlight. Il primo smoke test PyroWave 4K60 su A12 è riportato nello [stato sviluppo](development-status.md#apple-tv-device-observations). Restano aperti la qualificazione, il recupero dei frame parziali e la preferenza PyroWave nella selezione automatica del codec.
 
 ## Obiettivo
 
 Integrare nel client Moonlight standard per tvOS il protocollo Nonary e il decoder Metal PyroWave, concentrandosi sul tempo di decoding e sulla latenza fino al frame pronto. L'encoder è sul PC host: il client negozia codec/profilo e sceglie il proprio decoder. Non implementiamo un encoder sulla Apple TV.
 
-Il supporto PyroWave non è ancora qualificato su nessun modello. Per A12: il backend Metal ispezionato richiede Apple7, mentre A12 è Apple5. Il percorso portabile implementato sostituisce le operazioni SIMD non supportate con scan di threadgroup; deve ancora essere verificato sulla TV fisica. L'identità iniziale del bitstream è `186f0393`; sorgenti fissate in [upstreams.lock.json](../configs/upstreams.lock.json).
+Il supporto PyroWave non è ancora qualificato su nessun modello. Per A12: il backend Metal ispezionato richiede Apple7, mentre A12 è Apple5. Il percorso portabile implementato sostituisce le operazioni SIMD non supportate con scan di threadgroup; è stato provato con uno stream 4K60; la qualificazione richiede misure controllate. L'identità iniziale del bitstream è `186f0393`; sorgenti fissate in [upstreams.lock.json](../configs/upstreams.lock.json).
 
 ## Copertura dispositivi
 
@@ -38,7 +38,7 @@ Una sola app tvOS: percorso portabile Apple5 per A12 e percorso nativo Apple7+ c
 | Q0 — Qualificazione 4K | Stesso percorso a 4K60 | Prova fisica di almeno 30 minuti per modello/profilo ammesso, coda limitata e margine |
 | H0 — Profili aggiuntivi | 4:4:4, 10-bit, HDR | Misure e colorimetria corrette per ciascun profilo |
 
-D0 è iniziato con l’autorizzazione dell’utente: sorgenti veri, bootstrap e comando di build disponibili. Le prove fisiche della baseline restano richieste prima di qualificare la release. D1 dispone di harness offline Metal e generazione/encoding video compilati in CI; il round trip GPU richiede ancora un dispositivo ammesso dal backend. P0/R0 dispongono del primo percorso complete-frame sperimentale, descritto in [test client sperimentale](experimental-client.md). Il primo smoke test standard su A12/tvOS 27 è riferito dall’utente il 2026-10-08, senza misure e senza prova PyroWave. Le milestone restano aperte fino alle prove fisiche complete.
+D0 è iniziato con l’autorizzazione dell’utente: sorgenti veri, bootstrap e comando di build disponibili. Le prove fisiche della baseline restano richieste prima di qualificare la release. D1 dispone di harness offline Metal e generazione/encoding video compilati in CI; il round trip GPU richiede ancora un dispositivo ammesso dal backend. P0/R0 dispongono del primo percorso complete-frame sperimentale, descritto in [test client sperimentale](experimental-client.md). Il proprietario ha provato il client standard e il percorso PyroWave su A12. Le milestone restano aperte fino alle prove fisiche complete.
 
 ## D1/D2 — Lavoro sul decoding
 
@@ -79,7 +79,7 @@ Parser: riusare `pyrowaveframing.cpp/.h` Nonary. Codec: `clear → push_packet �
 
 ## N0 — Dashboard host e monitor pre-stream
 
-Implementato nella dashboard del PC selezionato, accessibile anche quando il servizio non risponde. Con servizio associato disponibile, preservare la griglia app e i controlli esistenti, con metriche in basso e spazio riservato per il focus. Con PC raggiungibile ma servizio non disponibile, o con PC non raggiungibile, mostrare pannello centrato e azioni Retry / Wake PC ove configurato. Pair PC richiede un'azione esplicita.
+La dashboard è conservata come patch di riferimento. La build standard usa la lista app di Moonlight. Il comportamento seguente descrive la patch. Con servizio associato disponibile, preservare la griglia app e i controlli esistenti, con metriche in basso e spazio riservato per il focus. Con PC raggiungibile ma servizio non disponibile, o con PC non raggiungibile, mostrare pannello centrato e azioni Retry / Wake PC ove configurato. Pair PC richiede un'azione esplicita.
 
 Ogni 5 secondi: serverinfo limitato; in caso di mancata risposta, echo ICMP opzionale tramite socket datagram non privilegiato, con scadenza e cancellazione DNS. Etichettare separatamente tempo di risposta del servizio e RTT ICMP. Un timeout non prova lo spegnimento del PC.
 

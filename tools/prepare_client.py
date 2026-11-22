@@ -58,6 +58,7 @@ def prepare(destination: Path) -> Path:
         ('moonlight-ios.patch', '.'),
         ('moonlight-cleanup.patch', '.'),
         ('moonlight-tvos-bitrate.patch', '.'),
+        ('moonlight-pyrowave-scheduling.patch', '.'),
         ('moonlight-common-c.patch', common_c),
         ('common-c-cleanup.patch', common_c),
         ('common-c-bitrate.patch', common_c),

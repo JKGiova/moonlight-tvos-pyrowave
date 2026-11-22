@@ -1,4 +1,4 @@
-# Build and test the initial implementation
+# Build and test
 
 Initialize the pinned sources:
 
@@ -52,7 +52,7 @@ These FFmpeg CPU baselines are not Apple hardware decoder timings or matched-qua
 
 ## Integrated experimental tvOS client
 
-On a Mac with Xcode/tvOS SDK:
+For a signed install on an Apple TV, follow the [installation guide](experimental-client.md#install-on-a-physical-apple-tv). For an unsigned build, run on a Mac with Xcode and its tvOS SDK:
 
 ```sh
 python3 tools/build_tvos.py --sdk appletvos
