@@ -58,6 +58,9 @@ The live pipeline still uses one command buffer for decode and color conversion.
 Separating decode from drawable acquisition, changing prefix scans and adding
 per-shader timing have not been implemented. No measured speedup is claimed.
 
+The [source comparison with Nonary Moonlight and Pyrolight](scheduling-comparison.md)
+records their queue bounds, decode/presentation ordering and candidate experiments.
+
 ## Reading a comparison
 
 Record the build, device/OS, backend, scene, resolution/FPS, requested and applied
