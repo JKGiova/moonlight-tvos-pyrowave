@@ -1,17 +1,26 @@
-# Planned integration boundaries
+# Integration patches
 
-The subfolders contain boundary notes. Actual app/common-c and Metal changes are reviewable patches under `patches/`, applied to generated copies by `tools/prepare_client.py` and `tools/prepare_metal.py`.
+The standard generated client uses these patches in order:
 
-- tvos/: standard app integration
-- metal/: native and portable PyroWave Metal paths for the full device matrix
-- protocol/: Nonary interoperability
-- selection/: client Auto/manual decision policy
+| Patch | Applied to | Purpose |
+| --- | --- | --- |
+| `moonlight-ios.patch` | Moonlight app | Codec preference/admission, renderer dispatch, project sources and base overlay |
+| `moonlight-cleanup.patch` | Moonlight app | Fixed-array constants, spinner/bitmap and build cleanup |
+| `moonlight-tvos-bitrate.patch` | Moonlight app | Bitrate Auto menu and manual values through 1,000 Mbps |
+| `moonlight-pyrowave-scheduling.patch` | Moonlight app | Frame-wait worker, GPU-end Ready and four-stage overlay |
+| `moonlight-common-c.patch` | Baseline common-c | Selective PyroWave negotiation and complete-frame transport |
+| `common-c-cleanup.patch` | Baseline common-c | Guarded control-thread initializations and platform warning cleanup |
+| `common-c-bitrate.patch` | Baseline common-c | Resolve bitrate Auto after codec negotiation |
 
-The pristine app remains pinned at upstream-compatible paths in `app/Moonlight`, as described in [upstream import](../docs/upstream-import.md). The live renderer and portable Apple5 shader are in `native/apple`.
+`tools/prepare_client.py` applies these to a generated copy below `build/client/`.
+`tools/prepare_metal.py` separately applies `pyrowave-metal-apple5.patch` to the
+staged native codec. The source submodules and their license notices are retained.
 
-`moonlight-cleanup.patch` updates fixed array constants and tvOS spinner styles;
-`common-c-cleanup.patch` explicitly initializes guarded control-thread values.
-They apply only to the generated client, retaining the original submodule pins
-and licenses. See the [reliability/Xcode review](../docs/reliability-and-xcode.md).
+`moonlight-host-dashboard.patch` is retained as reference and is not in the
+standard preparation list. The standard app uses Moonlight's normal app list.
 
-- network/: five-second host RTT and throughput monitoring, bounded capacity qualification
+- [tvOS app](tvos/README.md)
+- [Metal decoder](metal/README.md)
+- [Protocol](protocol/README.md)
+- [Codec selection](selection/README.md)
+- [Reference monitor](network/README.md)

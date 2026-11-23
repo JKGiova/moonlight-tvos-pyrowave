@@ -1,11 +1,14 @@
-# Benchmark area
+# Recorded checks and local measurements
 
-The offline encoder/decoder harness and generated-video script now exist. No physical Apple TV result is available. results/2026-10-07-linux-cpu-smoke.json records an actual FFmpeg CPU functional check only; it is neither PyroWave GPU performance nor Auto qualification.
+`results/` contains sanitized software-check records. CPU functional tests, GPU
+coefficient fixtures and unsigned builds are identified separately from physical
+Apple TV observations. [Owner-reported A12 observations](../docs/development-status.md#apple-tv-device-observations)
+are documented without claiming formal device qualification.
 
-- cases.md defines workloads and device/profile combinations.
-- templates/report.json defines an empty sanitized report.
-- local/ is ignored and reserved for raw captures/timestamps when implementation begins.
+- [Existing check coverage](cases.md)
+- `templates/report.json`: empty report schema, not a populated device result
+- `local/`: ignored raw captures, timestamps, host profiles and logs
 
-Do not replace null measurements with example numbers. Every model/profile is unqualified until physical-device evidence exists. Use the complete [device matrix](../docs/device-support.md); A12/A15 or third-generation variant results cannot be copied as qualification.
-
-Primary live host: the user-selected PC running Vibeshine. See [test workflow](../docs/vibeshine-testing.md) and [local profile template](../configs/test-host.example.json). Local profile/host addresses and raw logs stay under benchmarks/local/.
+Unavailable measurements stay null. No matched HEVC/PyroWave latency comparison,
+physical A15 result or qualified automatic codec-selection record is populated.
+Host addresses, pairing material and raw logs are not committed.

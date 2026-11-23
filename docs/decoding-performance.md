@@ -1,75 +1,77 @@
-# Client decode performance specification
+# Client timing and latency
 
-This guide defines experimental targets and controlled measurement procedures. See the [reported A12 smoke tests](development-status.md#apple-tv-device-observations) and the [current overlay definitions](experimental-client.md#statistics-overlay).
+The renderer records rolling p50/p95/p99 distributions with up to 2,048 samples
+per timing series. The overlay shows p95. A p95 is the threshold containing 95%
+of recorded samples, not the time of every frame.
 
-## Optimize latency and throughput separately
+## Implemented measurements
 
-A high FPS benchmark does not imply low input-to-display latency. At 60 Hz, the frame interval is 16.67 ms; use per-frame critical-path latency, sustained processing throughput and bounded queue depth together.
-
-| Metric | Definition |
+| Statistic | Boundaries |
 | --- | --- |
-| parse_cpu | Payload availability to validated packets |
-| upload_cpu | CPU preparation/copy into retained GPU upload storage |
-| gpu_decode | GPU execution of dequantization plus iDWT |
-| gpu_color_conversion | Y/Cb/Cr to drawable color conversion |
-| gpu_queue_wait | Submission to execution start; record separately when observable |
-| client_ready | Fully reassembled payload to decoded, color-converted frame ready to present |
-| present_wait | Ready frame to observed/presented output, separate from decoding |
-| startup | Shader/pipeline creation, preflight and first-frame cost |
-| sustained_throughput | Decode-only and live FPS with queue/drop statistics |
+| `submit_to_worker_ms` | Entry to `submitDecodeUnit` through mailbox pickup on the worker; includes validation/copy and client scheduling before pickup |
+| `drawable_wait_ms` | Time spent in `CAMetalLayer nextDrawable` on the worker |
+| `decode_and_color_gpu_ms` | Metal command-buffer GPU start to GPU end; includes decode and color conversion |
+| `gpu_callback_delay_ms` | GPU end to entry into the completion callback |
+| `client_ready_gpu_end_ms` | Renderer submission to GPU end |
+| `gpu_decode_ms` | Null: decoder-only GPU timing is not separately measured |
 
-GPU timestamps/counter samples require capability checks. Mark unavailable measurements null and include the measurement method. Do not combine CPU monotonic and GPU timestamps without calibration. Use callback timings as explicitly labelled proxies when counters are unavailable. Native counters added in newer upstream revisions are optional and do not change the pinned bitstream without review.
+The current Ready measurement ends at Metal's GPU end timestamp, unlike the
+older completion-callback proxy. GPU samples are retained only when timestamps
+are available and ordered consistently with submission and callback time. Worker
+and drawable samples are retained for successful completions. Sorting snapshots
+happens outside the submission lock.
 
-## Initial qualification gates
+Ready covers CPU preparation, waits and GPU work after renderer submission.
+It does not measure host capture, packet reassembly before renderer submission,
+physical presentation or controller-to-screen latency. The four stage percentiles
+cannot be added to reconstruct Ready p95: each percentile may describe different
+frames, and CPU parsing/encoding and GPU queue wait are not separate overlay fields.
 
-The frame budget B is 1000/FPS milliseconds. These are provisional admission limits, not measurements:
+At 60 FPS the arrival interval is 16.67 ms. That is not an independent allowance
+for every stage. Throughput, latency and dropped work must be read together.
+Only completed frames contribute these timing samples; skipped/replaced frames
+remain visible in separate counters.
 
-| Gate | Proposed limit |
-| --- | --- |
-| GPU decode p95 | <= 0.50 B |
-| GPU decode p99 | <= 0.75 B |
-| Full client-ready p95 | <= 0.75 B |
-| Full client-ready p99 | <= 1.00 B |
-| Decode-only throughput | >= 1.20 x requested FPS |
-| Memory/queue stability | No persistent growth; maximum 2 GPU frames plus 1 pending |
-| Cross-codec Auto comparison, when comparable | PyroWave ready p95 <= fastest qualifying hardware fallback + 0.5 ms |
-| Network | Useful throughput headroom >= 20%, plus live UDP validation |
+## Recorded observations
 
-At 60 FPS these imply GPU decode p95 <= 8.33 ms and client-ready p95 <= 12.5 ms. A decoder that merely averages under 16.67 ms is not qualified for low-latency Auto.
+The [device observations](development-status.md#apple-tv-device-observations)
+include A12 live streaming and screenshots with Ready p95 near 71–74 ms. The
+71.33 ms screenshot includes a combined GPU p95 of 22.32 ms and drawable-wait p95
+of 25.89 ms. It is not a decoder-only benchmark or a matched HEVC comparison.
+No controlled decoding or physical-presentation latency result is recorded for A15.
 
-Aspirational GPU decode p95 goals are <= 2 ms at 1080p60 and <= 4 ms at 4K60. They are optimization goals only and must not be advertised as expected performance on any target device.
+## Findings from source inspection
 
-## Optimization order
+The renderer calls `nextDrawable` before encoding and committing decode plus
+color conversion. Consequently a blocked drawable request delays submission of
+that frame's GPU work and occupies the serial worker. It uses a two-drawable pool.
+The snapshot field `GPU/pending` counts occupied processing slots, including CPU
+preparation/drawable waits, rather than only executing GPU commands.
 
-1. Validate the implemented experimental Apple5 dequantization with portable threadgroup scans on A12; preserve and qualify the native Apple7-or-later fast path on A15. Verify equivalent output where both paths can run; choose using real capabilities and pipeline limits.
-2. Stable memory lifetime and pool reuse; no per-frame texture/pipeline allocation.
-3. FP32 reference versus FP32 arithmetic with FP16 storage.
-4. Keep decoded planes on the GPU; avoid CPU readback and unnecessary conversions.
-5. Precompile/warm shader pipelines; report startup separately.
-6. Profile dequant, individual iDWT levels, upload, color conversion and present scheduling.
-7. Compare compute with a Metal rendering-pass iDWT experiment only if profiling justifies it.
-8. Tune groups, barriers and pass fusion only with equivalent output and physical-device wins.
+The Apple5 dequantizer uses two 128-thread prefix scans and seven threadgroup
+barriers per active tile. The inverse wavelet stages retain upstream dispatches
+and inter-level dependencies. FP16 wavelet storage with FP32 lifting math is
+already the default. These are source observations; there is no per-shader timing
+that attributes the measured GPU time to one operation.
 
-Two in-flight frames are an upper bound, not a target backlog. Prefer the smallest pool that sustains the requested frame rate. Drop/replace pending stale work rather than accumulating a queue. A large socket receive buffer absorbs bursts; it is not permission to decode an old backlog.
+The live pipeline still uses one command buffer for decode and color conversion.
+Separating decode from drawable acquisition, changing prefix scans and adding
+per-shader timing have not been implemented. No measured speedup is claimed.
 
-## Benchmark matrix and procedure
+## Reading a comparison
 
-- Physical A12 and A15 bring-up; release validation on A2169, A2737 and A2843 from the [device matrix](device-support.md). Keep model/backend/OS/profile result sets separate.
-- Qualify both third-generation variants independently, including thermal soak and network behavior. A shared SoC is not permission to copy an Auto qualification record.
-- 720p60 bring-up, 1080p60 qualification, 4K60 qualification.
-- SDR 8-bit 4:2:0 first; every additional color profile gets separate admission.
-- Workloads: flat fields, gradients, text, random/detail stress and representative game captures.
-- Use the same captures/profile for comparisons; fix quality and record bitrates instead of silently degrading one codec.
-- Warm up, collect at least 10,000 steady-state frames, and run a separate >=30 minute soak.
-- Alternate/randomize codec order and repeat trials to reduce thermal/order bias.
-- Run offline decode and live streaming; live tests include Wi-Fi on every model and Ethernet on A2169/A2843, plus UDP burst loss/jitter. A2737 has no Ethernet route.
-- Record accepted/rejected frame counts and drops; do not hide slow frames by reporting only completed fast frames.
-- Compare hardware paths with equivalent observable boundaries; AVSampleBufferDisplayLayer enqueue duration is not GPU decode time.
+Record the build, device/OS, backend, scene, resolution/FPS, requested and applied
+bitrate, network route, measurement interval and counter deltas. Keep host,
+network RTT, client GPU execution and visible presentation measurements separate.
+A standard decoder's enqueue time is not equivalent to PyroWave GPU execution.
+The selected bitrate is not measured network throughput.
 
-Store raw timestamps locally under benchmarks/local/ (ignored). Commit only sanitized summaries after real measurements, using benchmarks/templates/report.json. Null means not measured; it never passes an Auto gate.
+Raw local captures belong in ignored `benchmarks/local/`. The
+[report template](../benchmarks/templates/report.json) uses null for unavailable
+measurements. It contains no populated Apple TV qualification result.
 
-Host capture/encoding latency is recorded separately. Reducing client decode time cannot, by itself, establish that a host-processing stall has been resolved.
+## API references
 
-## Monitor overhead
-
-The generated tvOS client uses the standard Moonlight app list. The [optional dashboard patch](host-network-monitor.md) limits monitoring to the selected PC and drains outstanding probes before starting a stream. The optional HTTPS test measures a bounded download including connection setup. UDP capacity and passive in-stream goodput require separate measurements.
+- [Metal GPU execution timestamps](https://developer.apple.com/documentation/metal/mtlcommandbuffer/gpuendtime)
+- [CAMetalLayer drawable lifecycle](https://developer.apple.com/documentation/quartzcore/cametallayer)
+- [Renderer implementation](../native/apple/PyroWaveVideoRenderer.mm)

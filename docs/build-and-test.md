@@ -22,7 +22,7 @@ python3 tools/encode_test_video.py --backend metal --roundtrip
 
 The native build directly compiles the real pinned codec and does not need Granite/Vulkan. Encoding requires a GPU admitted by upstream’s native Apple7 gate (for example supported Apple Silicon Macs). The decoder-only extension now provides an experimental Apple5 path; the Intel Mac can build the tvOS app but cannot encode PyroWave with this native tool. The script generates 120 frames at 1280x720/60 of motion, gradients and text, then encodes PyroWave, H.264 and HEVC with real encoders. Outputs and logs live under ignored `benchmarks/local/video-test/`; use a fresh `--output-dir` for each run.
 
-PyroWave invokes the native C API, packetizes and validates each frame, and writes the upstream offline `.pyrowave` file. `--roundtrip` decodes into YUV and computes PSNR against the source. It does not impose a PSNR qualification threshold or declare correctness merely from a completed decode. The offline harness deliberately waits for completion and reads pixels back; this behavior is for comparison, not the planned live renderer. GPU execution timestamps are reported only when valid; process wall time includes setup/I/O and is never labelled per-frame GPU latency.
+PyroWave invokes the native C API, packetizes and validates each frame, and writes the upstream offline `.pyrowave` file. `--roundtrip` decodes into YUV and computes PSNR against the source. It does not impose a PSNR qualification threshold or declare correctness merely from a completed decode. The offline harness deliberately waits for completion and reads pixels back; this behavior is for comparison, not the live renderer. GPU execution timestamps are reported only when valid; process wall time includes setup/I/O and is never labelled per-frame GPU latency.
 
 Choose your own source/profile explicitly:
 
@@ -40,7 +40,7 @@ Use a real upstream `pyrowave-encode` binary built from the pinned codec revisio
 python3 tools/encode_test_video.py --backend vulkan --encoder /path/to/pyrowave-encode --encoder-commit 186f0393b77f7755953b5ecde994bb1cec2e4155 --framing-check build/portable/framing-check
 ```
 
-Its actual interface is `pyrowave-encode input.y4m output.pyrowave bytes_per_frame`. The runner validates the file/header, exact expected frame count and native Nonary framing because upstream can exit successfully even after GPU initialization fails. Declaring the revision is metadata, not a cryptographic proof; the binary SHA-256 is recorded. There is no FFmpeg PyroWave substitution. Vulkan decode/round-trip is not implemented by this runner yet.
+Its actual interface is `pyrowave-encode input.y4m output.pyrowave bytes_per_frame`. The runner validates the file/header, exact expected frame count and native Nonary framing because upstream can exit successfully even after GPU initialization fails. Declaring the revision is metadata, not a cryptographic proof; the binary SHA-256 is recorded. There is no FFmpeg PyroWave substitution. This runner does not implement Vulkan decode/round-trip.
 
 A CPU-only functional baseline run is explicit:
 
@@ -64,8 +64,7 @@ CI builds unsigned Debug/Release tvOS device targets and the Debug simulator,
 and runs the device static analyzer. Each invocation keeps complete Xcode output,
 structured diagnostics and a result bundle under `build/xcode/`; CI retains
 these as artifacts even on failure. Use `--action analyze` to reproduce analysis.
-See [reliability and Xcode diagnostics](reliability-and-xcode.md) for the warning
-review and fix plan.
+See [reliability and Xcode diagnostics](reliability-and-xcode.md) for recorded warnings and analyzer findings.
 
 CI also compiles native Metal and runs portable/smoke checks, executes the actual
 portable dequantizer against known coefficient fixtures, compiles six iDWT

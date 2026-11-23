@@ -1,7 +1,13 @@
 # Contributing
 
-Implementation started with the project owner’s authorization on 2026-10-07. See docs/development-status.md for what is implemented, tested and still pending.
+Read [current implementation](docs/PLAN.md), [architecture](docs/architecture.md)
+and [codec behavior](docs/codec-selection.md). Build/test commands are in
+[the development guide](docs/build-and-test.md).
 
-Before suggesting a change, read [the plan](docs/PLAN.md) and [the selection policy](docs/codec-selection.md). Document which upstream commit and physical device are relevant. Performance claims must include reproducible benchmark metadata and raw measurements; use the empty template in benchmarks/templates/.
+Keep upstream pins and licenses intact; commit selective patches rather than
+untracked submodule edits. Document the exact revision and physical device for
+performance results. Keep measurements separate from assumptions and software
+checks; unavailable timings stay null in `benchmarks/templates/report.json`.
 
-Source imports must preserve their original license and reviewed commit. Do not add binaries, Xcode user settings, signing material, pairing credentials or raw captures to Git.
+Do not commit binaries, Xcode user/signing settings, pairing credentials, host
+addresses or raw captures. The generated client lives below ignored `build/`.

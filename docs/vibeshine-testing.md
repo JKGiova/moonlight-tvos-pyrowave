@@ -1,32 +1,55 @@
-# Repeatable testing with the Vibeshine PC
+# Testing with Vibeshine
 
-Use the PC as the Vibeshine host, the Mac to build and sign, and the physical Apple TV to receive, decode and present the stream. GitHub Actions runs software checks on hosted runners. Live streaming and timing measurements happen locally.
+The PC runs Vibeshine, the Mac builds/signs the client, and the physical Apple TV
+receives, decodes and presents the stream. GitHub Actions runs software checks on
+hosted runners; it does not connect to the owner's paired PC or Apple TV.
 
-## Setup and test
+## Existing manual workflow
 
-1. Review the installed Vibeshine version, capture adapter and PyroWave capability. The project’s protocol reference is Vibeshine 2.0.0 at `0689b2e021d6106612a7ed72a34dacc714b7a133`, using bitstream identity `186f0393`.
-2. Follow the [Apple TV install guide](experimental-client.md#install-on-a-physical-apple-tv). Select the PC in Moonlight Pyro, use standard PIN pairing, then select the intended desktop or application from the app list. Automatic host selection and Debug auto-connect are planned.
-3. Start a new stream for each setting. Verify the negotiated codec in the overlay, then record the resolution, FPS, bitrate setting, applied bitrate if available, RTT, network loss and queue counter changes over a fixed duration.
-4. For an A12 bitrate comparison, hold the scene, host settings, build and network constant. Start at 150 Mbps and repeat at 200 Mbps. Keep captures and logs under ignored `benchmarks/local/` and remove host addresses, PINs and pairing material from anything you publish.
+1. Record the installed host version and capture/encoder settings. The repository's
+   protocol reference is Vibeshine 2.0.0 at
+   `0689b2e021d6106612a7ed72a34dacc714b7a133`, using bitstream `186f0393`;
+   this does not identify the version installed on a particular PC.
+2. Follow the [Apple TV installation guide](experimental-client.md#install-on-a-physical-apple-tv).
+   Select the PC, pair through the PIN flow and choose the application manually.
+3. Start a new stream after changing codec/profile/bitrate settings. Verify the
+   negotiated codec and backend in the overlay.
+4. Record the scene, build, device/OS, network route, requested and applied bitrate,
+   displayed timings and counter changes over a known interval. Keep raw local
+   logs/captures in ignored `benchmarks/local/`.
 
-## Measurement controls
+The existing local profile example is reference data, not a loaded auto-connect
+configuration. There is no automatic host selection or Debug auto-connect feature.
 
-- Compare H.264, HEVC and PyroWave using the same content, requested profile and fixed-quality methodology. Record actual negotiated codec and any fallback; a run requesting PyroWave that used HEVC is not a PyroWave result.
-- Separate host capture/encode timing, network RTT/goodput/loss, client parsing/upload/GPU decode and presentation. Unknown timings remain null with their measurement boundary.
-- Record concurrent host work. Editing is fine for smoke tests, but compile jobs, GPU workloads and capture of a changing development desktop can contaminate performance measurements. Qualification uses repeatable content and controlled host load.
-- Record RTT and reported network loss during the session. Use a separate controlled measurement when you need network goodput or capacity.
-- Alternate/randomize codec order, record warm-up separately, collect 10,000 steady-state frames and run a 30-minute soak for each admitted model/profile. An A12 run does not qualify A15 or another model.
-- Keep raw captures/configuration/logs under ignored benchmarks/local/. Commit only reviewed, sanitized summaries using [the report template](../benchmarks/templates/report.json).
+## Interpreting results
 
-## Reference Vibeshine bandwidth probe
+- Hold content, host workload, build and network constant for comparisons. The
+  recorded 150 Mbps and 300 Mbps observations used different builds and do not
+  establish a causal bitrate/drop relationship.
+- Keep network loss separate from client queue replacements. Record beginning/end
+  counters and interval length rather than treating a cumulative count as a rate.
+- Keep host processing, network RTT, combined GPU execution, client Ready and
+  visible display latency separate. [Timing definitions](decoding-performance.md)
+- The host's actual bitrate can differ from the client request. The source-reviewed
+  host log messages `Client configured bitrate is ... Kbps` and
+  `Final adjusted video encoding bitrate is ... Kbps` distinguish the received
+  budget from its encoding adjustment. Those logs have not been collected for the
+  owner's 120 Mbps/300 Mbps observations.
+- No matched HEVC/PyroWave latency comparison or on-screen latency measurement is
+  recorded. A successful standard-codec session does not prove PyroWave decoding.
 
-This probe is reference material for the optional dashboard patch. The default build uses the standard app list. The pinned paired HTTPS service exposes `/serverinfo` metadata and GET `/pyrowave-bandwidth-probe` returning 32 MiB. The server enforces eight requests per client/minute. Warm-up plus three measurements uses four requests / 128 MiB; take the slowest completed payload-transfer rate and apply the 20% headroom once in the client policy. Respect the planned total eight-second and per-request two-second limits, cancellation and rate limits. Unsupported/failed/incomplete probes do not invent a capacity number. Source method, byte/time caps and separate TLS setup are reported.
+## Retained bandwidth-probe implementation
 
-This gives a bulk host-to-client estimate, not an upload estimate or guarantee of loss-free UDP. The same-route live stream still needs network qualification. See [host monitoring](host-network-monitor.md) and [codec selection](codec-selection.md).
+The optional reference dashboard can query an advertised authenticated HTTPS
+`/pyrowave-bandwidth-probe` endpoint with 32 MiB responses and a host quota of
+eight requests per client per minute. Its implementation performs one warm-up
+and three transfers with bounded time/bytes and cancellation. The standard
+prepared app does not apply the dashboard patch or expose that probe UI.
+[Reference monitor details](host-network-monitor.md)
 
-## Primary references
+## References
 
-- [Vibeshine 2.0.0 release](https://github.com/Nonary/vibeshine/releases/tag/2.0.0)
-- [Pinned protocol and bandwidth guide](https://github.com/Nonary/vibeshine/blob/0689b2e021d6106612a7ed72a34dacc714b7a133/docs/pyrowave-protocol.md)
-- [Pinned host probe implementation](https://github.com/Nonary/vibeshine/blob/0689b2e021d6106612a7ed72a34dacc714b7a133/src/nvhttp.cpp)
-- [Source manifest](../configs/upstreams.lock.json), [device matrix](device-support.md), [benchmark cases](../benchmarks/cases.md)
+- [Vibeshine release](https://github.com/Nonary/vibeshine/releases/tag/2.0.0)
+- [Pinned protocol](https://github.com/Nonary/vibeshine/blob/0689b2e021d6106612a7ed72a34dacc714b7a133/docs/pyrowave-protocol.md)
+- [Pinned RTSP bitrate handling](https://github.com/Nonary/vibeshine/blob/0689b2e021d6106612a7ed72a34dacc714b7a133/src/rtsp.cpp)
+- [Pinned probe handler](https://github.com/Nonary/vibeshine/blob/0689b2e021d6106612a7ed72a34dacc714b7a133/src/nvhttp.cpp)

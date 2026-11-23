@@ -1,71 +1,117 @@
-# Moonlight tvOS PyroWave
+# Moonlight Pyro for Apple TV
 
-Moonlight Pyro is an experimental Moonlight client for tvOS with PyroWave decoding on the Apple TV’s GPU. Vibeshine encodes the stream on the host PC. The app uses the standard Moonlight host and app selection screens, with a persistent **PyroWave (SDR)** codec setting and an optional in-stream statistics overlay.
+[![Development checks](https://github.com/JKGiova/moonlight-tvos-pyrowave/actions/workflows/ci.yml/badge.svg)](https://github.com/JKGiova/moonlight-tvos-pyrowave/actions/workflows/ci.yml)
 
-The project owner reported 30 minutes of 4K60 PyroWave on an A12 Apple TV at **150 Mbps** with **zero queue drops**. A separate 300 Mbps run on the newer build showed **1,299 queue drops** in a screenshot. Session duration for that screenshot is unknown. These are device observations. Formal performance qualification and automatic PyroWave codec admission are still pending. [Device observations](docs/development-status.md#apple-tv-device-observations)
+Moonlight Pyro is an experimental game-streaming client based on
+[Moonlight for iOS/tvOS](https://github.com/moonlight-stream/moonlight-ios).
+It adds [PyroWave](https://github.com/Themaister/pyrowave) GPU decoding to the
+Apple TV client, using native Metal. The PC running Vibeshine encodes the video;
+the Apple TV receives, decodes and presents it.
+
+- PyroWave **8-bit SDR, YUV 4:2:0** with persistent manual codec selection.
+- Portable **Apple5** decoding on A12 and a capability-selected native
+  **Apple7-or-later** decoder candidate for newer Apple GPUs.
+- Standard Moonlight PC selection, PIN pairing and app list.
+- Manual bitrate requests from **0.5 to 1,000 Mbps**, plus bitrate Auto by profile.
+- A bounded renderer with two in-flight slots and one latest pending frame.
+- In-stream backend, timing, network-loss and client-drop statistics.
+- Existing Moonlight H.264/HEVC paths remain available.
+
+PyroWave is selected explicitly. **Preferred Codec → Auto** uses the standard
+Moonlight codec path; it does not automatically choose PyroWave.
+
+## Requirements
+
+- A Mac with Python 3.10+, Xcode and the tvOS SDK to build and sign the app.
+  An Intel Mac can build the client; its shaders execute on the Apple TV.
+- An Apple TV paired with Xcode. The recorded live tests use a second-generation
+  Apple TV 4K with A12. A15 models have no recorded physical-device result here.
+- A reachable PC running a PyroWave-capable Vibeshine build with matching bitstream
+  identity `186f0393`, and a network capable of the requested stream rate.
+
+See [device evidence](docs/device-support.md) and [host negotiation](docs/codec-selection.md).
+
+## Installation
+
+Build from source on the Mac:
+
+```sh
+git clone --recurse-submodules https://github.com/JKGiova/moonlight-tvos-pyrowave.git
+cd moonlight-tvos-pyrowave
+python3 tools/bootstrap.py
+python3 tools/prepare_client.py --client-dir build/client/Moonlight-local
+open build/client/Moonlight-local/Moonlight.xcodeproj
+```
+
+Select **Moonlight TV** in Xcode. Under **Signing & Capabilities**, enable automatic
+signing, select your team and enter your bundle identifier. Select the paired Apple
+TV and press **⌘R**. Reuse the same team and bundle identifier when updating an
+existing installation. See [installation details](docs/experimental-client.md#install-on-a-physical-apple-tv).
+
+For an existing clone, run `git pull --ff-only` and `python3 tools/bootstrap.py`.
+Generate into a fresh path under `build/client/` when integration inputs change;
+the preparation tool preserves old generated projects and their signing edits.
 
 ## Quick start
 
-You’ll need a Mac with Python 3.10+ and Xcode with the tvOS SDK, an Apple TV paired with Xcode, and a PC running a PyroWave-capable Vibeshine build. Put the Apple TV and PC on a reachable network.
+1. Open **Moonlight Pyro** on the Apple TV.
+2. Select the Vibeshine PC and complete PIN pairing if prompted.
+3. Select a desktop or application from the standard Moonlight app list.
+4. For PyroWave, open the app's tvOS Settings entry and choose
+   **Preferred Codec → PyroWave (SDR)**. Turn off HDR and enable **Statistics Overlay**.
+5. Start a new session. The overlay identifies the actual codec and decoder;
+   A12 uses `metal-portable-apple5`.
 
-1. Clone the repo, verify the pinned dependencies, and generate the Xcode project.
+Start with 720p60 when checking a new installation. The owner's reported A12
+4K60 smoke test used a manual **150 Mbps** setting. That is an observation,
+not a guarantee for other scenes, builds or devices.
 
-   ```sh
-   git clone --recurse-submodules https://github.com/JKGiova/moonlight-tvos-pyrowave.git
-   cd moonlight-tvos-pyrowave
-   python3 tools/bootstrap.py
-   python3 tools/prepare_client.py --client-dir build/client/Moonlight-local
-   open build/client/Moonlight-local/Moonlight.xcodeproj
-   ```
+## Bitrate settings
 
-   After updating an existing clone, use a new path under `build/client/` if the integration inputs changed. Generated projects can contain local signing edits.
+The manual menu reaches **1,000 Mbps**, including 600, 700, 800 and 900 Mbps.
+**Auto (by stream profile)** calculates an initial request after codec negotiation.
+For PyroWave it uses a 1.6-bit-per-pixel heuristic capped at **500 Mbps**.
+Bitrate Auto and codec Auto are separate settings.
 
-2. In Xcode, select **Moonlight TV**. Under **Signing & Capabilities**, enable automatic signing, select your team and use a unique bundle identifier. Reuse your existing identifier and team when updating a local installation. Choose the paired Apple TV and press **⌘R**.
-3. Open **Moonlight Pyro** on the TV. Pair with the Vibeshine PC using the PIN flow if needed. Start a stream with the standard codec settings to check connectivity.
-4. In the app’s tvOS Settings entry, choose **Preferred Codec → PyroWave (SDR)**, turn off HDR, and turn on **Statistics Overlay**. Start at **720p60**. The overlay should show PyroWave and its backend, such as `metal-portable-apple5` on A12.
-5. Once that works, move to 1080p60 and 4K60. For a first comparison on A12, use **150 Mbps** manually as the 4K60 baseline and see whether **Queue drops** rises over a fixed interval.
+The selected value is a request to the host, not a measurement of network traffic.
+The host controls the applied encoding rate. See [bitrate profiles](docs/experimental-client.md#bitrate-and-comparison-runs).
 
-Manual bitrate requests go up to **1,000 Mbps**. **Auto (by stream profile)** in the Bitrate menu picks an initial request from the negotiated codec, resolution and frame rate. At 4K60 it requests 500 Mbps for PyroWave. The host controls the applied bitrate. **Auto** in the Preferred Codec menu still uses the standard Moonlight codec selection. [Full Apple TV guide](docs/experimental-client.md)
+## Troubleshooting
 
-## Target devices and roadmap
+- **HEVC appears after selecting PyroWave:** check host capability, bitstream identity,
+  GPU admission and SDR settings. The overlay reports the negotiated codec.
+- **Queue drops increase with 0% network loss:** client queue replacements and missing
+  network frames are separate counters. See [statistics](docs/experimental-client.md#statistics-overlay).
+- **Ready p95 is high:** it includes client waits through GPU completion, not just
+  decoding. GPU time combines decode and color conversion; neither value measures
+  controller-to-screen latency. See [timing definitions](docs/decoding-performance.md).
+- **A generated project is rejected after updating:** prepare a fresh `--client-dir`
+  and reuse your signing identity. Existing generated projects are not overwritten.
+- **PyroWave startup fails:** select Auto or HEVC and start another session manually.
 
-The project targets the second-generation Apple TV 4K (A12) and both third-generation variants (A15). A12 uses the portable Apple5 decoder, and A15 is a candidate for the native Apple7-or-later backend. Each model and stream profile needs separate qualification. [Device support matrix](docs/device-support.md)
+## Implementation and recorded results
 
-The main milestones are controlled device measurements, partial-frame recovery and automatic PyroWave codec admission. [Implementation plan](docs/PLAN.md)
+The owner reported a **30-minute 4K60 A12 run at a 150 Mbps client setting with zero
+queue drops**. Separate screenshots show client queue drops and Ready p95 around
+71–74 ms. These sessions do not establish a universal bitrate ceiling or a
+controlled latency comparison with HEVC. [Recorded observations and CI evidence](docs/development-status.md)
 
-## Read first
+The live PyroWave integration accepts complete frames in SDR 4:2:0. It has no
+partial-frame recovery, automatic session retry or benchmark-aware PyroWave codec
+selection. No physical A15 result is recorded. This project is independent of
+upstream maintainers and does not claim release qualification.
 
-| Document | Purpose |
-| --- | --- |
-| [Device support matrix](docs/device-support.md) | All in-scope models, GPU paths and release qualification |
-| [Device manifest](configs/devices.json) | Reviewed hardware scope; not a runtime allowlist |
-| [Apple5 decoder](docs/apple5-decoder.md) | Portable shader, candidate selection and correctness checks |
-| [Development status](docs/development-status.md) | Implemented code, actual checks and remaining work |
-| [Reliability and Xcode review](docs/reliability-and-xcode.md) | Regression coverage, compiler warnings and prioritized fixes |
-| [Apple TV installation and streaming](docs/experimental-client.md) | Signing, settings, bitrate profiles and overlay reference |
-| [Build and encoding tests](docs/build-and-test.md) | Initialize sources, build genuine targets, encode the chosen video |
-| [Implementation plan](docs/PLAN.md) | Milestones and source integration points |
-| [Decode performance](docs/decoding-performance.md) | Metrics, optimization priorities and benchmark protocol |
-| [Automatic codec selection](docs/codec-selection.md) | Planned automatic codec admission and fallback |
-| [Vibeshine test workflow](docs/vibeshine-testing.md) | Repeatable comparisons on a paired Vibeshine PC |
-| [Host network monitor](docs/host-network-monitor.md) | Reference dashboard patch and bandwidth probe design |
-| [Network specification](configs/network-monitor.example.json) | Probe cadence, budgets and freshness policy; not runtime settings |
-| [Architecture](docs/architecture.md) | Proposed component ownership |
-| [Source research](docs/research.md) | Verified upstream facts and pinned references |
-| [Dependency manifest](configs/upstreams.lock.json) | Reviewed source revisions and registered dependency pins |
-| [Policy specification](configs/codec-policy.example.json) | Proposed settings; not loaded by an application |
-| [Benchmark report template](benchmarks/templates/report.json) | Empty result template; no claimed measurements |
+## Development
 
-## Repository layout
-
-The genuine app lives in the `app/Moonlight` submodule with its original Xcode project. `third_party/pyrowave` contains the pinned native Metal dependency. Selective app/common-c patches live in `integration/patches`; `tools/prepare_client.py` creates a generated client checkout under `build/client/` without changing the pristine submodules. The Metal renderer and queue/color/identity helpers live in `native/apple` and `native/client`. Implemented protocol validation lives in `native/protocol`; runnable tests and build/encoding tools live in `tests/` and `tools/`. Design and progress live in `docs/`, benchmarks in `benchmarks/`, and reviewed settings/references in `configs/`.
-
-## Development checks
-
-Use `python3 tools/run_portable_tests.py --sanitize` for parser, interoperability and runtime policy checks. On macOS, `python3 tools/build_tvos.py --sdk appletvos --client-dir build/client/Moonlight-check` compiles the integrated target without signing. [Build and test guide](docs/build-and-test.md)
-
-The five post-merge CI jobs passed for `f57c5ab`, including Debug and Release on the device target, the Debug simulator, portable tests, Metal checks and static analysis. [GitHub Actions run](https://github.com/JKGiova/moonlight-tvos-pyrowave/actions/runs/44893326699)
+- [Build and test](docs/build-and-test.md)
+- [Architecture](docs/architecture.md) and [integration patches](integration/README.md)
+- [Apple5 decoder](docs/apple5-decoder.md)
+- [Implementation record](docs/PLAN.md)
+- [Source pins and provenance](docs/upstream-import.md)
+- [Reliability diagnostics](docs/reliability-and-xcode.md)
 
 ## License
 
-Original scaffold material uses the MIT license selected for this repository; see [LICENSE](LICENSE). Preserve each upstream license and copyright when source is imported. Moonlight sources remain GPL-3.0-or-later and PyroWave remains MIT; this scaffold's license does not replace those licenses. See [third-party policy](third_party/README.md).
+Moonlight and the adapted Nonary protocol code retain GPL-3.0-or-later; PyroWave
+retains MIT. Original repository material uses the MIT license in [LICENSE](LICENSE).
+That license does not relicense upstream code. See [third-party attribution](third_party/README.md).

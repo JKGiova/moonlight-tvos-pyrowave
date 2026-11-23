@@ -4,7 +4,7 @@ Moonlight Pyro adds an experimental PyroWave path to Moonlight TV. The host enco
 
 ## Install on a physical Apple TV
 
-1. On a Mac with Xcode and the tvOS SDK, follow the [README quick start](../README.md#quick-start) to clone the repo, verify its pinned submodules and generate the client. When updating, run `git pull --ff-only` and `python3 tools/bootstrap.py`, then choose a fresh `--client-dir` if the integration inputs changed. Intel Macs can compile the tvOS target. The live shader runs on the Apple TV.
+1. On a Mac with Xcode and the tvOS SDK, follow the [README installation steps](../README.md#installation) to clone the repo, verify its pinned submodules and generate the client. When updating, run `git pull --ff-only` and `python3 tools/bootstrap.py`, then choose a fresh `--client-dir` if the integration inputs changed. Intel Macs can compile the tvOS target. The live shader runs on the Apple TV.
 2. In Xcode, configure **Signing & Capabilities** for the **Moonlight TV** target. Enable automatic signing, select your team and enter a unique bundle identifier. Use the same team and identifier when updating an existing installation. Pair the Apple TV with Xcode if needed, select it as the run destination and press **⌘R**. [Apple’s device and signing guide](https://developer.apple.com/documentation/xcode/building-and-running-an-app)
 3. On the TV, open Moonlight Pyro, select the Vibeshine PC and complete the PIN pairing flow if prompted. Confirm that a standard stream works. The app list uses Moonlight’s standard layout. Stream metrics appear in **Statistics Overlay** after the session starts.
 4. Open the Moonlight Pyro entry in tvOS Settings. Set **Preferred Codec → PyroWave (SDR)**, turn off HDR, select **720p** and **60 FPS**, and enable **Statistics Overlay**. Return to Moonlight Pyro and start a new stream. On A12, look for **PyroWave metal-portable-apple5**. The app can be launched from the TV Home Screen after installation without Xcode.
@@ -40,7 +40,7 @@ The PyroWave input worker waits for complete decode units from common-c and subm
 
 ## Current transport boundary
 
-The selective protocol patches negotiate SDR 4:2:0 PyroWave, advertises record framing, handles complete frames as opaque picture data and requests additional UDP receive-buffer headroom. It retains the baseline encrypted RTP/FEC transport and standard loss handling. A damaged frame is dropped as a whole. It does **not** yet deliver Nonary `BUFFER_TYPE_LOST`, record-start flags or critical-packet metadata; partial recovery, precise reassembly deadlines and Darwin receive-loop tuning are separate work.
+The selective protocol patches negotiate SDR 4:2:0 PyroWave, advertise record framing, handle complete frames as opaque picture data and request additional UDP receive-buffer headroom. It retains the baseline encrypted RTP/FEC transport and standard loss handling. A damaged frame is dropped as a whole. The live adapter does not deliver Nonary `BUFFER_TYPE_LOST`, record-start flags or critical-packet metadata. It has no partial-frame recovery.
 
 The patches derive their constants/negotiation from pinned Nonary common-c `d6a11bc685b41037b352a96f29d08276fe5359ba` and the verified Vibeshine protocol at `0689b2e021d6106612a7ed72a34dacc714b7a133`. Controller haptics and unrelated donor changes are not imported. Upstream baseline sources and licenses stay intact in submodules. The prepared app includes GPL protocol/renderer code and retains Moonlight's license; native PyroWave files retain their MIT notices.
 
@@ -54,11 +54,16 @@ The patches derive their constants/negotiation from pinned Nonary common-c `d6a1
 | Host processing latency | Minimum, maximum and average host processing time when supplied by the host. |
 | PyroWave | The active Metal decoder backend. |
 | Ready p95 (GPU end) | The 95th percentile from renderer submission to Metal’s GPU end timestamp. Uses up to 2,048 completed frames with valid timestamps. The earlier overlay measured through the completion callback. |
-| GPU/pending | Snapshot of occupied GPU slots and pending frames. The queue holds two in-flight frames and one pending frame. |
+| GPU/pending | Snapshot of occupied processing slots (including CPU/drawable waits) and pending frames. The queue holds two in-flight frames and one pending frame. |
 | Queue drops | Cumulative number of older pending frames replaced by newer frames in the session. Compare the increase over a fixed interval. |
-| Submit to worker / Drawable wait / GPU / Callback delay | Separate p95 values in milliseconds. These cover submission to mailbox pickup, drawable acquisition, GPU execution for decode plus conversion, and GPU end to entry into the completion callback. |
+| Submit to worker / Drawable wait / GPU / Callback delay | Separate p95 values in milliseconds. These cover renderer entry to mailbox pickup (including validation/copy and scheduling), drawable acquisition, GPU execution for decode plus conversion, and GPU end to entry into the completion callback. |
 | Parser rejects | Cumulative frames rejected by framing validation. |
 | Decode failures | Cumulative failures reported by the renderer while processing frames. |
 | Present drops | Cumulative frames dropped because a Metal drawable was unavailable. |
 
 Ready p95 covers completed frames. Use the drop counters alongside it to see how often work was skipped. GPU decode, visual presentation and controller-to-screen latency require their own timing boundaries. The renderer records GPU decode plus color conversion timing internally when valid command-buffer timestamps are available. [Performance measurement guide](decoding-performance.md)
+
+The renderer still acquires its drawable before submitting GPU decode/conversion.
+The timing breakdown documents this behavior; it does not demonstrate that the
+presentation bottleneck has been removed. Percentiles are calculated separately
+and cannot be added to obtain Ready p95. No physical on-screen timing is recorded.

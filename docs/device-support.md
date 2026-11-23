@@ -1,49 +1,34 @@
-# Apple TV device support plan
+# Apple TV devices and evidence
 
-The device scope was checked on 2026-10-07. The project owner has smoke-tested 4K60 PyroWave on an A12 Apple TV 4K using the portable decoder. Formal model and profile qualification remains open. [Device observations](development-status.md#apple-tv-device-observations)
+The repository's reviewed device manifest covers the second-generation Apple TV
+4K and both third-generation variants. This records the existing scope and
+backend implementation; it is not a claim of physical validation on every model.
 
-## Scope policy
+| Model | Model number | SoC / Metal family | Decoder candidate | Recorded physical evidence |
+| --- | --- | --- | --- | --- |
+| Apple TV 4K, 2nd generation | A2169 | A12 / Apple5 | Portable Apple5 | Owner-reported 4K60 PyroWave runs and overlay screenshots |
+| Apple TV 4K, 3rd generation, Wi-Fi | A2737 | A15 / Apple8 | Native Apple7-or-later | None recorded |
+| Apple TV 4K, 3rd generation, Wi-Fi + Ethernet | A2843 | A15 / Apple8 | Native Apple7-or-later | None recorded |
 
-Target every Apple TV compatible with the latest **stable** tvOS, excluding beta-only compatibility. Apple currently lists tvOS 27, released 2026-09-14, and the second and third Apple TV 4K generations. Include both third-generation variants. This is a hardware coverage policy, not an automatically raised minimum deployment target: decide the app's minimum OS and compatible toolchain during D0.
+The single **Moonlight TV** app target checks real GPU capabilities and pipeline
+creation. The manifest is not a runtime qualification allowlist. Apple7-or-later
+candidacy follows the backend checks; it does not prove A15 throughput or latency.
+A12 observations do not establish A15 results, and neither A15 variant has a
+recorded qualification result.
 
-| Model | Model number | SoC / expected Metal family | Planned PyroWave path | Network validation | Qualification |
-| --- | --- | --- | --- | --- | --- |
-| Apple TV 4K, 2nd generation | A2169 | A12 / Apple5 | Portable Apple5 | Wi-Fi and Ethernet | Live 4K60 smoke test reported. Formal qualification pending |
-| Apple TV 4K, 3rd generation, Wi-Fi | A2737 | A15 / Apple8 | Native Apple7-or-later candidate | Wi-Fi | Not tested |
-| Apple TV 4K, 3rd generation, Wi-Fi + Ethernet | A2843 | A15 / Apple8 | Native Apple7-or-later candidate | Wi-Fi and Ethernet | Not tested |
+The owner reported operation on A12/tvOS 27. Historical unsigned builds used
+Xcode 26.6 and tvOS SDK 26.5. A successful SDK build is separate from device
+execution. The manifest's scope was reviewed on 2026-10-07; this page makes no
+new compatibility claim about other Apple TV models or the latest OS release.
 
-Apple TV HD A1625 and Apple TV 4K first generation A1842 are outside this initial scope because they are not compatible with tvOS 27. No inference about their ability to decode PyroWave is made here. If broader legacy support is requested, add it as a separate scope decision and qualification matrix.
+Live PyroWave accepts 8-bit SDR 4:2:0. There is no qualified automatic PyroWave
+codec admission for any model. [Device observations](development-status.md#apple-tv-device-observations)
 
-## One app, feature-selected backends
+## References
 
-Use one tvOS app target. The expected GPU family above is planning information: query actual device capabilities and verify shader/pipeline creation, threadgroup limits, memory and profile support before choosing a backend. The pinned native PyroWave device gate requires Apple7; A15/Apple8 is therefore a candidate, while A12/Apple5 now has an experimental portable path. This is an inference from GPU families and the reviewed upstream gate, not proof of successful decoding.
-
-The implementation preserves the native path for newer GPUs and selects the experimental portable path for A12. See [Apple5 details](apple5-decoder.md). On A15, compare native and portable numerical output where both can execute. Select only a correct backend, then use physical-device latency and throughput evidence to qualify it. Never force all chips onto the portable path merely to share a build.
-
-## Qualification and release coverage
-
-- Establish standard Moonlight H.264/HEVC startup, streaming, input/audio and reconnect on every in-scope model.
-- Bring up saved-frame PyroWave correctness on physical A12 and A15; complete correctness, latency, queue, memory and thermal checks on every listed model.
-- Qualify 1080p60 SDR and 4K60 SDR separately. HDR, bit depth and chroma extensions require exact-profile evidence; no silent downgrade to gain eligibility.
-- Keep qualification/cache keys separate by model identifier, selected backend, app/shader revision, OS version/build and profile. The two A15 variants do not inherit each other's Auto result.
-- Test Wi-Fi on all models and Ethernet where present. Network admission belongs to the actual route and is refreshed separately from decode measurements.
-- Prefer PyroWave in Auto only after all device/profile/performance/host/network gates pass. Otherwise use a verified hardware fallback and show the rejection reason. No benchmark means no admission.
-- Release claims name exactly the models and profiles qualified. A model can run the app with a supported hardware codec even while PyroWave remains explicitly unqualified.
-
-The planned initial latency gates are shared across devices; measured values and admissible profiles are device-specific. See [decode performance](decoding-performance.md), [codec selection](codec-selection.md) and [benchmark cases](../benchmarks/cases.md). The [device manifest](../configs/devices.json) records reviewed scope only and must not serve as runtime qualification.
-
-## Maintenance
-
-Review Apple sources at each stable tvOS major release and Apple TV hardware launch, updating the date and manifest. Newly compatible models enter the planned matrix with untested status and need feature probes and physical qualification. Changes to the latest-stable cohort do not automatically remove support already released or change deployment settings; record those decisions explicitly. OS/build and shader changes invalidate affected benchmark evidence before Auto reuse.
-
-## Primary sources
-
-- [Apple security releases: stable tvOS version and release date](https://support.apple.com/it-it/100100)
-- [Apple tvOS 27 guide: supported second and third generations](https://support.apple.com/it-it/guide/tv/atvbac878c90/27/tvos/27)
-- [Apple TV model identification and variant numbers](https://support.apple.com/en-gb/101605)
-- [Apple TV 4K second-generation specs: A12](https://support.apple.com/it-it/111922)
-- [Apple TV 4K third-generation specs: A15 and network variants](https://support.apple.com/it-it/111839)
-- [Apple Metal feature-set tables: GPU families and feature requirements](https://developer.apple.com/metal/Metal-Feature-Set-Tables.pdf)
-- [Metal Apple5 family: A12](https://developer.apple.com/documentation/metal/mtlgpufamily/apple5)
-- [Metal Apple8 family: A15](https://developer.apple.com/documentation/metal/mtlgpufamily/apple8)
-- [Pinned PyroWave research and upstream references](research.md)
+- [Device manifest](../configs/devices.json)
+- [Apple model identification](https://support.apple.com/en-gb/101605)
+- [A12 model specifications](https://support.apple.com/it-it/111922)
+- [A15 model specifications](https://support.apple.com/it-it/111839)
+- [Metal feature tables](https://developer.apple.com/metal/Metal-Feature-Set-Tables.pdf)
+- [Apple5 decoder implementation](apple5-decoder.md)

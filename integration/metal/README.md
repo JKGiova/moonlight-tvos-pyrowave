@@ -1,7 +1,15 @@
-# Metal integration boundary
+# Metal integration
 
-Planned changes: pinned PyroWave native Metal dependency, portable Apple5 dequantization for A12, native Apple7-or-later candidate for A15, offline harness, texture pool and GPU presentation. Select the backend through actual capability and pipeline checks; qualify correctness and latency on physical devices per model/backend/profile. No model is qualified yet. See [device support](../../docs/device-support.md) and [decode performance](../../docs/decoding-performance.md).
+`third_party/pyrowave` is the pinned native codec dependency. Generated sources
+include the decoder-only Apple5 patch, portable dequantizer and native
+Apple7-or-later candidate. The encoder retains its original Apple7 gate.
 
-The real pinned source is registered at third_party/pyrowave. tools/pyrowave_video.mm implements offline C-API encode/decode, built by tools/build_engine.py. It currently preserves the upstream Apple7 gate; no Apple5 support or physical-device performance claim is made.
+`native/apple/PyroWaveVideoRenderer.mm` owns two decoder/private-texture slots,
+one replaceable pending frame, GPU color conversion and CAMetalLayer presentation.
+Decode and conversion share a command buffer. There is no live image readback.
+The Apple5 shader is embedded from its source and checked by CI.
 
-The experimental live decoder/presenter now lives in native/apple/PyroWaveVideoRenderer.mm. It reuses two private-texture/decoder slots, keeps only one latest pending frame and performs GPU color conversion on the same command buffer without CPU image readback. The actual presenter shader is shared with tools/check_presenter_shader.mm for real Metal pipeline compilation checks. See [experimental client testing](../../docs/experimental-client.md).
+`tools/pyrowave_video.mm` provides offline encode/decode and readback for tests.
+The presenter source is shared with its offscreen correctness checker. No Vulkan
+or MoltenVK backend is integrated. [Decoder details](../../docs/apple5-decoder.md),
+[timing](../../docs/decoding-performance.md) and [evidence](../../docs/development-status.md).

@@ -1,8 +1,9 @@
-# Experimental Apple5 decoder
+# Apple5 Metal decoder
 
-Implemented on 2026-10-08; physical PyroWave correctness and latency are still
-unverified. The user's successful standard-client smoke test on an A12 Apple TV
-does not qualify this decoder. Normal Auto remains unchanged.
+The portable decoder is implemented and has owner-reported live A12 streaming
+observations. These observations are separate from the synthetic GPU correctness
+checks below and do not establish release qualification. Codec Auto retains the
+standard Moonlight path. [Device observations](development-status.md#apple-tv-device-observations)
 
 [CI](https://github.com/JKGiova/moonlight-tvos-pyrowave/actions/runs/37809452393)
 passed for `5203f4bda439272f4b0bf5898f79c3817ea662f4`: the actual portable GPU
@@ -10,8 +11,8 @@ kernel matched all 32,768 reference coefficients exactly, all six iDWT pipelines
 compiled, and the full portable decoder reconstructed two uniform synthetic
 profiles correctly. The unsigned tvOS target and both Metal harness build paths
 also passed. [Recorded evidence](../benchmarks/results/2026-10-08-apple5-ci-checks.json)
-keeps real-video, native/portable comparison, physical-device and latency tests
-explicitly pending.
+records real-video, native/portable comparison, physical-device and latency tests
+as unavailable in that CI run.
 
 ## Backend choice
 
@@ -84,13 +85,11 @@ and profile-specific errors as well as the original Y4M; successful completion
 alone is insufficient. Offline timestamps include decoder command execution;
 readback/waits are confined to these testing tools.
 
-## Physical next gate
+## Physical observations
 
-Install the fresh app described in [experimental testing](experimental-client.md).
-Select PyroWave manually, keep SDR/HDR-off at 720p60 initially, and check that
-the statistics overlay names `metal-portable-apple5` on A12. Record negotiated
-codec, visual correctness, audio/input, ready p50/p95/p99, combined GPU time,
-queue replacements, parser failures and presentation drops. Repeat at 1080p60,
-then compare with HEVC using the same scene/bitrate. This is bring-up evidence;
-the [full performance gates](decoding-performance.md), physical A15 comparison,
-4K and thermal tests remain required before Auto qualification.
+The owner reported a 30-minute 4K60 A12 session at a 150 Mbps setting with zero
+queue drops, followed by separate screenshots with queue replacements and higher
+Ready p95. [The observation record](development-status.md#apple-tv-device-observations)
+keeps these sessions separate. No matched HEVC comparison, physical A15 result or
+decoder-only GPU timing is recorded. The current combined GPU time includes color
+conversion. [Timing boundaries](decoding-performance.md)

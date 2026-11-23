@@ -1,9 +1,14 @@
-# tvOS app boundary
+# tvOS app integration
 
-Implemented experimental integration: selective MainFrameViewController admission, Connection negotiated-format dispatch, renderer ownership and statistics overlay. The genuine project is preserved in app/Moonlight; tools/prepare_client.py applies integration/patches to a generated client checkout. Normal codec preferences and qualified Auto are still pending. See [experimental client testing](../../docs/experimental-client.md).
+The genuine Moonlight app remains pinned under `app/Moonlight`.
+`tools/prepare_client.py` creates the integrated Xcode project from selective
+patches without modifying the source submodule.
 
-Plan a single app for every Apple TV in [the device matrix](../../docs/device-support.md), including both third-generation variants. Runtime feature probes choose decoder paths; no second-generation-only build. Minimum deployment target and SDK/toolchain validation belong to D0 after implementation is authorized.
+Implemented: manual PyroWave SDR admission, negotiated-format renderer dispatch,
+persistent codec/bitrate settings, a PyroWave frame-wait worker and statistics
+overlay. Standard codec paths, PIN pairing and the standard PC/app UI are retained.
+The app uses native Metal with portable Apple5 and native Apple7-or-later decoder
+candidates. [Apple TV guide](../../docs/experimental-client.md)
 
-Planned host list/detail UI shows RTT in ms, current receive goodput in Mbps, available-bandwidth estimate or unknown/stale state, and last measurement age. Refresh from monitor snapshots every five seconds without blocking focus, settings or stream presentation.
-
-Planned debug-only test launch uses a local profile to reconnect to the explicitly selected paired Vibeshine host and chosen app. No auto-pairing bypass or global autostart default. See [Vibeshine testing](../../docs/vibeshine-testing.md).
+The reference dashboard patch is excluded from standard preparation. No Debug
+auto-connect or benchmark-aware codec Auto implementation is present.
