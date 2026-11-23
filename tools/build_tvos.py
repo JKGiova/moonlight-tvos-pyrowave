@@ -7,7 +7,7 @@ import platform
 import subprocess
 import sys
 from pathlib import Path
-from prepare_client import prepare
+from prepare_client import DEFAULT_CLIENT, prepare
 from xcode_diagnostics import capture
 ROOT=Path(__file__).resolve().parents[1]
 def main():
@@ -16,7 +16,7 @@ def main():
     parser.add_argument('--sdk',choices=['appletvsimulator','appletvos'],default='appletvsimulator')
     parser.add_argument('--action',choices=['build','analyze'],default='build')
     parser.add_argument('--baseline',action='store_true',help='Build pristine Moonlight without the integration patches.')
-    parser.add_argument('--client-dir',type=Path,default=ROOT/'build/client/Moonlight')
+    parser.add_argument('--client-dir',type=Path,default=DEFAULT_CLIENT)
     args=parser.parse_args()
     if platform.system()!='Darwin':raise RuntimeError('tvOS compilation requires Mac/Xcode.')
     source=ROOT/'app/Moonlight'

@@ -11,7 +11,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   portable:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Initialize only the pinned codec for CPU interoperability checks
@@ -26,11 +26,11 @@ jobs:
           cmake --build build/cmake --parallel 2
           ctest --test-dir build/cmake --output-on-failure
       - name: Install FFmpeg for functional video encoding checks
-        timeout-minutes: 6
+        timeout-minutes: 10
         run: |
           if ! command -v ffmpeg >/dev/null || ! command -v ffprobe >/dev/null; then
-            timeout 180 sudo apt-get update
-            timeout 180 sudo apt-get install -y ffmpeg
+            timeout 180 sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=30 update
+            timeout 420 sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=30 install -y --no-install-recommends ffmpeg
           fi
           ffmpeg -version
       - name: Encode generated motion/gradient/text video with baseline codecs

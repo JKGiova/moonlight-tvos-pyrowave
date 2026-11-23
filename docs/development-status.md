@@ -15,7 +15,7 @@ source implementation, automated checks and owner-reported device observations.
 | Scheduling | Two occupied decoder/texture slots and one latest pending frame; completion releases slots |
 | Settings | Persistent PyroWave (SDR), manual requests through 1,000 Mbps and per-profile bitrate Auto capped at 500 Mbps for PyroWave |
 | Timing | GPU-end Ready, worker/drawable/GPU/callback distributions, p50/p95/p99 snapshots and separate error/drop counters |
-| Source preparation | Generated client and Metal dependency copies, exact-pin checks, selective patches and preserved signing edits |
+| Source preparation | One reusable generated client, exact-pin checks, selective patches, recorded file baselines and project merging that preserves signing edits |
 | Reference monitor | Dashboard/transport/policy sources retained; dashboard patch excluded from the standard generated client |
 
 The current renderer acquires the drawable before committing decode/conversion.

@@ -39,8 +39,8 @@ Build from source on the Mac:
 git clone --recurse-submodules https://github.com/JKGiova/moonlight-tvos-pyrowave.git
 cd moonlight-tvos-pyrowave
 python3 tools/bootstrap.py
-python3 tools/prepare_client.py --client-dir build/client/Moonlight-local
-open build/client/Moonlight-local/Moonlight.xcodeproj
+python3 tools/prepare_client.py
+open build/client/Moonlight-Clean-Release/Moonlight.xcodeproj
 ```
 
 Select **Moonlight TV** in Xcode. Under **Signing & Capabilities**, enable automatic
@@ -49,8 +49,12 @@ TV and press **⌘R**. Reuse the same team and bundle identifier when updating a
 existing installation. See [installation details](docs/experimental-client.md#install-on-a-physical-apple-tv).
 
 For an existing clone, run `git pull --ff-only` and `python3 tools/bootstrap.py`.
-Generate into a fresh path under `build/client/` when integration inputs change;
-the preparation tool preserves old generated projects and their signing edits.
+Run `python3 tools/prepare_client.py` after pulling changes. The same project at
+`build/client/Moonlight-Clean-Release/Moonlight.xcodeproj` is updated in place.
+The tool merges project changes with local signing settings and preserves Xcode
+user data. Conflicting local source or project edits stop the update before any
+managed file is written. Make runtime changes in `native/` or the integration
+patches so GitHub and subsequent preparations include them.
 
 ## Quick start
 
@@ -85,8 +89,10 @@ The host controls the applied encoding rate. See [bitrate profiles](docs/experim
 - **Ready p95 is high:** it includes client waits through GPU completion, not just
   decoding. GPU time combines decode and color conversion; neither value measures
   controller-to-screen latency. See [timing definitions](docs/decoding-performance.md).
-- **A generated project is rejected after updating:** prepare a fresh `--client-dir`
-  and reuse your signing identity. Existing generated projects are not overwritten.
+- **Preparation reports a conflict:** reconcile the named local file with the
+  repository change, then rerun preparation. Local files are preserved on conflict.
+  Older checkouts without a file baseline are adopted when their generated
+  sources match the repository and project differences concern signing settings.
 - **PyroWave startup fails:** select Auto or HEVC and start another session manually.
 
 ## Implementation and recorded results
