@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 #include "bitstream_identity.h"
 #include "latest_frame_queue.hpp"
+#include "frame_completion.hpp"
 #include "color_conversion.hpp"
 #include <cmath>
 #include <iostream>
@@ -43,6 +44,35 @@ int main() {
     require(lifetime.submit(std::make_shared<int>(44)) && pendingObserved.expired());
     lifetime.stop(); require(!observed.expired() && !lifetime.pending());
     require(lifetime.complete(retained->slot)); retained.reset(); require(observed.expired());
+    // A drawable timeout or stop can resolve presentation before the GPU
+    // finishes decoding. Its slot must remain occupied until both callbacks.
+    for (bool decodeFirst : {false, true}) {
+        PWClient::FrameCompletion completion;
+        PWClient::LatestFrameQueue<int> split;
+        split.submit(1); auto decoding = split.take();
+        split.submit(2); auto rendering = split.take();
+        split.submit(3);
+        bool released = decodeFirst ? completion.completeDecode() : completion.completePresentation();
+        require(!released && split.inFlight() == 2 && !split.take());
+        require(!(decodeFirst ? completion.completeDecode() : completion.completePresentation()));
+        released = decodeFirst ? completion.completePresentation() : completion.completeDecode();
+        require(released);
+        require(split.complete(decoding->slot));
+        require(!completion.completeDecode() && !completion.completePresentation());
+        auto successor = split.take();
+        require(successor && successor->frame == 3 && split.inFlight() == 2);
+        require(split.complete(rendering->slot));
+        require(split.complete(successor->slot));
+    }
+    // On stop, abandon presentation and wait for the outstanding decode.
+    PWClient::FrameCompletion stoppedCompletion;
+    PWClient::LatestFrameQueue<int> stopping;
+    stopping.submit(1); auto stoppedWork = stopping.take();
+    stopping.submit(2); stopping.stop();
+    require(!stoppedCompletion.completePresentation());
+    require(stopping.inFlight() == 1 && !stopping.pending() && !stopping.take());
+    require(stoppedCompletion.completeDecode() && stopping.complete(stoppedWork->slot));
+    require(stopping.inFlight() == 0);
     for(int space:{0,1}) for(bool full:{false,true}) {
         auto conversion=PWClient::colorConversion(space,full);
         const float black=(full?0.f:16.f)/255.f, white=(full?255.f:235.f)/255.f, chroma=128.f/255.f;

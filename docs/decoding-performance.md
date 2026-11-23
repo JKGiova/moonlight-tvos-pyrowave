@@ -8,29 +8,49 @@ of recorded samples, not the time of every frame.
 
 | Statistic | Boundaries |
 | --- | --- |
-| `submit_to_worker_ms` | Entry to `submitDecodeUnit` through mailbox pickup on the worker; includes validation/copy and client scheduling before pickup |
-| `drawable_wait_ms` | Time spent in `CAMetalLayer nextDrawable` on the worker |
-| `decode_and_color_gpu_ms` | Metal command-buffer GPU start to GPU end; includes decode and color conversion |
-| `gpu_callback_delay_ms` | GPU end to entry into the completion callback |
-| `client_ready_gpu_end_ms` | Renderer submission to GPU end |
-| `gpu_decode_ms` | Null: decoder-only GPU timing is not separately measured |
+| `submit_to_worker_ms` | Renderer entry to mailbox pickup, including payload ownership/copy and scheduling |
+| `input_queue_ms` | Common-c enqueue to delivery at renderer entry, using the common-c microsecond clock |
+| `copy_cpu_ms` | Renderer entry to payload ownership/copy completion, including initial lock acquisition |
+| `prepare_cpu_ms` | Worker pickup to decode commit preparation, including framing, packet preparation and command encoding/upload |
+| `drawable_wait_ms` | Time in `CAMetalLayer nextDrawable`, after decode submission |
+| `decode_queue_ms` | Timestamp immediately before decode commit to that command buffer's GPU start |
+| `render_queue_ms` | Timestamp immediately before conversion commit to that command buffer's GPU start |
+| `gpu_decode_ms` | Decode command-buffer GPU start to GPU end |
+| `color_gpu_ms` | Conversion command-buffer GPU start to GPU end |
+| `decode_and_color_gpu_ms` | Sum of the two command-buffer execution durations for a completed frame |
+| `gpu_callback_delay_ms` | Conversion GPU end to its completion callback |
+| `client_ready_gpu_end_ms` | Renderer entry to conversion GPU end |
+| `submit_to_presented_ms` | Renderer entry to the drawable's OS-reported presentation time on device builds |
 
-The current Ready measurement ends at Metal's GPU end timestamp, unlike the
-older completion-callback proxy. GPU samples are retained only when timestamps
-are available and ordered consistently with submission and callback time. Worker
-and drawable samples are retained for successful completions. Sorting snapshots
-happens outside the submission lock.
+Each distribution retains up to 2,048 valid samples. Decode GPU/queue samples
+cover successful decode completions, including frames whose presentation was
+subsequently abandoned. Worker, copy, prepare, input queue, drawable and conversion
+samples cover frames whose decode and conversion both completed successfully.
+Presentation samples come from drawable callbacks with valid positive timestamps.
+`presentation_timing_available` is false in the tvOS Simulator, whose SDK omits
+these drawable callback APIs. An empty timing series is reported as null.
 
-Ready covers CPU preparation, waits and GPU work after renderer submission.
-It does not measure host capture, packet reassembly before renderer submission,
-physical presentation or controller-to-screen latency. The four stage percentiles
-cannot be added to reconstruct Ready p95: each percentile may describe different
-frames, and CPU parsing/encoding and GPU queue wait are not separate overlay fields.
+`decoded_frames`, `completed_frames` and `presented_frames` count successful
+decode commands, successful decode/conversion pairs and valid OS presentation
+observations respectively. `present_failed` counts conversion encoding/execution
+failures separately from `decode_failed` and unavailable-drawable drops.
 
-At 60 FPS the arrival interval is 16.67 ms. That is not an independent allowance
-for every stage. Throughput, latency and dropped work must be read together.
-Only completed frames contribute these timing samples; skipped/replaced frames
-remain visible in separate counters.
+`last_completed_frame` preserves frame number, RTP timestamp, common-c receive,
+enqueue and delivery timestamps, plus renderer-entry, decode-commit, conversion-
+commit and GPU boundaries. Common-c values are microseconds in its own clock.
+Renderer/Metal values use host-time seconds. Compare intervals within each clock
+domain. Snapshots include `snapshot_time_seconds` for calculating counter deltas.
+
+Ready covers local ownership/copy, CPU work, waits and GPU execution through
+conversion completion. Input reassembly and common-c queue residence have their
+own boundaries. The OS presentation timestamp records compositor feedback.
+Controller-to-screen and physical-panel latency require external measurement.
+
+Percentiles are calculated independently. With the split submission path,
+decoding can overlap drawable waiting. The combined GPU field now sums two
+command-buffer durations and excludes their intervening gap. Historical combined
+GPU samples came from one command buffer. Align measurement boundaries before
+comparing those values. At 60 FPS the source interval is 16.67 ms.
 
 ## Recorded observations
 
@@ -40,26 +60,26 @@ include A12 live streaming and screenshots with Ready p95 near 71–74 ms. The
 of 25.89 ms. It is not a decoder-only benchmark or a matched HEVC comparison.
 No controlled decoding or physical-presentation latency result is recorded for A15.
 
-## Findings from source inspection
+## Current scheduling
 
-The renderer calls `nextDrawable` before encoding and committing decode plus
-color conversion. Consequently a blocked drawable request delays submission of
-that frame's GPU work and occupies the serial worker. It uses a two-drawable pool.
-The snapshot field `GPU/pending` counts occupied processing slots, including CPU
-preparation/drawable waits, rather than only executing GPU commands.
+The serial worker commits GPU decode before acquiring a drawable, then submits
+color conversion and presentation on the same Metal command queue. Private plane
+textures use Metal's tracked resource dependencies. The layer has three drawable
+resources. The mailbox retains two occupied processing slots plus one newest
+pending frame. `processing_slots` and the compatibility field `gpu_in_flight`
+count occupied processing slots, including CPU/drawable waits.
 
-The Apple5 dequantizer uses two 128-thread prefix scans and seven threadgroup
-barriers per active tile. The inverse wavelet stages retain upstream dispatches
-and inter-level dependencies. FP16 wavelet storage with FP32 lifting math is
-already the default. These are source observations; there is no per-shader timing
-that attributes the measured GPU time to one operation.
+Each slot remains occupied until the decode completion callback and the conversion
+completion or abandonment have both resolved. A missing drawable, stop, or
+conversion-encoding failure preserves the slot while its submitted decode is
+outstanding. Both callbacks retain the runtime. Payload copying takes place
+outside the completion lock, with stop checked again before mailbox admission.
 
-The live pipeline still uses one command buffer for decode and color conversion.
-Separating decode from drawable acquisition, changing prefix scans and adding
-per-shader timing have not been implemented. No measured speedup is claimed.
-
+The Apple5 dequantizer and inverse wavelet shaders retain their previous dispatch
+structure. Per-shader timing remains an additional profiling step.
 The [source comparison with Nonary Moonlight and Pyrolight](scheduling-comparison.md)
-records their queue bounds, decode/presentation ordering and candidate experiments.
+records the pre-change pipeline and the reference architectures. Physical A12
+measurements will establish the new scheduling path's performance.
 
 ## Reading a comparison
 

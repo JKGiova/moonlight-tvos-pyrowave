@@ -6,7 +6,7 @@ Apple7-or-later candidate. The encoder retains its original Apple7 gate.
 
 `native/apple/PyroWaveVideoRenderer.mm` owns two decoder/private-texture slots,
 one replaceable pending frame, GPU color conversion and CAMetalLayer presentation.
-Decode and conversion share a command buffer. There is no live image readback.
+Decode commits before drawable acquisition; conversion uses a second command buffer on the same queue. Both stages resolve before an app slot is reused. There is no live image readback.
 The Apple5 shader is embedded from its source and checked by CI.
 
 `tools/pyrowave_video.mm` provides offline encode/decode and readback for tests.

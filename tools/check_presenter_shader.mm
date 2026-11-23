@@ -52,6 +52,12 @@ void verify(id<MTLDevice> device,id<MTLCommandQueue> queue,id<MTLRenderPipelineS
         auto output=[device newTextureWithDescriptor:descriptor];
         auto readback=[device newBufferWithLength:RowBytes*Height options:MTLResourceStorageModeShared];
         require(output && readback,"presenter output allocation");
+        command.label = @"Presenter fixture plane upload";
+        [command commit];
+        auto uploadCommand = command;
+        command = [queue commandBuffer];
+        require(command != nil, "presenter conversion command allocation");
+        command.label = @"Presenter fixture separate conversion";
         auto pass=[MTLRenderPassDescriptor renderPassDescriptor];
         pass.colorAttachments[0].texture=output;
         pass.colorAttachments[0].loadAction=MTLLoadActionDontCare;
@@ -69,6 +75,7 @@ void verify(id<MTLDevice> device,id<MTLCommandQueue> queue,id<MTLRenderPipelineS
             sourceSize:MTLSizeMake(Width,Height,1) toBuffer:readback destinationOffset:0
             destinationBytesPerRow:RowBytes destinationBytesPerImage:RowBytes*Height];
         [blit endEncoding]; [command commit]; [command waitUntilCompleted];
+        require(uploadCommand.status == MTLCommandBufferStatusCompleted, "presenter upload command failed");
         if (command.status!=MTLCommandBufferStatusCompleted)
             throw std::runtime_error(command.error.localizedDescription.UTF8String ?: "presenter GPU command failed");
         const auto pixels=static_cast<const uint8_t*>(readback.contents);

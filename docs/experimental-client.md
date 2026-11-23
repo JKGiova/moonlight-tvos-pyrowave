@@ -34,9 +34,9 @@ For a repeatable 4K60 A12 comparison, start at a manual **150 Mbps**. Run the sa
 
 ## Memory and scheduling
 
-`Connection.m` dispatches PyroWave decode units before NAL parameter-set processing. The renderer validates and copies the linked packet buffers before `LiCompleteVideoFrame` releases them. CPU framing validation and drawable acquisition run on a serial worker. The renderer creates two independent native decoder/texture slots, each reused only after its GPU command completes. This also keeps the upstream four-entry upload pool from blocking the UI.
+`Connection.m` dispatches PyroWave decode units before NAL parameter-set processing. The renderer validates and copies the linked packet buffers before `LiCompleteVideoFrame` releases them. CPU framing validation and drawable acquisition run on a serial worker. The renderer creates two independent native decoder/texture slots, each reused after decode completion and conversion completion or abandonment have both resolved. This also keeps the upstream four-entry upload pool from blocking the UI.
 
-The PyroWave input worker waits for complete decode units from common-c and submits them as they arrive. Standard codecs use display-link polling. At most two commands are in flight and one newest frame is pending. A new pending frame replaces the previous one under overload. There are no per-frame dispatch blocks accumulating behind the GPU, no image readback, and no GPU completion wait on the main thread. The PyroWave path bypasses the standard one-frame pacing hold. Y/Cb/Cr remain private R8 textures; compute decode and full-screen color conversion share one command buffer and present through CAMetalLayer. Limited/full-range BT.601 and BT.709 are explicit, with range taken from the negotiated session configuration; unsupported color profiles terminate the experiment instead of being displayed as SDR.
+The PyroWave input worker waits for complete decode units from common-c and submits them as they arrive. Standard codecs use display-link polling. At most two frame-processing slots are occupied and one newest frame is pending. Each active frame uses separate decode and conversion commands. A new pending frame replaces the previous one under overload. There are no per-frame dispatch blocks accumulating behind the GPU, no image readback, and no GPU completion wait on the main thread. The PyroWave path bypasses the standard one-frame pacing hold. Y/Cb/Cr remain private R8 textures; compute decode is committed before drawable acquisition, followed by full-screen color conversion on the same command queue. CAMetalLayer uses three drawable resources. Limited/full-range BT.601 and BT.709 are explicit, with range taken from the negotiated session configuration; unsupported color profiles terminate the experiment instead of being displayed as SDR.
 
 ## Current transport boundary
 
@@ -54,16 +54,20 @@ The patches derive their constants/negotiation from pinned Nonary common-c `d6a1
 | Host processing latency | Minimum, maximum and average host processing time when supplied by the host. |
 | PyroWave | The active Metal decoder backend. |
 | Ready p95 (GPU end) | The 95th percentile from renderer submission to Metal’s GPU end timestamp. Uses up to 2,048 completed frames with valid timestamps. The earlier overlay measured through the completion callback. |
-| GPU/pending | Snapshot of occupied processing slots (including CPU/drawable waits) and pending frames. The queue holds two in-flight frames and one pending frame. |
+| Slots/pending | Snapshot of occupied processing slots (including CPU/drawable waits) and pending frames. The queue holds two in-flight frames and one pending frame. |
 | Queue drops | Cumulative number of older pending frames replaced by newer frames in the session. Compare the increase over a fixed interval. |
-| Submit to worker / Drawable wait / GPU / Callback delay | Separate p95 values in milliseconds. These cover renderer entry to mailbox pickup (including validation/copy and scheduling), drawable acquisition, GPU execution for decode plus conversion, and GPU end to entry into the completion callback. |
+| Worker / Drawable / Decode / Color / GPU queue / Callback | Separate p95 values in milliseconds for worker pickup, drawable acquisition, GPU decode, GPU conversion, decode commit-to-GPU-start and conversion completion callback delay. |
 | Parser rejects | Cumulative frames rejected by framing validation. |
-| Decode failures | Cumulative failures reported by the renderer while processing frames. |
+| Decode failures | Cumulative decode allocation/submission/execution failures. Conversion failures have a separate internal counter. |
 | Present drops | Cumulative frames dropped because a Metal drawable was unavailable. |
 
-Ready p95 covers completed frames. Use the drop counters alongside it to see how often work was skipped. GPU decode, visual presentation and controller-to-screen latency require their own timing boundaries. The renderer records GPU decode plus color conversion timing internally when valid command-buffer timestamps are available. [Performance measurement guide](decoding-performance.md)
+Ready p95 covers successful decode/conversion pairs. Decode-only GPU timing is
+also recorded for successfully decoded frames whose presentation was abandoned.
+Drop counters and timing sample counts describe those different populations.
+The internal snapshot additionally exposes input-queue time, CPU preparation,
+conversion queue time, frame identifiers and OS presentation observations on
+device builds. [Performance measurement guide](decoding-performance.md)
 
-The renderer still acquires its drawable before submitting GPU decode/conversion.
-The timing breakdown documents this behavior; it does not demonstrate that the
-presentation bottleneck has been removed. Percentiles are calculated separately
-and cannot be added to obtain Ready p95. No physical on-screen timing is recorded.
+Decode now starts before drawable acquisition. Drawable waiting can overlap GPU
+decode, so stage percentiles cannot be added to reconstruct Ready p95. Physical
+A12 measurements will determine the effect on playback and latency.

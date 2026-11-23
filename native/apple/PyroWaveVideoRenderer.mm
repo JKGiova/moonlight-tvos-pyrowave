@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #import "PyroWaveVideoRenderer.h"
 #import <Metal/Metal.h>
+#import <TargetConditionals.h>
 #import <QuartzCore/CAMetalLayer.h>
 #include "pyrowave_metal.h"
 #include "pyrowave_decoder_backend.h"
 #include "pyrowaveframing.h"
 #include "latest_frame_queue.hpp"
+#include "frame_completion.hpp"
 #include "color_conversion.hpp"
 #include "PyroWavePresenterSource.h"
 #include <algorithm>
@@ -16,7 +18,16 @@
 
 namespace {
 constexpr size_t MaxFrameBytes = 64U*1024U*1024U;
-struct Frame { NSData* data; int colorSpace; bool fullRange; double received; };
+struct Frame {
+    NSData* data;
+    int colorSpace;
+    bool fullRange;
+    double received;
+    int frameNumber;
+    uint32_t rtpTimestamp;
+    uint64_t receiveTimeUs, enqueueTimeUs, deliveryTimeUs;
+    double copyMs;
+};
 struct Slot {
     pyrowave_decoder decoder = nullptr;
     __strong id<MTLTexture> planes[3];
@@ -30,6 +41,42 @@ struct Runtime {
     ~Runtime() {
         for (auto& slot:slots) { if (slot.decoder) pyrowave_decoder_destroy(slot.decoder); slot.decoder=nullptr; }
         if (device) pyrowave_device_destroy(device);
+    }
+};
+
+struct FrameProgress {
+    std::shared_ptr<Runtime> runtime;
+    PWClient::FrameCompletion completion;
+    int frameNumber;
+    uint32_t rtpTimestamp;
+    uint64_t receiveTimeUs, enqueueTimeUs, deliveryTimeUs;
+    double received, workerStart, copyMs, prepareMs, drawableWaitMs = 0;
+    double decodeCommitted = 0, decodeStart = 0, decodeEnd = 0;
+    double renderCommitted = 0, renderStart = 0, renderEnd = 0, callbackTime = 0;
+    bool decoded = false, rendered = false;
+};
+
+enum Timing {
+    SubmitToWorker, InputQueue, CopyCpu, PrepareCpu, DrawableWait,
+    DecodeQueue, RenderQueue, DecodeGpu, ColorGpu, DecodeAndColorGpu, ClientReady,
+    CallbackDelay, SubmitToPresented, TimingCount
+};
+constexpr const char* TimingKeys[] = {
+    "submit_to_worker_ms", "input_queue_ms", "copy_cpu_ms", "prepare_cpu_ms",
+    "drawable_wait_ms", "decode_queue_ms", "render_queue_ms", "gpu_decode_ms", "color_gpu_ms",
+    "decode_and_color_gpu_ms", "client_ready_gpu_end_ms",
+    "gpu_callback_delay_ms", "submit_to_presented_ms"
+};
+static_assert(sizeof(TimingKeys)/sizeof(*TimingKeys) == TimingCount);
+struct TimingWindow {
+    std::array<double,2048> values{};
+    size_t count = 0;
+    void record(double milliseconds) {
+        if (std::isfinite(milliseconds) && milliseconds >= 0)
+            values[count++ % values.size()] = milliseconds;
+    }
+    std::vector<double> snapshot() const {
+        return {values.begin(), values.begin() + std::min(count, values.size())};
     }
 };
 
@@ -54,9 +101,9 @@ id distribution(std::vector<double> values) {
     std::shared_ptr<Runtime> _runtime;
     PyroWaveFraming::StreamGeometry _geometry;
     BOOL _pumpScheduled, _shown, _fatalReported, _fullRange;
-    uint64_t _parserRejected, _profileRejected, _decodeFailed, _drawableDropped, _completed;
-    std::array<double,2048> _readyTimes, _gpuTimes, _callbackDelayTimes, _submitToWorkerTimes, _drawableWaitTimes;
-    size_t _stageCount, _gpuCount;
+    uint64_t _parserRejected, _profileRejected, _decodeFailed, _drawableDropped, _presentFailed, _decoded, _completed, _presented;
+    std::array<TimingWindow,TimingCount> _timings;
+    NSDictionary* _lastCompletedFrame;
 }
 
 + (BOOL)isDecoderBackendCandidate {
@@ -68,11 +115,13 @@ id distribution(std::vector<double> values) {
     if ((self=[super init])) {
         NSAssert([NSThread isMainThread],@"Metal layer must be created on the main thread");
         _view=view; _callbacks=callbacks; _lock=[NSLock new];
-        _worker=dispatch_queue_create("org.moonlight.pyrowave.decode",DISPATCH_QUEUE_SERIAL);
+        dispatch_queue_attr_t priority = dispatch_queue_attr_make_with_qos_class(
+            DISPATCH_QUEUE_SERIAL, QOS_CLASS_USER_INITIATED, 0);
+        _worker=dispatch_queue_create("org.moonlight.pyrowave.decode",priority);
         _metal=MTLCreateSystemDefaultDevice();
         _layer=[CAMetalLayer layer]; _layer.device=_metal;
         _layer.pixelFormat=MTLPixelFormatBGRA8Unorm; _layer.framebufferOnly=YES;
-        _layer.maximumDrawableCount=2; _layer.allowsNextDrawableTimeout=YES;
+        _layer.maximumDrawableCount=3; _layer.allowsNextDrawableTimeout=YES;
         _layer.hidden=YES; _layer.backgroundColor=UIColor.blackColor.CGColor;
         CGColorSpaceRef colorSpace=CGColorSpaceCreateWithName(kCGColorSpaceITUR_709);
         _layer.colorspace=colorSpace; CGColorSpaceRelease(colorSpace);
@@ -148,6 +197,7 @@ id distribution(std::vector<double> values) {
 
 - (int)submitDecodeUnit:(PDECODE_UNIT)unit {
     const double received=CACurrentMediaTime();
+    const uint64_t deliveryTimeUs=LiGetMicroseconds();
     if (!unit || unit->fullLength<8 || size_t(unit->fullLength)>MaxFrameBytes) {
         [_lock lock]; ++_parserRejected; [_lock unlock]; return DR_OK;
     }
@@ -156,9 +206,11 @@ id distribution(std::vector<double> values) {
     }
     [_lock lock];
     if (_mailbox.stopped() || !_runtime) { [_lock unlock]; return DR_OK; }
+    const bool fullRange = _fullRange;
+    [_lock unlock];
     // Ownership is transferred before LiCompleteVideoFrame frees network buffers.
     void* bytes=malloc(size_t(unit->fullLength));
-    if (!bytes) { ++_decodeFailed; [_lock unlock]; return DR_OK; }
+    if (!bytes) { [_lock lock]; ++_decodeFailed; [_lock unlock]; return DR_OK; }
     size_t offset=0, entries=0;
     bool valid=true;
     for (PLENTRY entry=unit->bufferList;entry;entry=entry->next) {
@@ -166,9 +218,13 @@ id distribution(std::vector<double> values) {
             size_t(entry->length)>size_t(unit->fullLength)-offset) { valid=false; break; }
         memcpy(static_cast<uint8_t*>(bytes)+offset,entry->data,size_t(entry->length)); offset+=size_t(entry->length);
     }
-    if (!valid || offset!=size_t(unit->fullLength)) { free(bytes); ++_parserRejected; [_lock unlock]; return DR_OK; }
+    if (!valid || offset!=size_t(unit->fullLength)) { free(bytes); [_lock lock]; ++_parserRejected; [_lock unlock]; return DR_OK; }
     NSData* data=[NSData dataWithBytesNoCopy:bytes length:offset freeWhenDone:YES];
-    _mailbox.submit({data,unit->colorspace,bool(_fullRange),received});
+    const double copyMs = (CACurrentMediaTime() - received) * 1000;
+    [_lock lock];
+    if (_mailbox.stopped()) { [_lock unlock]; return DR_OK; }
+    _mailbox.submit({data,unit->colorspace,fullRange,received,unit->frameNumber,
+        unit->rtpTimestamp,unit->receiveTimeUs,unit->enqueueTimeUs,deliveryTimeUs,copyMs});
     [self schedulePumpLocked]; [_lock unlock];
     return DR_OK; // PyroWave frames are independent; never request an IDR for a drop.
 }
@@ -181,7 +237,7 @@ id distribution(std::vector<double> values) {
             if (!work) { _pumpScheduled=NO; [_lock unlock]; return; }
             auto runtime=_runtime;
             [_lock unlock];
-            const double submitToWorkerMs = (CACurrentMediaTime() - work->frame.received) * 1000;
+            const double workerStart = CACurrentMediaTime();
             auto& slot=runtime->slots[work->slot];
             std::string error;
             bool valid=PyroWaveFraming::parse(static_cast<const uint8_t*>(work->frame.data.bytes),work->frame.data.length,
@@ -196,71 +252,160 @@ id distribution(std::vector<double> values) {
             if (!valid || !pyrowave_decoder_decode_is_ready(slot.decoder,false)) {
                 [_lock lock]; ++_parserRejected; _mailbox.complete(work->slot); [_lock unlock]; continue;
             }
-            // Drawable acquisition happens on this worker; never wait for GPU/UI on main.
-            const double drawableStart = CACurrentMediaTime();
-            id<CAMetalDrawable> drawable=[_layer nextDrawable];
-            const double drawableWaitMs = (CACurrentMediaTime() - drawableStart) * 1000;
-            if (!drawable) {
-                [_lock lock]; ++_drawableDropped; _mailbox.complete(work->slot); [_lock unlock]; continue;
-            }
-            [_lock lock]; BOOL stopped=_mailbox.stopped(); [_lock unlock];
-            if (stopped) { [_lock lock]; _mailbox.complete(work->slot); [_lock unlock]; continue; }
-            id<MTLCommandBuffer> command=[_commands commandBuffer];
+            auto progress = std::make_shared<FrameProgress>();
+            progress->runtime = runtime;
+            progress->frameNumber = work->frame.frameNumber;
+            progress->rtpTimestamp = work->frame.rtpTimestamp;
+            progress->receiveTimeUs = work->frame.receiveTimeUs;
+            progress->enqueueTimeUs = work->frame.enqueueTimeUs;
+            progress->deliveryTimeUs = work->frame.deliveryTimeUs;
+            progress->received = work->frame.received;
+            progress->copyMs = work->frame.copyMs;
+            progress->workerStart = workerStart;
+            const size_t index = work->slot;
+            id<MTLCommandBuffer> decode=[_commands commandBuffer];
             pyrowave_gpu_buffers output{};
             for (unsigned p=0;p<3;++p) output.planes[p]=(__bridge void*)slot.planes[p];
-            if (!command || pyrowave_decoder_decode_gpu_buffer(slot.decoder,(__bridge void*)command,&output)!=PYROWAVE_SUCCESS) {
-                [_lock lock]; ++_decodeFailed; _mailbox.complete(work->slot); [_lock unlock]; [self failSession]; continue;
+            if (!decode || pyrowave_decoder_decode_gpu_buffer(slot.decoder,(__bridge void*)decode,&output)!=PYROWAVE_SUCCESS) {
+                [_lock lock]; ++_decodeFailed; _mailbox.complete(index); [_lock unlock]; [self failSession]; continue;
             }
+            decode.label = @"PyroWave decode";
+            [decode addCompletedHandler:^(id<MTLCommandBuffer> completed) {
+                const double callbackTime = CACurrentMediaTime();
+                [self->_lock lock];
+                progress->decoded = completed.status == MTLCommandBufferStatusCompleted;
+                if (progress->decoded) {
+                    ++self->_decoded;
+                    const double start = completed.GPUStartTime, end = completed.GPUEndTime;
+                    if (start > 0 && progress->decodeCommitted <= start && start < end && end <= callbackTime) {
+                        progress->decodeStart = start;
+                        progress->decodeEnd = end;
+                        self->_timings[DecodeGpu].record((end - start) * 1000);
+                        self->_timings[DecodeQueue].record((start - progress->decodeCommitted) * 1000);
+                    }
+                } else ++self->_decodeFailed;
+                if (progress->completion.completeDecode())
+                    [self finishFrameLocked:progress slot:index];
+                [self->_lock unlock];
+                if (!progress->decoded) [self failSession];
+            }];
+            // Commit before asking the compositor for a drawable. Both command
+            // buffers use the same queue and tracked plane textures.
+            progress->decodeCommitted = CACurrentMediaTime();
+            progress->prepareMs = (progress->decodeCommitted - workerStart) * 1000;
+            [decode commit];
+
+            const double drawableStart = CACurrentMediaTime();
+            id<CAMetalDrawable> drawable=[_layer nextDrawable];
+            progress->drawableWaitMs = (CACurrentMediaTime() - drawableStart) * 1000;
+            [_lock lock];
+            const bool stopped = _mailbox.stopped();
+            if (!drawable) ++_drawableDropped;
+            [_lock unlock];
+            if (!drawable || stopped) {
+                [_lock lock];
+                if (progress->completion.completePresentation())
+                    [self finishFrameLocked:progress slot:index];
+                [_lock unlock];
+                continue;
+            }
+            id<MTLCommandBuffer> command=[_commands commandBuffer];
             auto pass=[MTLRenderPassDescriptor renderPassDescriptor];
             pass.colorAttachments[0].texture=drawable.texture;
-            pass.colorAttachments[0].loadAction=MTLLoadActionDontCare; pass.colorAttachments[0].storeAction=MTLStoreActionStore;
+            pass.colorAttachments[0].loadAction=MTLLoadActionDontCare;
+            pass.colorAttachments[0].storeAction=MTLStoreActionStore;
             id<MTLRenderCommandEncoder> encoder=[command renderCommandEncoderWithDescriptor:pass];
             if (!encoder) {
-                [_lock lock]; ++_decodeFailed; _mailbox.complete(work->slot); [_lock unlock]; [self failSession]; continue;
+                [_lock lock];
+                ++_presentFailed;
+                if (progress->completion.completePresentation())
+                    [self finishFrameLocked:progress slot:index];
+                [_lock unlock];
+                [self failSession];
+                continue;
             }
+            command.label = @"PyroWave conversion and presentation";
             const auto conversion=PWClient::colorConversion(work->frame.colorSpace,work->frame.fullRange);
             [encoder setRenderPipelineState:_presenter];
             for (unsigned p=0;p<3;++p) [encoder setFragmentTexture:slot.planes[p] atIndex:p];
             [encoder setFragmentBytes:&conversion length:sizeof(conversion) atIndex:0];
-            [encoder drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:3]; [encoder endEncoding];
+            [encoder drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:3];
+            [encoder endEncoding];
+#if !TARGET_OS_SIMULATOR
+            const double received = progress->received;
+            [drawable addPresentedHandler:^(id<MTLDrawable> presented) {
+                const double time = presented.presentedTime;
+                if (time >= received && time <= CACurrentMediaTime()) {
+                    [self->_lock lock];
+                    ++self->_presented;
+                    self->_timings[SubmitToPresented].record((time - received) * 1000);
+                    [self->_lock unlock];
+                }
+            }];
+#endif
             [command presentDrawable:drawable];
-            const size_t index=work->slot; const double received=work->frame.received;
             [command addCompletedHandler:^(id<MTLCommandBuffer> completed) {
                 const double callbackTime = CACurrentMediaTime();
-                // runtime retains decoders, upload buffers and texture slots until completion.
-                (void)runtime;
                 [self->_lock lock];
-                BOOL successful=completed.status==MTLCommandBufferStatusCompleted;
-                BOOL reveal=successful && !self->_shown && !self->_mailbox.stopped();
-                if (successful) {
-                    ++self->_completed;
-                    const size_t sample = self->_stageCount++ % self->_submitToWorkerTimes.size();
-                    self->_submitToWorkerTimes[sample] = submitToWorkerMs;
-                    self->_drawableWaitTimes[sample] = drawableWaitMs;
-
-                    // Metal reports both GPU timestamps in host mach time, the
-                    // same clock used by CACurrentMediaTime(). Skip unavailable
-                    // timestamps and reject samples whose boundaries are out of order.
-                    const double gpuStart = completed.GPUStartTime;
-                    const double gpuEnd = completed.GPUEndTime;
-                    if (gpuStart > 0 && received <= gpuStart && gpuStart < gpuEnd && gpuEnd <= callbackTime) {
-                        const size_t gpuSample = self->_gpuCount++ % self->_gpuTimes.size();
-                        self->_readyTimes[gpuSample] = (gpuEnd - received) * 1000;
-                        self->_gpuTimes[gpuSample] = (gpuEnd - gpuStart) * 1000;
-                        self->_callbackDelayTimes[gpuSample] = (callbackTime - gpuEnd) * 1000;
-                    }
-                    if (reveal) self->_shown=YES;
-                } else ++self->_decodeFailed;
-                self->_mailbox.complete(index); [self schedulePumpLocked]; [self->_lock unlock];
-                if (reveal) dispatch_async(dispatch_get_main_queue(), ^{
-                    [self->_lock lock]; BOOL active=!self->_mailbox.stopped(); [self->_lock unlock];
-                    if (active) { self->_layer.hidden=NO; [self->_callbacks videoContentShown]; }
-                });
-                if (!successful) [self failSession];
+                progress->rendered = completed.status == MTLCommandBufferStatusCompleted;
+                progress->renderStart = completed.GPUStartTime;
+                progress->renderEnd = completed.GPUEndTime;
+                progress->callbackTime = callbackTime;
+                if (!progress->rendered) ++self->_presentFailed;
+                if (progress->completion.completePresentation())
+                    [self finishFrameLocked:progress slot:index];
+                [self->_lock unlock];
+                if (!progress->rendered) [self failSession];
             }];
+            progress->renderCommitted = CACurrentMediaTime();
             [command commit];
         }
     }
+}
+
+// Called with _lock held, once both decode and presentation have resolved.
+// Abandoning presentation still waits for the submitted decode before slot reuse.
+- (void)finishFrameLocked:(const std::shared_ptr<FrameProgress>&)progress slot:(size_t)index {
+    if (progress->decoded && progress->rendered) {
+        ++_completed;
+        _timings[SubmitToWorker].record((progress->workerStart - progress->received) * 1000);
+        _timings[CopyCpu].record(progress->copyMs);
+        _timings[PrepareCpu].record(progress->prepareMs);
+        _timings[DrawableWait].record(progress->drawableWaitMs);
+        if (progress->enqueueTimeUs && progress->deliveryTimeUs >= progress->enqueueTimeUs)
+            _timings[InputQueue].record((progress->deliveryTimeUs - progress->enqueueTimeUs) / 1000.0);
+        const double start = progress->renderStart, end = progress->renderEnd;
+        if (start > 0 && progress->received <= start && start < end && end <= progress->callbackTime) {
+            _timings[ClientReady].record((end - progress->received) * 1000);
+            _timings[ColorGpu].record((end - start) * 1000);
+            if (start >= progress->renderCommitted)
+                _timings[RenderQueue].record((start - progress->renderCommitted) * 1000);
+            _timings[CallbackDelay].record((progress->callbackTime - end) * 1000);
+            if (progress->decodeEnd > 0 && progress->decodeEnd <= end)
+                _timings[DecodeAndColorGpu].record(
+                    (progress->decodeEnd - progress->decodeStart + end - start) * 1000);
+        }
+        _lastCompletedFrame = @{
+            @"frame_number":@(progress->frameNumber), @"rtp_timestamp":@(progress->rtpTimestamp),
+            @"receive_time_us":@(progress->receiveTimeUs), @"enqueue_time_us":@(progress->enqueueTimeUs),
+            @"delivery_time_us":@(progress->deliveryTimeUs),
+            @"renderer_submit_seconds":@(progress->received),
+            @"decode_commit_seconds":@(progress->decodeCommitted),
+            @"decode_gpu_start_seconds":@(progress->decodeStart),
+            @"decode_gpu_end_seconds":@(progress->decodeEnd),
+            @"render_commit_seconds":@(progress->renderCommitted),
+            @"render_gpu_start_seconds":@(progress->renderStart),
+            @"render_gpu_end_seconds":@(progress->renderEnd)};
+        if (!_shown && !_mailbox.stopped()) {
+            _shown = YES;
+            dispatch_async(dispatch_get_main_queue(), ^{
+                [self->_lock lock]; BOOL active=!self->_mailbox.stopped(); [self->_lock unlock];
+                if (active) { self->_layer.hidden=NO; [self->_callbacks videoContentShown]; }
+            });
+        }
+    }
+    _mailbox.complete(index);
+    [self schedulePumpLocked];
 }
 
 - (void)failSession {
@@ -277,26 +422,32 @@ id distribution(std::vector<double> values) {
 
 - (NSDictionary*)statistics {
     [_lock lock];
-    const size_t gpuSamples = std::min(_gpuCount, _gpuTimes.size());
-    std::vector<double> ready(_readyTimes.begin(), _readyTimes.begin() + gpuSamples);
-    std::vector<double> gpu(_gpuTimes.begin(), _gpuTimes.begin() + gpuSamples);
-    std::vector<double> callbackDelay(_callbackDelayTimes.begin(), _callbackDelayTimes.begin() + gpuSamples);
-    const size_t timed = std::min(_stageCount, _submitToWorkerTimes.size());
-    std::vector<double> submitToWorker(_submitToWorkerTimes.begin(), _submitToWorkerTimes.begin() + timed);
-    std::vector<double> drawableWait(_drawableWaitTimes.begin(), _drawableWaitTimes.begin() + timed);
-    NSMutableDictionary* result=[@{@"completed_frames":@(_completed),@"parser_rejected":@(_parserRejected),@"decode_failed":@(_decodeFailed),
-        @"profile_rejected":@(_profileRejected),@"pending_replacements":@(_mailbox.pendingReplacements),@"drawable_dropped":@(_drawableDropped),
-        @"gpu_in_flight":@(_mailbox.inFlight()),@"pending_frames":@(_mailbox.pending()?1:0),
-        @"gpu_decode_ms":NSNull.null,@"auto_qualified":@NO,
-        @"decoder_backend":@(pw_decoder_backend_name(_runtime ? _runtime->device : nullptr))} mutableCopy];
+    std::array<std::vector<double>,TimingCount> samples;
+    for (size_t i=0; i<samples.size(); ++i) samples[i]=_timings[i].snapshot();
+    NSMutableDictionary* result=[@{
+        @"completed_frames":@(_completed),
+        @"decoded_frames":@(_decoded),
+        @"presented_frames":@(_presented),
+        @"presentation_timing_available":@(!TARGET_OS_SIMULATOR),
+        @"snapshot_time_seconds":@(CACurrentMediaTime()),
+        @"parser_rejected":@(_parserRejected),
+        @"decode_failed":@(_decodeFailed),
+        @"present_failed":@(_presentFailed),
+        @"profile_rejected":@(_profileRejected),
+        @"pending_replacements":@(_mailbox.pendingReplacements),
+        @"drawable_dropped":@(_drawableDropped),
+        @"processing_slots":@(_mailbox.inFlight()),
+        @"gpu_in_flight":@(_mailbox.inFlight()),
+        @"pending_frames":@(_mailbox.pending()?1:0),
+        @"last_completed_frame":_lastCompletedFrame ?: NSNull.null,
+        @"auto_qualified":@NO,
+        @"decoder_backend":@(pw_decoder_backend_name(_runtime ? _runtime->device : nullptr))
+    } mutableCopy];
     [_lock unlock];
     // Sorting a diagnostic snapshot must not block arriving frames or GPU
     // completion handlers on the submission lock.
-    result[@"client_ready_gpu_end_ms"]=distribution(std::move(ready));
-    result[@"gpu_callback_delay_ms"]=distribution(std::move(callbackDelay));
-    result[@"decode_and_color_gpu_ms"]=distribution(std::move(gpu));
-    result[@"submit_to_worker_ms"]=distribution(std::move(submitToWorker));
-    result[@"drawable_wait_ms"]=distribution(std::move(drawableWait));
+    for (size_t i=0; i<samples.size(); ++i)
+        result[@(TimingKeys[i])]=distribution(std::move(samples[i]));
     return result;
 }
 @end

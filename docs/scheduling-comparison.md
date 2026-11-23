@@ -10,6 +10,15 @@ resource bounds. Device timing comparisons require matching workloads and hardwa
 [Nonary snapshot](https://github.com/Nonary/moonlight-qt/tree/9184cacd8d426316bdecc47634f0dbf4e6e34654),
 [Pyrolight snapshot](https://github.com/karsyboy/Pyrolight/tree/561bd3cad2d15ae74b01b4faadc03caa6868061d)
 
+## Implementation update
+
+The tvOS code now implements decode submission before drawable acquisition,
+separate conversion on the same command queue, three drawable resources, retained
+frame metadata and independent GPU timing for decode and conversion. Both stages
+resolve before a processing slot is reused. The analysis below records the earlier
+local snapshot and the rationale for those changes. Physical A12 measurements will
+determine their effect. [Current timing and scheduling](decoding-performance.md)
+
 ## Compared paths
 
 | Concern | Moonlight Pyro tvOS | Nonary Moonlight Qt | Pyrolight |

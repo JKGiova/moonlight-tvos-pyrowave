@@ -1,7 +1,7 @@
 # Development status
 
-Documentation snapshot: 2026-11-23. This page describes the implementation through
-`7a9a0cb`, including the `afbda5f` scheduling/timing changes. It distinguishes
+Documentation snapshot: 2026-11-23. This page includes the split decode/conversion scheduling update following
+`0d68cb8`, with decode committed before drawable acquisition. It distinguishes
 source implementation, automated checks and owner-reported device observations.
 
 ## Implemented client
@@ -12,16 +12,16 @@ source implementation, automated checks and owner-reported device observations.
 | Live PyroWave | Complete-frame 8-bit SDR 4:2:0, exact bitstream identity validation and Metal presentation |
 | Backend | Portable Apple5 for A12; native Apple7-or-later candidate selected through capability/pipeline checks |
 | Frame delivery | Dedicated PyroWave receive worker waits for common-c frames; standard codecs retain display-link polling |
-| Scheduling | Two occupied decoder/texture slots and one latest pending frame; completion releases slots |
+| Scheduling | Two occupied decoder/texture slots, one latest pending frame and three drawables; decode commits before drawable acquisition; both stages resolve before slot release |
 | Settings | Persistent PyroWave (SDR), manual requests through 1,000 Mbps and per-profile bitrate Auto capped at 500 Mbps for PyroWave |
-| Timing | GPU-end Ready, worker/drawable/GPU/callback distributions, p50/p95/p99 snapshots and separate error/drop counters |
+| Timing | GPU-end Ready, isolated decode/conversion and queue timing, retained frame timestamps, device presentation callbacks and separate error/drop counters |
 | Source preparation | One reusable generated client, exact-pin checks, selective patches, recorded file baselines and project merging that preserves signing edits |
 | Reference monitor | Dashboard/transport/policy sources retained; dashboard patch excluded from the standard generated client |
 
-The current renderer acquires the drawable before committing decode/conversion.
-The presentation and shader optimizations discussed during latency investigation
-are not implemented. There is no integrated Vulkan backend, partial-frame recovery,
-automatic session retry or benchmark-aware PyroWave codec selection.
+The split-command-buffer path compiles for the simulator and is covered by
+portable completion-order/abandonment tests and the GPU presenter's split-submission
+fixture. The recorded A12 screenshots below predate this update. Collect physical
+device measurements before attributing a latency improvement to it.
 
 ## Apple TV device observations
 

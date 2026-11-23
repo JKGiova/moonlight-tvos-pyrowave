@@ -18,21 +18,22 @@ and decodes and presents PyroWave using native Metal.
 ## Source preparation
 
 `tools/prepare_client.py` checks exact upstream revisions and nested dependencies,
-applies selected patches and copies the runtime into a new directory below
-`build/client/`. `tools/prepare_metal.py` stages the pinned Metal sources plus the
+applies selected patches and updates the reusable project below
+`build/client/Moonlight-Clean-Release/`, preserving local signing and Xcode user data. `tools/prepare_metal.py` stages the pinned Metal sources plus the
 Apple5 patch. Source submodules stay pristine. [Patch list](../integration/README.md)
 
 ## Ownership and scheduling
 
 The renderer copies a common-c decode unit before common-c releases it. A serial
-worker picks the newest pending frame, validates/parses its packets and acquires
-a drawable. It then encodes GPU decode and color conversion into one command
-buffer, registers presentation and commits. Completion releases the occupied slot.
+worker picks the newest pending frame, validates/parses its packets and commits
+GPU decode. It then acquires a drawable from a three-resource pool and submits
+conversion/presentation on the same Metal command queue. Tracked plane textures
+carry dependencies between the two command buffers. Slot release requires both
+decode completion and conversion completion or presentation abandonment.
 
 There are two independent decoder/output-texture slots and at most one pending
 frame. New arrivals replace older pending frames. Occupied slots include work
-waiting for a drawable, so `GPU/pending` is not a count of actively executing GPU
-commands. GPU callbacks retain the runtime until submitted work finishes.
+waiting for a drawable. The overlay calls this `Slots/pending`. GPU callbacks retain the runtime until submitted work finishes.
 
 Layer setup/removal runs on the main thread. Drawable acquisition runs on the
 worker. The live renderer has no image readback or main-thread GPU completion wait.

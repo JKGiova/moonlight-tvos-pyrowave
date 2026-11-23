@@ -80,16 +80,16 @@
 +        id ready=pyro[@"client_ready_gpu_end_ms"];
          NSString* p95=[ready isKindOfClass:NSDictionary.class] ? [NSString stringWithFormat:@"%.2f ms",[ready[@"p95"] doubleValue]] : @"N/A";
 -        text=[text stringByAppendingFormat:@"\nPyroWave %@\nReady p95 (completion proxy): %@\nGPU/pending: %@/%@  Queue drops: %@  Parser rejects: %@  Decode failures: %@  Present drops: %@",
-+        text=[text stringByAppendingFormat:@"\nPyroWave %@\nReady p95 (GPU end): %@\nGPU/pending: %@/%@  Queue drops: %@  Parser rejects: %@  Decode failures: %@  Present drops: %@",
++        text=[text stringByAppendingFormat:@"\nPyroWave %@\nReady p95 (GPU end): %@\nSlots/pending: %@/%@  Queue drops: %@  Parser rejects: %@  Decode failures: %@  Present drops: %@",
              pyro[@"decoder_backend"],p95,pyro[@"gpu_in_flight"],pyro[@"pending_frames"],pyro[@"pending_replacements"],pyro[@"parser_rejected"],pyro[@"decode_failed"],pyro[@"drawable_dropped"]];
-+        NSArray<NSString*>* timingKeys = @[@"submit_to_worker_ms", @"drawable_wait_ms", @"decode_and_color_gpu_ms", @"gpu_callback_delay_ms"];
++        NSArray<NSString*>* timingKeys = @[@"submit_to_worker_ms", @"drawable_wait_ms", @"gpu_decode_ms", @"color_gpu_ms", @"decode_queue_ms", @"gpu_callback_delay_ms"];
 +        NSMutableArray<NSString*>* stages = [NSMutableArray arrayWithCapacity:timingKeys.count];
 +        for (NSString* key in timingKeys) {
 +            id timing = pyro[key];
 +            [stages addObject:[timing isKindOfClass:NSDictionary.class]
 +                ? [NSString stringWithFormat:@"%.2f", [timing[@"p95"] doubleValue]] : @"N/A"];
 +        }
-+        text = [text stringByAppendingFormat:@"\np95 ms | Submit to worker / Drawable wait / GPU / Callback delay: %@",
++        text = [text stringByAppendingFormat:@"\np95 ms | Worker / Drawable / Decode / Color / GPU queue / Callback: %@",
 +            [stages componentsJoinedByString:@" / "]];
      }
      return text;
