@@ -1,0 +1,298 @@
+{
+  "date": "2026-11-23",
+  "kind": "synthetic-host-testbenches",
+  "baseline_revision": "f32ef2e",
+  "system": "Darwin",
+  "architecture": "x86_64",
+  "metal_device": "AMD Radeon HD GFX10 Family Unknown Prototype",
+  "production_backend_candidate": false,
+  "candidate_sources": {
+    "framing_sha256": "599ae37655f0ad63e3c6286b82c334d250a4446e7822457397737d9ce7f18845",
+    "shader_sha256": "9cd995fb01319b5f7f41ed1801d9e68513f9f10a5b8dc8f8ac56b007a8fd341c",
+    "benchmark_sha256": "3506554cdb645a456a43445bc73f7eb7a27419da775b0f7ca4626f2b7c9268bb"
+  },
+  "physical_apple_tv_tested": false,
+  "a12_latency_change_ms": null,
+  "cpu_paired": {
+    "method": "same-process-alternating-order",
+    "warmup": 50,
+    "samples_per_implementation_per_case": 500,
+    "cases": [
+      {
+        "width": 3840,
+        "height": 2160,
+        "budget_mbps": 150,
+        "reference_ms": {
+          "samples": 500,
+          "mean": 0.371360612,
+          "p50": 0.509144,
+          "p95": 0.54418,
+          "p99": 0.547864
+        },
+        "candidate_ms": {
+          "samples": 500,
+          "mean": 0.213598136,
+          "p50": 0.250005,
+          "p95": 0.315458,
+          "p99": 0.322143
+        },
+        "median_reduction_percent": 50.896995741872644
+      },
+      {
+        "width": 3840,
+        "height": 2160,
+        "budget_mbps": 300,
+        "reference_ms": {
+          "samples": 500,
+          "mean": 0.855216578,
+          "p50": 0.854861,
+          "p95": 0.859146,
+          "p99": 0.860822
+        },
+        "candidate_ms": {
+          "samples": 500,
+          "mean": 0.496658056,
+          "p50": 0.493184,
+          "p95": 0.514052,
+          "p99": 0.566
+        },
+        "median_reduction_percent": 42.30828169725839
+      },
+      {
+        "width": 3840,
+        "height": 2160,
+        "budget_mbps": 500,
+        "reference_ms": {
+          "samples": 500,
+          "mean": 0.96967649,
+          "p50": 0.602705,
+          "p95": 1.428563,
+          "p99": 1.434768
+        },
+        "candidate_ms": {
+          "samples": 500,
+          "mean": 0.557156328,
+          "p50": 0.34687,
+          "p95": 0.826231,
+          "p99": 0.9372
+        },
+        "median_reduction_percent": 42.44779784471674
+      },
+      {
+        "width": 3840,
+        "height": 2160,
+        "budget_mbps": 1000,
+        "reference_ms": {
+          "samples": 500,
+          "mean": 1.20310885,
+          "p50": 1.202407,
+          "p95": 1.209328,
+          "p99": 1.210546
+        },
+        "candidate_ms": {
+          "samples": 500,
+          "mean": 0.690858316,
+          "p50": 0.685403,
+          "p95": 0.709803,
+          "p99": 0.803156
+        },
+        "median_reduction_percent": 42.99742100636473
+      }
+    ]
+  },
+  "gpu_dequant": {
+    "method": "one synthetic coefficient band; command-buffer execution",
+    "warmup": 20,
+    "samples_per_case": 100,
+    "all_cases": 24,
+    "coefficients_checked": 91095040,
+    "maximum_coefficient_error": 0,
+    "barriers_per_active_group_reference": 7,
+    "barriers_per_active_group_candidate": 4,
+    "cases_4k": [
+      {
+        "fixture": 0,
+        "reference_gpu_ms": {
+          "samples": 100,
+          "mean": 0.13876,
+          "p50": 0.13864,
+          "p95": 0.14056,
+          "p99": 0.14144
+        },
+        "candidate_gpu_ms": {
+          "samples": 100,
+          "mean": 0.137028,
+          "p50": 0.13692,
+          "p95": 0.13892,
+          "p99": 0.14
+        },
+        "maximum_coefficient_error": 0
+      },
+      {
+        "fixture": 1,
+        "reference_gpu_ms": {
+          "samples": 100,
+          "mean": 0.1480728,
+          "p50": 0.14808,
+          "p95": 0.15008,
+          "p99": 0.15052
+        },
+        "candidate_gpu_ms": {
+          "samples": 100,
+          "mean": 0.14767,
+          "p50": 0.14768,
+          "p95": 0.14936,
+          "p99": 0.15024
+        },
+        "maximum_coefficient_error": 0
+      },
+      {
+        "fixture": 2,
+        "reference_gpu_ms": {
+          "samples": 100,
+          "mean": 0.158026,
+          "p50": 0.158,
+          "p95": 0.15992,
+          "p99": 0.16076
+        },
+        "candidate_gpu_ms": {
+          "samples": 100,
+          "mean": 0.1558568,
+          "p50": 0.15592,
+          "p95": 0.15832,
+          "p99": 0.15876
+        },
+        "maximum_coefficient_error": 0
+      },
+      {
+        "fixture": 3,
+        "reference_gpu_ms": {
+          "samples": 100,
+          "mean": 0.1598688,
+          "p50": 0.15996,
+          "p95": 0.16172,
+          "p99": 0.16204
+        },
+        "candidate_gpu_ms": {
+          "samples": 100,
+          "mean": 0.1574288,
+          "p50": 0.15764,
+          "p95": 0.15992,
+          "p99": 0.16036
+        },
+        "maximum_coefficient_error": 0
+      },
+      {
+        "fixture": 4,
+        "reference_gpu_ms": {
+          "samples": 100,
+          "mean": 0.1541968,
+          "p50": 0.1542,
+          "p95": 0.1558,
+          "p99": 0.15624
+        },
+        "candidate_gpu_ms": {
+          "samples": 100,
+          "mean": 0.1529804,
+          "p50": 0.15324,
+          "p95": 0.1542,
+          "p99": 0.15496
+        },
+        "maximum_coefficient_error": 0
+      },
+      {
+        "fixture": 5,
+        "reference_gpu_ms": {
+          "samples": 100,
+          "mean": 0.1591876,
+          "p50": 0.15924,
+          "p95": 0.1614,
+          "p99": 0.162
+        },
+        "candidate_gpu_ms": {
+          "samples": 100,
+          "mean": 0.1573188,
+          "p50": 0.1574,
+          "p95": 0.16108,
+          "p99": 0.1624
+        },
+        "maximum_coefficient_error": 0
+      },
+      {
+        "fixture": 6,
+        "reference_gpu_ms": {
+          "samples": 100,
+          "mean": 0.1455024,
+          "p50": 0.14548,
+          "p95": 0.14708,
+          "p99": 0.14764
+        },
+        "candidate_gpu_ms": {
+          "samples": 100,
+          "mean": 0.14096,
+          "p50": 0.14096,
+          "p95": 0.14312,
+          "p99": 0.14396
+        },
+        "maximum_coefficient_error": 0
+      },
+      {
+        "fixture": 7,
+        "reference_gpu_ms": {
+          "samples": 100,
+          "mean": 0.1604176,
+          "p50": 0.1608,
+          "p95": 0.16424,
+          "p99": 0.17056
+        },
+        "candidate_gpu_ms": {
+          "samples": 100,
+          "mean": 0.1571428,
+          "p50": 0.15636,
+          "p95": 0.1638,
+          "p99": 0.16436
+        },
+        "maximum_coefficient_error": 0
+      }
+    ],
+    "interpretation": "Small host-GPU timing changes; no large GPU or Apple TV speedup established."
+  },
+  "full_decoder": {
+    "method": "host-lab-offscreen-split-serial",
+    "zero_profiles_checked": 2,
+    "output_hashes_matched": 14,
+    "samples_per_case": 100,
+    "readback_timed": false,
+    "drawable_acquisition_tested": false,
+    "interpretation": "Offscreen synthetic host experiment, with normal production admission reported separately."
+  },
+  "portable_checks": {
+    "sanitizers_passed": true,
+    "python_tests_passed": 25,
+    "coefficient_fixture_cases": 8,
+    "gpu_fixture_coefficients_checked": 32768,
+    "gpu_fixture_maximum_error": 0
+  },
+  "builds": [
+    {
+      "configuration": "Debug",
+      "sdk": "appletvsimulator",
+      "passed": true
+    },
+    {
+      "configuration": "Release",
+      "sdk": "appletvsimulator",
+      "passed": true
+    },
+    {
+      "configuration": "Release",
+      "sdk": "appletvos",
+      "passed": true
+    },
+    {
+      "configuration": "Debug",
+      "sdk": "appletvos",
+      "passed": true
+    }
+  ]
+}

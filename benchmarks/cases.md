@@ -5,6 +5,7 @@
 | Nonary framing and malformed data | Directed parser checks, random malformed frames and valid-record mutations |
 | CPU codec interoperability | 12 layout/packetizer/parser profiles, including 4K geometry |
 | Portable dequantization | Eight synthetic fixtures and 32,768 GPU reference coefficients in the recorded Apple5 CI run |
+| Local synthetic testbenches | CPU preparation, paired validation, tiled dequant and host-lab offscreen decode/conversion; source hashes and hardware recorded |
 | Complete portable decode | Two uniform synthetic profiles, 128×128 and 320×180, on an admitted runner GPU |
 | Presenter | 25 offscreen color/range/orientation cases and 3,200 pixels |
 | Client runtime | Queue replacement/stop ownership, exact identity and SDR color helpers |

@@ -3,6 +3,7 @@
 #include "pyrowaveframing.h"
 
 #include <algorithm>
+#include <array>
 #include <cstring>
 #include <limits>
 #include <utility>
@@ -31,11 +32,18 @@ uint32_t readU32(const uint8_t* p)
     return uint32_t(p[0]) | (uint32_t(p[1]) << 8) | (uint32_t(p[2]) << 16) | (uint32_t(p[3]) << 24);
 }
 
+// Fixed byte counts avoid data-dependent loops while validating coefficient signs.
+constexpr auto BytePopulation = [] {
+    std::array<uint8_t,256> counts{};
+    for (unsigned i = 1; i < counts.size(); ++i)
+        counts[i] = uint8_t(counts[i >> 1] + (i & 1));
+    return counts;
+}();
+
 unsigned population(uint32_t value)
 {
-    unsigned count = 0;
-    while (value) { value &= value - 1; ++count; }
-    return count;
+    return BytePopulation[value & 255] + BytePopulation[(value >> 8) & 255] +
+           BytePopulation[(value >> 16) & 255] + BytePopulation[value >> 24];
 }
 
 // Validate the coded control/magnitude/sign regions before a GPU can read them.

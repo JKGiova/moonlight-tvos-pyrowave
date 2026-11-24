@@ -52,6 +52,18 @@ The owner also reported roughly 120 Mbps of traffic at 4K and up to 300 Mbps at
 are not recorded; no fixed 120 Mbps cap or causal explanation is established.
 No matched HEVC latency result or physical A15 result is recorded.
 
+## Local testbench update
+
+The [2026-11-23 host record](../benchmarks/results/2026-11-23-local-testbenches.json)
+covers paired CPU validation, 24 tiled dequant workloads, 14 complete offscreen
+decoder/conversion cases and four local tvOS builds. The CPU validator uses byte
+population counts, and the portable shader uses four barriers per active group.
+Paired synthetic 4K validation medians fell by approximately 42–51% on this host.
+All 14 full-decoder output checksums matched the reference, and tiled dequant
+coefficient errors were zero. Host GPU timing changes were small. This evidence
+belongs to the host lab workloads. Physical A12 latency for these changes remains
+to be measured. [Running the testbenches](local-testbenches.md)
+
 ## Automated evidence
 
 | Check record | Recorded result and boundary |

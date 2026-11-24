@@ -150,10 +150,9 @@ float decode_quant_scale(thread const uint& code)
     return (float(code) / 8.0) + 0.25;
 }
 
-// Inclusive scan of exactly 128 contributions, independent of SIMD width.
-// Eight threads per group scan their eight shared values; 16 group totals
-// then give the global prefix. All 128 threads must enter all three barriers.
-// Scratch is distinct from the persistent per-tile plane offsets.
+// Inclusive scan of exactly 128 sign counts, independent of SIMD width.
+// Eight threads per group scan their shared values, then add prior group totals.
+// Scratch is written once per invocation and read after the two barriers.
 static inline uint prefix128(uint value, uint index,
                              threadgroup uint* values, threadgroup uint* totals)
 {
@@ -168,8 +167,6 @@ static inline uint prefix128(uint value, uint index,
     threadgroup_barrier(mem_flags::mem_threadgroup);
     for (uint i = 0; i < (index >> 3u); ++i)
         prefix += totals[i];
-    // Finish every read before scratch is reused by the next scan.
-    threadgroup_barrier(mem_flags::mem_threadgroup);
     return prefix;
 }
 
@@ -180,6 +177,7 @@ kernel void pyrowave_wavelet_dequant(const device void* spvBufferAliasSet0Bindin
     const device auto& payload_data_u16 = *(const device Payloads16*)spvBufferAliasSet0Binding2;
     threadgroup uint scan_values[128];
     threadgroup uint scan_totals[16];
+    threadgroup uint tile_byte_costs[16];
     threadgroup uint shared_sign_offset;
     threadgroup spvUnsafeArray<uint, 16> shared_plane_byte_offsets;
     int block_index_32x32 = int((uint(registers.block_offset_32x32) + (gl_WorkGroupID.y * uint(registers.block_stride_32x32))) + gl_WorkGroupID.x);
@@ -223,13 +221,19 @@ kernel void pyrowave_wavelet_dequant(const device void* spvBufferAliasSet0Bindin
         msbs |= msbs >> 1u;
         byte_cost = popcount(lsbs) + popcount(msbs) + q_bits * 8u;
     }
-    uint byte_scan = offset_u32 * 4u + 8u + 3u * popcount(ballot) +
-                     prefix128(byte_cost, local_index, scan_values, scan_totals);
+    // Only the 16 active-tile lanes contribute payload byte costs. Keep
+    // costs separate from offsets so the prefix reads cannot race offset writes.
+    if (local_index < 16u)
+        tile_byte_costs[local_index] = byte_cost;
+    threadgroup_barrier(mem_flags::mem_threadgroup);
     if (local_index < 16u)
     {
-        shared_plane_byte_offsets[local_index] = byte_scan - byte_cost;
+        uint byte_offset = offset_u32 * 4u + 8u + 3u * popcount(ballot);
+        for (uint tile = 0u; tile < local_index; ++tile)
+            byte_offset += tile_byte_costs[tile];
+        shared_plane_byte_offsets[local_index] = byte_offset;
         if (local_index == 15u)
-            shared_sign_offset = 8u * byte_scan;
+            shared_sign_offset = 8u * (byte_offset + byte_cost);
     }
     threadgroup_barrier(mem_flags::mem_threadgroup);
     float2x4 v;

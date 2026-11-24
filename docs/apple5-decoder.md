@@ -20,13 +20,16 @@ as unavailable in that CI run.
 `metal-portable-apple5`; Apple7 and later retain `metal-native-apple7`.
 Both must successfully compile all decode pipelines, meet per-pipeline thread
 and static threadgroup memory limits, allocate their textures and create the
-sampler. Candidate detection alone is not success. Intel/AMD Mac GPUs remain
-excluded from live codec admission and offline full decoding. Encoding still
+sampler. Candidate detection alone is not success. The standard factory requires Apple-family
+capabilities for complete decoding. The [host testbench](local-testbenches.md)
+assembles a separate lab device for synthetic offscreen experiments. Encoding still
 uses the original Apple7 gate.
 
-The portable path replaces dequant SIMD prefix sums/shuffles. Its 128 threads
-scan eight contributions per group and then sixteen group totals in shared
-memory, with uniform barriers and no dependency on SIMD width. The upstream
+The portable path replaces dequant SIMD prefix sums/shuffles. Sixteen lanes
+compute tile byte offsets from separate shared cost storage. All 128 threads
+then scan sign counts using groups of eight and sixteen group totals. Four
+uniform barriers order these phases, reduced from seven after host coefficient
+and timing comparisons. The algorithm is independent of SIMD width. The upstream
 64-thread iDWT is unchanged; it already uses threadgroup storage/barriers.
 Portable libraries compile with MSL 2.2. The wire identity is still `186f0393`.
 FP32 math with FP16 pyramid storage remains the default, not a new quality mode.

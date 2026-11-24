@@ -6,6 +6,8 @@ Apple TV observations. [Owner-reported A12 observations](../docs/development-sta
 are documented without claiming formal device qualification.
 
 - [Existing check coverage](cases.md)
+- [Local CPU/Metal testbenches](../docs/local-testbenches.md)
+- [2026-11-23 host comparison](results/2026-11-23-local-testbenches.json)
 - `templates/report.json`: empty report schema, not a populated device result
 - `local/`: ignored raw captures, timestamps, host profiles and logs
 

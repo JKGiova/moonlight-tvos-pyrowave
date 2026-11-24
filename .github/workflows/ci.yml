@@ -18,6 +18,17 @@ jobs:
         run: git submodule update --init third_party/pyrowave
       - name: Parser and real codec CPU tests
         run: python3 tools/run_portable_tests.py --sanitize
+      - name: Run synthetic CPU preparation testbench
+        run: python3 tools/run_local_benchmarks.py --cpu-only --iterations 8 --warmup 2 --output-dir build/benchmark-cpu
+      - name: Retain CPU testbench report and diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: cpu-testbench
+          path: |
+            build/benchmark-cpu/report.json
+            build/benchmark-cpu/build.log
+            build/benchmark-cpu/run.log
       - name: Verify the portable shader's embedded runtime source
         run: python3 tools/embed_apple5_shader.py --check
       - name: CMake portable build and tests
@@ -65,6 +76,17 @@ jobs:
         run: |
           xcrun clang++ -std=c++17 -fobjc-arc -Wall -Wextra -Werror -I native/apple -I native/client tools/check_presenter_shader.mm -framework Metal -framework Foundation -o build/metal/check-presenter
           build/metal/check-presenter
+      - name: Run host Metal stage and offscreen decoder testbenches
+        run: python3 tools/run_local_benchmarks.py --iterations 8 --warmup 2 --output-dir build/benchmark-metal
+      - name: Retain host Metal testbench report and diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: metal-testbench
+          path: |
+            build/benchmark-metal/report.json
+            build/benchmark-metal/build.log
+            build/benchmark-metal/run.log
       - name: Inspect available Metal backend
         id: gpu
         run: |

@@ -75,8 +75,12 @@ conversion-encoding failure preserves the slot while its submitted decode is
 outstanding. Both callbacks retain the runtime. Payload copying takes place
 outside the completion lock, with stop checked again before mailbox admission.
 
-The Apple5 dequantizer and inverse wavelet shaders retain their previous dispatch
-structure. Per-shader timing remains an additional profiling step.
+The Apple5 dequantizer keeps its 128-thread dispatch contract and now computes
+tile byte offsets using sixteen contributors, with four barriers across the
+byte-offset and sign-count phases. The inverse wavelet shaders retain their
+previous implementation. [Local testbenches](local-testbenches.md) cover CPU
+preparation, dequant and complete offscreen decode/conversion with explicit
+host-GPU scope.
 The [source comparison with Nonary Moonlight and Pyrolight](scheduling-comparison.md)
 records the pre-change pipeline and the reference architectures. Physical A12
 measurements will establish the new scheduling path's performance.
