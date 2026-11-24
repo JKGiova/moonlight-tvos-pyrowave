@@ -3,6 +3,7 @@
 #include "latest_frame_queue.hpp"
 #include "frame_completion.hpp"
 #include "color_conversion.hpp"
+#include "pyrowave_profiles.h"
 #include <cmath>
 #include <iostream>
 #include <memory>
@@ -83,7 +84,22 @@ int main() {
         require(close(conversion.red[2],space==1?1.5748f:1.402f));
         require(close(conversion.blue[1],space==1?1.8556f:1.772f));
     }
-    bool rejected=false; try { PWClient::colorConversion(2,false); } catch(const std::invalid_argument&) { rejected=true; }
+    for (bool full:{false,true}) {
+        auto c=PWClient::colorConversion(2,full);
+        require(close(c.red[2],1.4746f) && close(c.blue[1],1.8814f));
+    }
+    const int formats[]={PW_FORMAT_420_8,PW_FORMAT_444_8,PW_FORMAT_420_10,PW_FORMAT_444_10};
+    const int modes[]={PW_SERVER_420_8,PW_SERVER_444_8,PW_SERVER_420_10,PW_SERVER_444_10};
+    for (int i=0;i<4;++i) {
+        require(pw_select_profile(formats[i],modes[i]|PW_SERVER_420_8)==formats[i]);
+        require(pw_profile_valid(formats[i]));
+        for (int j=0;j<4;++j) if (j!=i)
+            require(pw_select_profile(formats[i],modes[j]|(i==0?0:PW_SERVER_420_8))==0);
+    }
+    require(pw_select_profile(PW_FORMAT_MASK,0)==0);
+    require(pw_select_profile(PW_FORMAT_MASK,0x07800000)==PW_FORMAT_444_10);
+    require(!pw_profile_valid(PW_FORMAT_MASK));
+    bool rejected=false; try { PWClient::colorConversion(3,false); } catch(const std::invalid_argument&) { rejected=true; }
     require(rejected);
-    std::cout<<checks<<" client runtime checks passed (queue overload, strict identity, SDR conversion; no GPU)\n";
+    std::cout<<checks<<" client runtime checks passed (queue overload, strict identity, color conversion, profile selection; no GPU)\n";
 }

@@ -8,7 +8,9 @@ It adds [PyroWave](https://github.com/Themaister/pyrowave) GPU decoding to the
 Apple TV client, using native Metal. The PC running Vibeshine encodes the video;
 the Apple TV receives, decodes and presents it.
 
-- PyroWave **8-bit SDR, YUV 4:2:0** with persistent manual codec selection.
+- PyroWave **8-bit SDR and 10-bit HDR10, YUV 4:2:0 or 4:4:4** with explicit profile selection.
+  HDR10/4:4:4 are implemented; live display/performance qualification is pending.
+  HDR10+ requires a host protocol extension and is not advertised.
 - Portable **Apple5** decoding on A12 and a capability-selected native
   **Apple7-or-later** decoder candidate for newer Apple GPUs.
 - Standard Moonlight PC selection, PIN pairing and app list.
@@ -62,7 +64,10 @@ patches so GitHub and subsequent preparations include them.
 2. Select the Vibeshine PC and complete PIN pairing if prompted.
 3. Select a desktop or application from the standard Moonlight app list.
 4. For PyroWave, open the app's tvOS Settings entry and choose
-   **Preferred Codec → PyroWave (SDR)**. Turn off HDR and enable **Statistics Overlay**.
+   **Preferred Codec → PyroWave 4:2:0**. Start with HDR off and enable **Statistics Overlay**.
+   Choose **PyroWave 4:4:4** for full-resolution chroma, and enable HDR for the
+   corresponding 10-bit profile. See the [HDR10 and 4:4:4 guide](docs/video-profiles.md)
+   for requirements, strict profile selection and HDR10+ limitations.
 5. Start a new session. The overlay identifies the actual codec and decoder;
    A12 uses `metal-portable-apple5`.
 
@@ -83,7 +88,8 @@ The host controls the applied encoding rate. See [bitrate profiles](docs/experim
 ## Troubleshooting
 
 - **HEVC appears after selecting PyroWave:** check host capability, bitstream identity,
-  GPU admission and SDR settings. The overlay reports the negotiated codec.
+  GPU admission and profile settings. The overlay reports the negotiated codec.
+  Explicit HDR/4:4:4 requests fail if unavailable; they do not silently downgrade.
 - **Queue drops increase with 0% network loss:** client queue replacements and missing
   network frames are separate counters. See [statistics](docs/experimental-client.md#statistics-overlay).
 - **Ready p95 is high:** it includes client waits through GPU completion, not just
@@ -102,7 +108,9 @@ queue drops**. Separate screenshots show client queue drops and Ready p95 around
 71–74 ms. These sessions do not establish a universal bitrate ceiling or a
 controlled latency comparison with HEVC. [Recorded observations and CI evidence](docs/development-status.md)
 
-The live PyroWave integration accepts complete frames in SDR 4:2:0. It has no
+The live PyroWave integration accepts complete frames in 4:2:0/4:4:4 with 8-bit SDR
+or 10-bit HDR10 presentation. The new profiles are not yet qualified for live HDR
+output or sustained 4K60 operation. It has no
 partial-frame recovery, automatic session retry or benchmark-aware PyroWave codec
 selection. No physical A15 result is recorded. This project is independent of
 upstream maintainers and does not claim release qualification.

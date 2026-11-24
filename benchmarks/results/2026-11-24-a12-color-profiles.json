@@ -1,0 +1,47 @@
+{
+  "date": "2026-11-24",
+  "kind": "physical-offscreen-color-profile-correctness",
+  "device": {
+    "model": "Apple TV 4K (2nd generation)",
+    "identifier": "AppleTV11,1",
+    "soc": "A12"
+  },
+  "source": {
+    "video_profiles": true,
+    "timing_breakdown": false,
+    "isolate_stages": false,
+    "run_id": "pyrowave-offline-20261124T170532492240Z",
+    "baseline": false,
+    "iterations": 100,
+    "warmup": 20,
+    "revision": "0c9e7a32577f51a5ec293cd6d67615179ebbb5c4",
+    "diagnostic_source_sha256": "e4d892c362b4ce2065a63df02af4e68da13ff5968732ab25cb9a076f2dd2ffa1",
+    "decoder_source_sha256": "f5d3c6952b8593b9cdef1129fb452dea2fcd8b7824c196446d5e095570f952c2",
+    "shader_header_sha256": "a1238f936efc2c06a95b290b7f34530f9236af4fa7585bcc735ee081f9509d35"
+  },
+  "production_files_sha256": {
+    "native/apple/PyroWaveHDRPresenter.h": "1e0194fc44f539fa37d8db306997c4fde36b30b67b6e4162c4ecf67e4f1ccb30",
+    "native/apple/PyroWaveVideoRenderer.mm": "274afd129ceb264e6e0a8ecca68fa7734164042e1c9eb31777c78260aa3c78b6",
+    "native/client/pyrowave_profiles.h": "b9de64163d4ce17130a81233c17c7fe95aed5f0bbc4b17e8687b35f46d7527e9"
+  },
+  "status": {
+    "thermal_after": 0,
+    "exit_code": 0,
+    "run_id": "pyrowave-offline-20261124T170532492240Z",
+    "thermal_before": 0
+  },
+  "metrics": {
+    "gpu_available": true,
+    "samples_checked": 8,
+    "full_decoder_zero_profiles": 8,
+    "packed_samples_checked": 294912,
+    "physical_hdr_display_tested": false
+  },
+  "notes": [
+    "Temporary diagnostic in the existing signed Release project; production decoder factory selects metal-portable-apple5.",
+    "Eight complete synthetic zero-coefficient frames: 128x128 and 320x180, 420/444, R8/R16 output. No encoded-video quality or throughput measurement.",
+    "Eight packing cases: full/limited range, 420/444 and PQ/SDR; exact 10-bit component values and static metadata checked.",
+    "No live host, HDR HDMI output, HDR10+, sustained 4K60 or input-to-display latency tested.",
+    "Subsequent host packing checker additionally exercises the three-surface pool limit and recycling recovery."
+  ]
+}

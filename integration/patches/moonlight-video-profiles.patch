@@ -1,0 +1,265 @@
+diff --git a/moonlight-common/moonlight-common-c/src/Limelight.h b/moonlight-common/moonlight-common-c/src/Limelight.h
+--- a/moonlight-common/moonlight-common-c/src/Limelight.h
++++ b/moonlight-common/moonlight-common-c/src/Limelight.h
+@@ -231,7 +231,10 @@
+ #define VIDEO_FORMAT_AV1_MAIN8       0x1000 // AV1 Main 8-bit profile
+ #define VIDEO_FORMAT_AV1_MAIN10      0x2000 // AV1 Main 10-bit profile
+ #define VIDEO_FORMAT_AV1_HIGH8_444   0x4000 // AV1 High 4:4:4 8-bit profile
+-#define VIDEO_FORMAT_PYROWAVE        0x010000 // Nonary extension: 8-bit SDR 4:2:0
++#define VIDEO_FORMAT_PYROWAVE        0x010000
++#define VIDEO_FORMAT_PYROWAVE_444    0x020000
++#define VIDEO_FORMAT_PYROWAVE_HDR10  0x040000
++#define VIDEO_FORMAT_PYROWAVE_HDR10_444 0x080000
+ #define VIDEO_FORMAT_MASK_PYROWAVE  0x0F0000
+ #define VIDEO_FORMAT_AV1_HIGH10_444  0x8000 // AV1 High 4:4:4 10-bit profile
+ 
+@@ -239,8 +242,8 @@
+ #define VIDEO_FORMAT_MASK_H264   0x000F
+ #define VIDEO_FORMAT_MASK_H265   0x0F00
+ #define VIDEO_FORMAT_MASK_AV1    0xF000
+-#define VIDEO_FORMAT_MASK_10BIT  0xAA00
+-#define VIDEO_FORMAT_MASK_YUV444 0xCC04
++#define VIDEO_FORMAT_MASK_10BIT  0xCAA00
++#define VIDEO_FORMAT_MASK_YUV444 0xACC04
+ 
+ // If set in the renderer capabilities field, this flag will cause audio/video data to
+ // be submitted directly from the receive thread. This should only be specified if the
+@@ -514,15 +517,18 @@
+ #define SCM_HEVC_REXT8_444  0x00080000 // Sunshine extension
+ #define SCM_HEVC_REXT10_444 0x00100000 // Sunshine extension
+ #define SCM_AV1_HIGH8_444   0x00200000 // Sunshine extension
+-#define SCM_PYROWAVE        0x00800000 // Nonary extension: 8-bit SDR 4:2:0
++#define SCM_PYROWAVE        0x00800000
++#define SCM_PYROWAVE_444    0x01000000
++#define SCM_PYROWAVE_HDR10  0x02000000
++#define SCM_PYROWAVE_HDR10_444 0x04000000
+ #define SCM_AV1_HIGH10_444  0x00400000 // Sunshine extension
+ 
+ // SCM masks to identify various codec capabilities
+ #define SCM_MASK_H264   (SCM_H264 | SCM_H264_HIGH8_444)
+ #define SCM_MASK_HEVC   (SCM_HEVC | SCM_HEVC_MAIN10 | SCM_HEVC_REXT8_444 | SCM_HEVC_REXT10_444)
+ #define SCM_MASK_AV1    (SCM_AV1_MAIN8 | SCM_AV1_MAIN10 | SCM_AV1_HIGH8_444 | SCM_AV1_HIGH10_444)
+-#define SCM_MASK_10BIT  (SCM_HEVC_MAIN10 | SCM_HEVC_REXT10_444 | SCM_AV1_MAIN10 | SCM_AV1_HIGH10_444)
+-#define SCM_MASK_YUV444 (SCM_H264_HIGH8_444 | SCM_HEVC_REXT8_444 | SCM_HEVC_REXT10_444 | SCM_AV1_HIGH8_444 | SCM_AV1_HIGH10_444)
++#define SCM_MASK_10BIT  (SCM_PYROWAVE_HDR10 | SCM_PYROWAVE_HDR10_444 | SCM_HEVC_MAIN10 | SCM_HEVC_REXT10_444 | SCM_AV1_MAIN10 | SCM_AV1_HIGH10_444)
++#define SCM_MASK_YUV444 (SCM_PYROWAVE_444 | SCM_PYROWAVE_HDR10_444 | SCM_H264_HIGH8_444 | SCM_HEVC_REXT8_444 | SCM_HEVC_REXT10_444 | SCM_AV1_HIGH8_444 | SCM_AV1_HIGH10_444)
+ 
+ typedef struct _SERVER_INFORMATION {
+     // Server host name or IP address in text form
+diff --git a/moonlight-common/moonlight-common-c/src/RtspConnection.c b/moonlight-common/moonlight-common-c/src/RtspConnection.c
+--- a/moonlight-common/moonlight-common-c/src/RtspConnection.c
++++ b/moonlight-common/moonlight-common-c/src/RtspConnection.c
+@@ -1,5 +1,6 @@
+ #include "Limelight-internal.h"
+ #include "bitstream_identity.h"
++#include "pyrowave_profiles.h"
+ #include "Rtsp.h"
+ 
+ #define RTSP_CONNECT_TIMEOUT_SEC 10
+@@ -1119,9 +1120,9 @@
+ 
+         // Select PyroWave only for an explicit admitted request and an exact identity.
+         // Unknown/mismatched identities preserve the standard negotiated fallback.
+-        if ((StreamConfig.supportedVideoFormats & VIDEO_FORMAT_PYROWAVE) &&
+-            (serverInfo->serverCodecModeSupport & SCM_PYROWAVE) && pw_bitstream_matches_sdp(response.payload)) {
+-            NegotiatedVideoFormat = VIDEO_FORMAT_PYROWAVE;
++        int pyroProfile=pw_select_profile(StreamConfig.supportedVideoFormats,serverInfo->serverCodecModeSupport);
++        if (pyroProfile && pw_bitstream_matches_sdp(response.payload)) {
++            NegotiatedVideoFormat = pyroProfile;
+         }
+         else if ((StreamConfig.supportedVideoFormats & VIDEO_FORMAT_MASK_AV1) && strstr(response.payload, "AV1/90000")) {
+             if ((serverInfo->serverCodecModeSupport & SCM_AV1_HIGH10_444) && (StreamConfig.supportedVideoFormats & VIDEO_FORMAT_AV1_HIGH10_444)) {
+diff --git a/Limelight/Stream/Connection.m b/Limelight/Stream/Connection.m
+--- a/Limelight/Stream/Connection.m
++++ b/Limelight/Stream/Connection.m
+@@ -86,8 +86,10 @@
+ {
+     switch (activeVideoFormat)
+     {
+-        case VIDEO_FORMAT_PYROWAVE:
+-            return @"PyroWave (SDR)";
++        case VIDEO_FORMAT_PYROWAVE: return @"PyroWave SDR 4:2:0";
++        case VIDEO_FORMAT_PYROWAVE_444: return @"PyroWave SDR 4:4:4";
++        case VIDEO_FORMAT_PYROWAVE_HDR10: return @"PyroWave 10-bit 4:2:0";
++        case VIDEO_FORMAT_PYROWAVE_HDR10_444: return @"PyroWave 10-bit 4:4:4";
+         case VIDEO_FORMAT_H264:
+             return @"H.264";
+         case VIDEO_FORMAT_H264_HIGH8_444:
+@@ -180,7 +182,7 @@
+ 
+     // PyroWave is opaque record data, not NAL parameter sets. Copy ownership
+     // inside the renderer before common-c completes and frees this decode unit.
+-    if (activeVideoFormat == VIDEO_FORMAT_PYROWAVE) {
++    if ((activeVideoFormat & VIDEO_FORMAT_MASK_PYROWAVE) != 0) {
+         return [renderer submitPyroWaveDecodeUnit:decodeUnit];
+     }
+     unsigned char* data = (unsigned char*) malloc(decodeUnit->fullLength);
+diff --git a/Limelight/Stream/VideoDecoderRenderer.m b/Limelight/Stream/VideoDecoderRenderer.m
+--- a/Limelight/Stream/VideoDecoderRenderer.m
++++ b/Limelight/Stream/VideoDecoderRenderer.m
+@@ -106,13 +106,15 @@
+     self->videoFormat = videoFormat;
+     self->frameRate = frameRate;
+ #if TARGET_OS_TV
+-    if (videoFormat == VIDEO_FORMAT_PYROWAVE) {
++    if ((videoFormat & VIDEO_FORMAT_MASK_PYROWAVE) != 0) {
+         dispatch_sync(dispatch_get_main_queue(), ^{
+             self->displayLayer.hidden=YES;
+             self->_pyrowave=[[PyroWaveVideoRenderer alloc] initWithView:self->_view callbacks:self->_callbacks];
+         });
+         if (_colorRange != COLOR_RANGE_LIMITED && _colorRange != COLOR_RANGE_FULL) return -1;
+-        return [_pyrowave prepareWidth:videoWidth height:videoHeight fullRange:_colorRange == COLOR_RANGE_FULL];
++        int result=[_pyrowave prepareWidth:videoWidth height:videoHeight fullRange:_colorRange == COLOR_RANGE_FULL videoFormat:videoFormat frameRate:frameRate];
++        [_pyrowave setMasteringDisplay:masteringDisplayColorVolume contentLight:contentLightLevelInfo];
++        return result;
+     }
+ #endif
+     return 0;
+@@ -141,7 +143,7 @@
+ - (void)start
+ {
+ #if TARGET_OS_TV
+-    if (videoFormat == VIDEO_FORMAT_PYROWAVE) {
++    if ((videoFormat & VIDEO_FORMAT_MASK_PYROWAVE) != 0) {
+         // Deliver complete frames when common-c signals them. Polling on the
+         // display link can deliver several frames together in one tick.
+         dispatch_queue_attr_t priority = dispatch_queue_attr_make_with_qos_class(
+@@ -739,6 +741,12 @@
+         metadataChanged = YES;
+     }
+     
++#if TARGET_OS_TV
++    if (_pyrowave) {
++        [_pyrowave setMasteringDisplay:masteringDisplayColorVolume contentLight:contentLightLevelInfo];
++        return;
++    }
++#endif
+     // If the metadata changed, request an IDR frame to re-create the CMVideoFormatDescription
+     if (metadataChanged) {
+         LiRequestIdrFrame();
+diff --git a/Limelight/Database/TemporarySettings.h b/Limelight/Database/TemporarySettings.h
+--- a/Limelight/Database/TemporarySettings.h
++++ b/Limelight/Database/TemporarySettings.h
+@@ -24,7 +24,8 @@
+     CODEC_PREF_H264,
+     CODEC_PREF_HEVC,
+     CODEC_PREF_AV1,
+-    CODEC_PREF_PYROWAVE = 4, // Explicit experimental tvOS request
++    CODEC_PREF_PYROWAVE = 4, // Explicit tvOS request; HDR follows the HDR setting
++    CODEC_PREF_PYROWAVE_444 = 5,
+ } preferredCodec;
+ @property (nonatomic) BOOL useFramePacing;
+ @property (nonatomic) BOOL multiController;
+diff --git a/Limelight/ViewControllers/MainFrameViewController.m b/Limelight/ViewControllers/MainFrameViewController.m
+--- a/Limelight/ViewControllers/MainFrameViewController.m
++++ b/Limelight/ViewControllers/MainFrameViewController.m
+@@ -674,6 +674,7 @@
+ #endif
+             // Fall-through
+             
++        case CODEC_PREF_PYROWAVE_444:
+         case CODEC_PREF_PYROWAVE: // Keep hardware fallbacks available during negotiation.
+         case CODEC_PREF_AUTO:
+         case CODEC_PREF_HEVC:
+@@ -690,20 +691,26 @@
+ #if TARGET_OS_TV
+     // Persistent manual request works when launched from the TV, without Xcode.
+     // Normal Auto still requires future physical qualification.
+-    BOOL pyroRequested=streamSettings.preferredCodec == CODEC_PREF_PYROWAVE;
++    BOOL pyroRequested=streamSettings.preferredCodec == CODEC_PREF_PYROWAVE || streamSettings.preferredCodec == CODEC_PREF_PYROWAVE_444;
+ #if DEBUG
+     pyroRequested |= streamSettings.preferredCodec == CODEC_PREF_AUTO &&
+         [[NSUserDefaults standardUserDefaults] boolForKey:@"PyroWaveExperimental"];
+ #endif
+     if (pyroRequested) {
+-        if (!streamSettings.enableHdr && (_streamConfig.serverCodecModeSupport & SCM_PYROWAVE) &&
++        if ((_streamConfig.serverCodecModeSupport & SCM_PYROWAVE) &&
+             _streamConfig.width>=128 && _streamConfig.width<=4096 && _streamConfig.width%2==0 &&
+             _streamConfig.height>=128 && _streamConfig.height<=2160 && _streamConfig.height%2==0 &&
+             [PyroWaveVideoRenderer isDecoderBackendCandidate]) {
+-            _streamConfig.supportedVideoFormats |= VIDEO_FORMAT_PYROWAVE;
++            BOOL c444=streamSettings.preferredCodec==CODEC_PREF_PYROWAVE_444;
++            int profile=streamSettings.enableHdr ? (c444?VIDEO_FORMAT_PYROWAVE_HDR10_444:VIDEO_FORMAT_PYROWAVE_HDR10) :
++                (c444?VIDEO_FORMAT_PYROWAVE_444:VIDEO_FORMAT_PYROWAVE);
++            int mode=streamSettings.enableHdr ? (c444?SCM_PYROWAVE_HDR10_444:SCM_PYROWAVE_HDR10) :
++                (c444?SCM_PYROWAVE_444:SCM_PYROWAVE);
++            if ((_streamConfig.serverCodecModeSupport & mode) && (!streamSettings.enableHdr || AVPlayer.eligibleForHDRPlayback))
++                _streamConfig.supportedVideoFormats |= profile;
+             Log(LOG_W, @"Explicit experimental PyroWave request; device is not Auto-qualified");
+         } else {
+-            Log(LOG_W, @"PyroWave refused: unsupported device, host or SDR geometry/profile; keeping standard codec mask");
++            Log(LOG_W, @"PyroWave refused: unsupported device, host or geometry/profile; keeping standard codec mask");
+         }
+     }
+ #endif
+diff --git a/Moonlight TV/Settings.bundle/Root.plist b/Moonlight TV/Settings.bundle/Root.plist
+--- a/Moonlight TV/Settings.bundle/Root.plist
++++ b/Moonlight TV/Settings.bundle/Root.plist
+@@ -229,13 +229,15 @@
+ 				<string>1</string>
+ 				<string>2</string>
+ 				<string>4</string>
++				<string>5</string>
+ 			</array>
+ 			<key>Titles</key>
+ 			<array>
+ 				<string>Auto</string>
+ 				<string>H.264</string>
+ 				<string>HEVC</string>
+-				<string>PyroWave (SDR)</string>
++				<string>PyroWave 4:2:0</string>
++				<string>PyroWave 4:4:4</string>
+ 			</array>
+ 		</dict>
+ 		<dict>
+diff --git a/Limelight/Stream/StreamConfiguration.h b/Limelight/Stream/StreamConfiguration.h
+--- a/Limelight/Stream/StreamConfiguration.h
++++ b/Limelight/Stream/StreamConfiguration.h
+@@ -7,6 +7,7 @@
+ //
+ 
+ @interface StreamConfiguration : NSObject
++@property (nonatomic) int pyroRequiredFormat;
+ 
+ @property NSString* host;
+ @property unsigned short httpsPort;
+diff --git a/Limelight/ViewControllers/MainFrameViewController.m b/Limelight/ViewControllers/MainFrameViewController.m
+--- a/Limelight/ViewControllers/MainFrameViewController.m
++++ b/Limelight/ViewControllers/MainFrameViewController.m
+@@ -697,6 +697,10 @@
+         [[NSUserDefaults standardUserDefaults] boolForKey:@"PyroWaveExperimental"];
+ #endif
+     if (pyroRequested) {
++        BOOL c444=streamSettings.preferredCodec==CODEC_PREF_PYROWAVE_444;
++        _streamConfig.pyroRequiredFormat=streamSettings.enableHdr ?
++            (c444?VIDEO_FORMAT_PYROWAVE_HDR10_444:VIDEO_FORMAT_PYROWAVE_HDR10) :
++            (c444?VIDEO_FORMAT_PYROWAVE_444:0);
+         if ((_streamConfig.serverCodecModeSupport & SCM_PYROWAVE) &&
+             _streamConfig.width>=128 && _streamConfig.width<=4096 && _streamConfig.width%2==0 &&
+             _streamConfig.height>=128 && _streamConfig.height<=2160 && _streamConfig.height%2==0 &&
+diff --git a/Limelight/Stream/Connection.m b/Limelight/Stream/Connection.m
+--- a/Limelight/Stream/Connection.m
++++ b/Limelight/Stream/Connection.m
+@@ -45,8 +45,14 @@
+ 
+ static VideoDecoderRenderer* renderer;
+ 
++static int requiredPyroFormat;
++
+ int DrDecoderSetup(int videoFormat, int width, int height, int redrawRate, void* context, int drFlags)
+ {
++    if (requiredPyroFormat && videoFormat!=requiredPyroFormat) {
++        Log(LOG_E,@"Requested PyroWave profile unavailable; refusing a chroma/HDR downgrade");
++        return -1;
++    }
+     int result=[renderer setupWithVideoFormat:videoFormat width:width height:height frameRate:redrawRate];
+     lastFrameNumber = 0;
+     activeVideoFormat = videoFormat;
+@@ -448,6 +454,7 @@
+     _streamConfig.width = config.width;
+     _streamConfig.height = config.height;
+     _streamConfig.fps = config.frameRate;
++    requiredPyroFormat=config.pyroRequiredFormat;
+     _streamConfig.bitrate = config.bitRate;
+     _streamConfig.supportedVideoFormats = config.supportedVideoFormats;
+     _streamConfig.audioConfiguration = config.audioConfiguration;

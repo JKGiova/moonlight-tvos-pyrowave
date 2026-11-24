@@ -10,6 +10,8 @@
 #include "frame_completion.hpp"
 #include "color_conversion.hpp"
 #include "PyroWavePresenterSource.h"
+#include "PyroWaveHDRPresenter.h"
+#include "pyrowave_profiles.h"
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -27,6 +29,9 @@ struct Frame {
     uint32_t rtpTimestamp;
     uint64_t receiveTimeUs, enqueueTimeUs, deliveryTimeUs;
     double copyMs;
+    bool hdr;
+    NSData* mastering;
+    NSData* contentLight;
 };
 struct Slot {
     pyrowave_decoder decoder = nullptr;
@@ -100,6 +105,11 @@ id distribution(std::vector<double> values) {
     PWClient::LatestFrameQueue<Frame> _mailbox;
     std::shared_ptr<Runtime> _runtime;
     PyroWaveFraming::StreamGeometry _geometry;
+    std::shared_ptr<PWClient::HDRPresenter> _hdrPresenter;
+    NSData* _mastering;
+    NSData* _contentLight;
+    BOOL _tenBit;
+    int _lastPresentationSpace;
     BOOL _pumpScheduled, _shown, _fatalReported, _fullRange;
     uint64_t _parserRejected, _profileRejected, _decodeFailed, _drawableDropped, _presentFailed, _decoded, _completed, _presented;
     std::array<TimingWindow,TimingCount> _timings;
@@ -114,7 +124,7 @@ id distribution(std::vector<double> values) {
 - (instancetype)initWithView:(UIView*)view callbacks:(id<ConnectionCallbacks>)callbacks {
     if ((self=[super init])) {
         NSAssert([NSThread isMainThread],@"Metal layer must be created on the main thread");
-        _view=view; _callbacks=callbacks; _lock=[NSLock new];
+        _view=view; _callbacks=callbacks; _lock=[NSLock new]; _lastPresentationSpace=-1;
         dispatch_queue_attr_t priority = dispatch_queue_attr_make_with_qos_class(
             DISPATCH_QUEUE_SERIAL, QOS_CLASS_USER_INITIATED, 0);
         _worker=dispatch_queue_create("org.moonlight.pyrowave.decode",priority);
@@ -132,6 +142,16 @@ id distribution(std::vector<double> values) {
 
 // Called during decoder setup, on the connection worker (never the UI thread).
 - (int)prepareWidth:(int)width height:(int)height fullRange:(BOOL)fullRange {
+    return [self prepareWidth:width height:height fullRange:fullRange videoFormat:PW_FORMAT_420_8 frameRate:60];
+}
+
+- (void)setMasteringDisplay:(NSData*)mastering contentLight:(NSData*)light {
+    [_lock lock]; _mastering=[mastering copy]; _contentLight=[light copy]; [_lock unlock];
+}
+
+- (int)prepareWidth:(int)width height:(int)height fullRange:(BOOL)fullRange videoFormat:(int)format frameRate:(int)rate {
+    if (!pw_profile_valid(format) || rate<=0 || rate>240) return -1;
+    const bool c444=pw_profile_444(format),tenBit=pw_profile_10bit(format);
     if ([NSThread isMainThread] || width<128 || height<128 || width>4096 || height>2160 || width%2 || height%2 ||
         !_metal || !pw_decoder_backend_is_candidate((__bridge void*)_metal)) return -1;
     [_lock lock];
@@ -147,16 +167,21 @@ id distribution(std::vector<double> values) {
     if (pw_decoder_device_create(&deviceInfo,portable,&runtime->device)!=PYROWAVE_SUCCESS) return -1;
     for (auto& slot:runtime->slots) {
         pyrowave_decoder_create_info info{}; info.device=runtime->device; info.width=width; info.height=height;
-        info.chroma=PYROWAVE_CHROMA_SUBSAMPLING_420;
+        info.chroma=c444?PYROWAVE_CHROMA_SUBSAMPLING_444:PYROWAVE_CHROMA_SUBSAMPLING_420;
         if (pyrowave_decoder_create(&info,&slot.decoder)!=PYROWAVE_SUCCESS) return -1;
         for (unsigned p=0;p<3;++p) {
-            auto descriptor=[MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatR8Unorm
-                width:width/(p?2:1) height:height/(p?2:1) mipmapped:NO];
+            auto descriptor=[MTLTextureDescriptor texture2DDescriptorWithPixelFormat:tenBit?MTLPixelFormatR16Unorm:MTLPixelFormatR8Unorm
+                width:width/(p&&!c444?2:1) height:height/(p&&!c444?2:1) mipmapped:NO];
             descriptor.storageMode=MTLStorageModePrivate;
             descriptor.usage=MTLTextureUsageShaderWrite|MTLTextureUsageShaderRead;
             slot.planes[p]=[_metal newTextureWithDescriptor:descriptor];
             if (!slot.planes[p]) return -1;
         }
+    }
+    if (tenBit) {
+        _hdrPresenter=std::make_shared<PWClient::HDRPresenter>();
+        if (!_hdrPresenter->prepare(_metal,width,height,fullRange,c444)) return -1;
+        _hdrPresenter->frameRate=rate;
     }
     NSError* error=nil;
     id<MTLLibrary> library=[_metal newLibraryWithSource:[NSString stringWithUTF8String:PWClient::PresenterSource] options:nil error:&error];
@@ -169,6 +194,14 @@ id distribution(std::vector<double> values) {
     _commands=[_metal newCommandQueue];
     if (!_presenter || !_commands) return -1;
     dispatch_sync(dispatch_get_main_queue(), ^{
+        if (tenBit) {
+            self->_hdrPresenter->hostView=self->_view;
+            self->_hdrPresenter->layer=[AVSampleBufferDisplayLayer layer];
+            self->_hdrPresenter->layer.hidden=YES;
+            self->_hdrPresenter->layer.frame=self->_view.bounds;
+            self->_hdrPresenter->layer.videoGravity=AVLayerVideoGravityResizeAspect;
+            [self->_view.layer addSublayer:self->_hdrPresenter->layer];
+        }
         const CGFloat aspect=(CGFloat)width/height;
         CGSize bounds=self->_view.bounds.size;
         CGSize size=bounds.width>bounds.height*aspect ? CGSizeMake(bounds.height*aspect,bounds.height) : CGSizeMake(bounds.width,bounds.width/aspect);
@@ -181,7 +214,7 @@ id distribution(std::vector<double> values) {
     // statistics and stop. An interrupted setup must never revive the session.
     [_lock lock];
     if (_mailbox.stopped()) { [_lock unlock]; return -1; }
-    _geometry={width,height,false}; _fullRange=fullRange;
+    _geometry={width,height,c444}; _fullRange=fullRange; _tenBit=tenBit;
     _runtime=std::move(runtime);
     [_lock unlock];
     return 0;
@@ -201,12 +234,14 @@ id distribution(std::vector<double> values) {
     if (!unit || unit->fullLength<8 || size_t(unit->fullLength)>MaxFrameBytes) {
         [_lock lock]; ++_parserRejected; [_lock unlock]; return DR_OK;
     }
-    if ((unit->colorspace!=COLORSPACE_REC_601 && unit->colorspace!=COLORSPACE_REC_709) || unit->hdrActive) {
+    if ((unit->colorspace!=COLORSPACE_REC_601 && unit->colorspace!=COLORSPACE_REC_709 && unit->colorspace!=COLORSPACE_REC_2020) ||
+        (unit->hdrActive && (!_tenBit || unit->colorspace!=COLORSPACE_REC_2020))) {
         [_lock lock]; ++_profileRejected; [_lock unlock]; [self failSession]; return DR_OK;
     }
     [_lock lock];
     if (_mailbox.stopped() || !_runtime) { [_lock unlock]; return DR_OK; }
     const bool fullRange = _fullRange;
+    NSData* mastering=_mastering; NSData* contentLight=_contentLight;
     [_lock unlock];
     // Ownership is transferred before LiCompleteVideoFrame frees network buffers.
     void* bytes=malloc(size_t(unit->fullLength));
@@ -224,7 +259,7 @@ id distribution(std::vector<double> values) {
     [_lock lock];
     if (_mailbox.stopped()) { [_lock unlock]; return DR_OK; }
     _mailbox.submit({data,unit->colorspace,fullRange,received,unit->frameNumber,
-        unit->rtpTimestamp,unit->receiveTimeUs,unit->enqueueTimeUs,deliveryTimeUs,copyMs});
+        unit->rtpTimestamp,unit->receiveTimeUs,unit->enqueueTimeUs,deliveryTimeUs,copyMs,unit->hdrActive,mastering,contentLight});
     [self schedulePumpLocked]; [_lock unlock];
     return DR_OK; // PyroWave frames are independent; never request an IDR for a drop.
 }
@@ -295,6 +330,38 @@ id distribution(std::vector<double> values) {
             progress->prepareMs = (progress->decodeCommitted - workerStart) * 1000;
             [decode commit];
 
+            if (_hdrPresenter) {
+                auto presentation=_hdrPresenter;
+                auto command=[_commands commandBuffer];
+                auto surface=presentation->encode(command,slot.planes,work->frame.colorSpace,
+                    work->frame.hdr,work->frame.mastering,work->frame.contentLight);
+                if (!surface) {
+                    [_lock lock]; ++_drawableDropped;
+                    if (progress->completion.completePresentation()) [self finishFrameLocked:progress slot:index];
+                    [_lock unlock]; continue;
+                }
+                [command addCompletedHandler:^(id<MTLCommandBuffer> completed) {
+                    const double now=CACurrentMediaTime();
+                    [self->_lock lock];
+                    progress->rendered=completed.status==MTLCommandBufferStatusCompleted;
+                    progress->renderStart=completed.GPUStartTime; progress->renderEnd=completed.GPUEndTime;
+                    progress->callbackTime=now;
+                    if (!progress->rendered) ++self->_presentFailed;
+                    if (progress->completion.completePresentation()) [self finishFrameLocked:progress slot:index];
+                    [self->_lock unlock];
+                    if (progress->rendered) dispatch_async(dispatch_get_main_queue(), ^{
+                        [self->_lock lock]; const bool stopped=self->_mailbox.stopped(); [self->_lock unlock];
+                        if (!stopped && !presentation->enqueue(surface)) {
+                            [self->_lock lock]; ++self->_presentFailed; [self->_lock unlock];
+                        }
+                    });
+                    else [self failSession];
+                }];
+                progress->renderCommitted=CACurrentMediaTime();
+                [command commit];
+                continue;
+            }
+
             const double drawableStart = CACurrentMediaTime();
             id<CAMetalDrawable> drawable=[_layer nextDrawable];
             progress->drawableWaitMs = (CACurrentMediaTime() - drawableStart) * 1000;
@@ -325,6 +392,14 @@ id distribution(std::vector<double> values) {
                 continue;
             }
             command.label = @"PyroWave conversion and presentation";
+            if (_lastPresentationSpace!=work->frame.colorSpace) {
+                const int space=work->frame.colorSpace;
+                dispatch_sync(dispatch_get_main_queue(), ^{
+                    CGColorSpaceRef colors=CGColorSpaceCreateWithName(space==2?kCGColorSpaceITUR_2020:kCGColorSpaceITUR_709);
+                    self->_layer.colorspace=colors; CGColorSpaceRelease(colors);
+                });
+                _lastPresentationSpace=space;
+            }
             const auto conversion=PWClient::colorConversion(work->frame.colorSpace,work->frame.fullRange);
             [encoder setRenderPipelineState:_presenter];
             for (unsigned p=0;p<3;++p) [encoder setFragmentTexture:slot.planes[p] atIndex:p];
@@ -400,7 +475,10 @@ id distribution(std::vector<double> values) {
             _shown = YES;
             dispatch_async(dispatch_get_main_queue(), ^{
                 [self->_lock lock]; BOOL active=!self->_mailbox.stopped(); [self->_lock unlock];
-                if (active) { self->_layer.hidden=NO; [self->_callbacks videoContentShown]; }
+                if (active) {
+                    if (self->_hdrPresenter) self->_hdrPresenter->layer.hidden=NO; else self->_layer.hidden=NO;
+                    [self->_callbacks videoContentShown];
+                }
             });
         }
     }
@@ -417,7 +495,8 @@ id distribution(std::vector<double> values) {
 
 - (void)stop {
     [_lock lock]; _mailbox.stop(); [_lock unlock];
-    dispatch_async(dispatch_get_main_queue(), ^{ [self->_layer removeFromSuperlayer]; });
+    dispatch_async(dispatch_get_main_queue(), ^{ [self->_layer removeFromSuperlayer];
+        if (self->_hdrPresenter) { self->_hdrPresenter->stop(); } });
 }
 
 - (NSDictionary*)statistics {
@@ -428,7 +507,7 @@ id distribution(std::vector<double> values) {
         @"completed_frames":@(_completed),
         @"decoded_frames":@(_decoded),
         @"presented_frames":@(_presented),
-        @"presentation_timing_available":@(!TARGET_OS_SIMULATOR),
+        @"presentation_timing_available":@(!TARGET_OS_SIMULATOR && !_tenBit),
         @"snapshot_time_seconds":@(CACurrentMediaTime()),
         @"parser_rejected":@(_parserRejected),
         @"decode_failed":@(_decodeFailed),
@@ -441,6 +520,8 @@ id distribution(std::vector<double> values) {
         @"pending_frames":@(_mailbox.pending()?1:0),
         @"last_completed_frame":_lastCompletedFrame ?: NSNull.null,
         @"auto_qualified":@NO,
+        @"chroma":_geometry.chroma444?@"4:4:4":@"4:2:0", @"bit_depth":@(_tenBit?10:8),
+        @"hdr10plus_transport_available":@NO,
         @"decoder_backend":@(pw_decoder_backend_name(_runtime ? _runtime->device : nullptr))
     } mutableCopy];
     [_lock unlock];

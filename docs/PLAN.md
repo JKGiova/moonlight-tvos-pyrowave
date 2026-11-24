@@ -12,7 +12,8 @@ This page records completed implementation work. Runtime behavior is described i
 | Apple5 decoder | Threadgroup-based portable dequantizer, capability/pipeline checks and backend identification |
 | Renderer | Two decoder/texture slots, latest-frame mailbox, decode before drawable acquisition, separate conversion and three-drawable presentation |
 | Frame delivery | PyroWave receive worker waits for complete frames from common-c instead of display-link polling |
-| Settings | Persistent PyroWave (SDR), manual bitrate through 1,000 Mbps and per-profile bitrate Auto |
+| Settings | Persistent PyroWave 4:2:0/4:4:4 and HDR-toggle profile requests, manual bitrate through 1,000 Mbps and per-profile bitrate Auto |
+| Color profiles | 8-bit 420/444 and 10-bit HDR10 420/444, strict advanced-profile negotiation, PQ/static metadata and bounded AVFoundation presentation; live qualification pending |
 | Diagnostics | GPU-end Ready, decode/conversion/queue distributions, frame timestamps, device presentation observations and separate loss/error counters |
 | Offline tools | Video generation, real encoding, frame validation, Metal decode/readback and comparison reports |
 | Automated checks | Portable parser/runtime tests, GPU fixture/presenter checks and unsigned tvOS builds in CI |

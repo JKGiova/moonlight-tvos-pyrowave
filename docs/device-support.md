@@ -21,7 +21,12 @@ Xcode 26.6 and tvOS SDK 26.5. A successful SDK build is separate from device
 execution. The manifest's scope was reviewed on 2026-10-07; this page makes no
 new compatibility claim about other Apple TV models or the latest OS release.
 
-Live PyroWave accepts 8-bit SDR 4:2:0. There is no qualified automatic PyroWave
+The client implements 8-bit SDR and 10-bit HDR10 profiles in 4:2:0 and 4:4:4.
+The 10-bit presentation path requires tvOS 17+ and successful CoreVideo surface
+admission. Live HDR output and 4:4:4 performance are not qualified on any model.
+HDR10+ is not advertised; the A12 model does not list HDR10+ output support.
+See [color profile implementation and limits](video-profiles.md).
+There is no qualified automatic PyroWave
 codec admission for any model. [Device observations](development-status.md#apple-tv-device-observations)
 
 ## References

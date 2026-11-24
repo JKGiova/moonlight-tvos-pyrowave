@@ -94,14 +94,14 @@ static unsigned fullDecoderSmoke(id<MTLDevice> metal) {
     PWTest::require(std::string(pw_decoder_backend_name(device.value))=="metal-portable-apple5","full decoder backend choice");
     auto queue=[metal newCommandQueue];PWTest::require(queue!=nil,"full decoder queue");
     unsigned profiles=0;
-    for (auto dimensions:{std::pair<int,int>{128,128},{320,180}}) {
+    for (auto dimensions:{std::pair<int,int>{128,128},{320,180}}) for (bool c444:{false,true}) for (bool tenBit:{false,true}) {
         struct Decoder {
             pyrowave_decoder value=nullptr;
             ~Decoder(){pyrowave_decoder_destroy(value);}
         } decoder;
         pyrowave_decoder_create_info info{};info.device=device.value;info.width=dimensions.first;info.height=dimensions.second;
-        info.chroma=PYROWAVE_CHROMA_SUBSAMPLING_420;check(pyrowave_decoder_create(&info,&decoder.value));
-        PyroWave::BlockLayout layout;PWTest::require(layout.init(info.width,info.height,PyroWave::ChromaSubsampling::Chroma420),"zero-frame layout");
+        info.chroma=c444?PYROWAVE_CHROMA_SUBSAMPLING_444:PYROWAVE_CHROMA_SUBSAMPLING_420;check(pyrowave_decoder_create(&info,&decoder.value));
+        PyroWave::BlockLayout layout;PWTest::require(layout.init(info.width,info.height,c444?PyroWave::ChromaSubsampling::Chroma444:PyroWave::ChromaSubsampling::Chroma420),"zero-frame layout");
         // All-zero wavelet coefficients analytically reconstruct normalized 0.5
         // in every plane after the final DC shift. This is not encoded video.
         std::vector<PyroWave::BitstreamPacket> metadata(size_t(layout.block_count_32x32));
@@ -110,15 +110,15 @@ static unsigned fullDecoderSmoke(id<MTLDevice> metal) {
         std::vector<uint8_t> bytes(32);PyroWave::Packet packet{};
         PWTest::require(PyroWave::packetize(layout,&packet,bytes.size(),bytes.data(),bytes.size(),metadata.data(),raw.data())==1,"zero-frame packetization");
         PyroWaveFraming::Frame frame;std::string error;
-        if (!PyroWaveFraming::parse(bytes.data()+packet.offset,packet.size,{info.width,info.height,false},frame,error)) throw std::runtime_error(error);
+        if (!PyroWaveFraming::parse(bytes.data()+packet.offset,packet.size,{info.width,info.height,c444},frame,error)) throw std::runtime_error(error);
         for (auto span:frame.spans) check(pyrowave_decoder_push_packet(decoder.value,bytes.data()+packet.offset+span.offset,span.size));
         PWTest::require(pyrowave_decoder_decode_is_ready(decoder.value,false),"zero-frame readiness");
         id<MTLTexture> planes[3];id<MTLBuffer> readbacks[3];size_t rows[3];pyrowave_gpu_buffers buffers{};
         for (unsigned p=0;p<3;++p) {
-            const size_t width=size_t(info.width)/(p?2:1),height=size_t(info.height)/(p?2:1);
-            auto descriptor=[MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatR8Unorm width:width height:height mipmapped:NO];
+            const size_t width=size_t(info.width)/(p&&!c444?2:1),height=size_t(info.height)/(p&&!c444?2:1);
+            auto descriptor=[MTLTextureDescriptor texture2DDescriptorWithPixelFormat:tenBit?MTLPixelFormatR16Unorm:MTLPixelFormatR8Unorm width:width height:height mipmapped:NO];
             descriptor.storageMode=MTLStorageModePrivate;descriptor.usage=MTLTextureUsageShaderRead|MTLTextureUsageShaderWrite;
-            planes[p]=[metal newTextureWithDescriptor:descriptor];rows[p]=(width+255)&~size_t(255);
+            planes[p]=[metal newTextureWithDescriptor:descriptor];rows[p]=(width*(tenBit?2:1)+255)&~size_t(255);
             readbacks[p]=[metal newBufferWithLength:rows[p]*height options:MTLResourceStorageModeShared];
             PWTest::require(planes[p]&&readbacks[p],"full decoder plane allocation");buffers.planes[p]=(__bridge void*)planes[p];
         }
@@ -132,9 +132,11 @@ static unsigned fullDecoderSmoke(id<MTLDevice> metal) {
         if (command.status!=MTLCommandBufferStatusCompleted) throw std::runtime_error(command.error.localizedDescription.UTF8String ?: "full decoder command failed");
         for (unsigned p=0;p<3;++p) {
             auto pixels=static_cast<const uint8_t*>(readbacks[p].contents);
-            PWTest::require(pixels[0]==127||pixels[0]==128,"zero-frame DC shift");
-            for (size_t y=0;y<planes[p].height;++y) for (size_t x=0;x<planes[p].width;++x)
-                PWTest::require(pixels[y*rows[p]+x]==pixels[0],"zero-frame is not uniform");
+            const unsigned expected=tenBit?32768:128;
+            for (size_t y=0;y<planes[p].height;++y) for (size_t x=0;x<planes[p].width;++x) {
+                const unsigned value=tenBit?reinterpret_cast<const uint16_t*>(pixels+y*rows[p])[x]:pixels[y*rows[p]+x];
+                PWTest::require(value==expected || value+1==expected,"zero-frame DC shift / output precision");
+            }
         }
         ++profiles;
     }

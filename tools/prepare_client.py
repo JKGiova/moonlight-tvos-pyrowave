@@ -190,6 +190,7 @@ def generate_client(destination: Path):
         ('moonlight-common-c.patch', common_c),
         ('common-c-cleanup.patch', common_c),
         ('common-c-bitrate.patch', common_c),
+        ('moonlight-video-profiles.patch', '.'),
     ]
     for patch, directory in patches:
         patch_path = ROOT / 'integration/patches' / patch
@@ -204,6 +205,7 @@ def generate_client(destination: Path):
     for name in ['apple', 'client', 'protocol']:
         shutil.copytree(ROOT / 'native' / name, runtime / name)
     prepare_metal(runtime / 'metal')
+    shutil.copy2(ROOT/'native/client/pyrowave_profiles.h',destination/common_c/'src/pyrowave_profiles.h')
     shutil.copy2(ROOT / 'native/client/bitstream_identity.h',
                  destination / common_c / 'src/bitstream_identity.h')
 

@@ -1,20 +1,24 @@
 # Current codec selection
 
 The host encodes; the Apple TV negotiates a format and binds its renderer to the
-format actually selected. The persistent **PyroWave (SDR)** setting is available
+format actually selected. The persistent **PyroWave 4:2:0 / 4:4:4** setting is available
 in Debug and Release.
 
 | Preferred Codec | Current behavior |
 | --- | --- |
 | Auto | Standard Moonlight hardware-codec negotiation; no automatic PyroWave choice |
-| PyroWave (SDR) | Explicit PyroWave request after device, host and SDR/profile checks |
+| PyroWave 4:2:0 | Explicit 8-bit 4:2:0, or 10-bit 4:2:0 with HDR enabled |
+| PyroWave 4:4:4 | Explicit 8-bit 4:4:4, or 10-bit 4:4:4 with HDR enabled |
 | Standard codec choices | Retain Moonlight's existing negotiation and support checks |
 
 The manual PyroWave path checks host capability and renderer backend admission.
 The RTSP response must contain exactly one matching
 `a=x-ss-pyrowave.bitstream:186f0393` attribute. A missing, duplicated or mismatched
-identity preserves standard negotiation. Unsupported device/profile requests keep
-the standard codec mask; the overlay reports the actual result.
+identity preserves standard negotiation for the original SDR 4:2:0 request.
+An explicit HDR or 4:4:4 request requires the exact selected PyroWave format;
+missing host/profile support, identity mismatch or resource initialization failure
+rejects the session instead of reducing bit depth or chroma. The overlay reports
+the actual result. [Color profiles and HDR10+ status](video-profiles.md)
 
 A decoder or shader startup failure after PyroWave negotiation rejects the
 session. There is no automatic reconnect with another codec. Select Auto or HEVC

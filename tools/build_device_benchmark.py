@@ -39,6 +39,21 @@ def device_source(source):
     return source
 
 
+def video_profile_source():
+    """Run production A12 decode and CV packing checks; no HDMI qualification."""
+    decoder=(ROOT/'tools/check_apple5_decoder.mm').read_text()
+    begin=decoder.index('static unsigned fullDecoderSmoke(')
+    end=decoder.index('int main()',begin)
+    smoke=decoder[begin:end].replace('pw_decoder_device_create(&deviceInfo,true,',
+                                    'pw_decoder_device_create(&deviceInfo,false,')
+    source=(ROOT/'tools/check_video_profiles.mm').read_text()
+    source=source.replace('int main() {', 'int main(int, char**) {')
+    source=source.replace('    auto queue=[device newCommandQueue];',
+        '    const unsigned decoderProfiles=fullDecoderSmoke(device);\n    check(decoderProfiles==8,"physical full decoder profiles");\n    auto queue=[device newCommandQueue];')
+    source=source.replace('<<samples<<', '<<samples<<",\\\"full_decoder_zero_profiles\\\":"<<decoderProfiles<<')
+    return '#include <fstream>\n#include "dequant_fixture.hpp"\n#include "pyrowave_decoder_backend.h"\n'+smoke+source
+
+
 def timing_source(source, isolate=False):
     """Instrument a temporary diagnostic copy; production decoder is untouched."""
     source=source.replace('std::vector<double> decodeTimes,colorTimes,readyTimes,prepareTimes,wallTimes;',
@@ -116,6 +131,7 @@ extern "C" void PWRunOfflineDeviceBenchmark(void) {
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--device-name',required=True)
+    parser.add_argument('--video-profiles',action='store_true',help='Check 8/10-bit 420/444 decode and HDR10 sample packing on A12; no HDMI/live-stream test.')
     parser.add_argument('--timing-breakdown',action='store_true')
     parser.add_argument('--isolate-stages',action='store_true',help='Diagnostic CPU wait before conversion submission; alters scheduling.')
     parser.add_argument('--baseline',action='store_true',help='Use pre-batching Apple5 shader and decoder from 15df554.')
@@ -124,6 +140,8 @@ def main():
     args=parser.parse_args()
     if not 1<=args.iterations<=10000 or not 0<=args.warmup<=10000:
         parser.error('Invalid sample count')
+    if args.video_profiles and (args.baseline or args.timing_breakdown or args.isolate_stages):
+        parser.error('--video-profiles cannot be combined with timing/baseline experiments')
     client=prepare(DEFAULT_CLIENT)
     run_id='pyrowave-offline-'+datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S%fZ')
     folder=ROOT/'benchmarks/local'/run_id
@@ -158,7 +176,7 @@ def main():
             delegate.write_text(text)
             renderer=runtime/'apple/PyroWaveVideoRenderer.mm'
             renderer.write_bytes(originals[renderer]+bridge(run_id,args.iterations,args.warmup).encode())
-            code=device_source((ROOT/'tools/benchmark_client.cpp').read_text())
+            code=video_profile_source() if args.video_profiles else device_source((ROOT/'tools/benchmark_client.cpp').read_text())
             if args.timing_breakdown or args.isolate_stages:
                 code=timing_source(code,args.isolate_stages)
             (runtime/'apple/PWOfflineBenchmark.cpp').write_text(code)
@@ -168,7 +186,7 @@ def main():
                 header=subprocess.check_output(['git','show','15df554:native/apple/PyroWaveApple5Source.h'],cwd=ROOT)
                 for p in [runtime/'apple/PyroWaveApple5Source.h',runtime/'metal/shaders/pyrowave_apple5_msl.h']:
                     p.write_bytes(header)
-            metadata={'timing_breakdown':args.timing_breakdown or args.isolate_stages,'isolate_stages':args.isolate_stages,'run_id':run_id,'baseline':args.baseline,'iterations':args.iterations,'warmup':args.warmup,
+            metadata={'video_profiles':args.video_profiles,'timing_breakdown':args.timing_breakdown or args.isolate_stages,'isolate_stages':args.isolate_stages,'run_id':run_id,'baseline':args.baseline,'iterations':args.iterations,'warmup':args.warmup,
                       'revision':subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip(),
                       'diagnostic_source_sha256':hashlib.sha256((runtime/'apple/PWOfflineBenchmark.cpp').read_bytes()).hexdigest(),
                       'decoder_source_sha256':hashlib.sha256((runtime/'metal/pyrowave_decoder.mm').read_bytes()).hexdigest(),

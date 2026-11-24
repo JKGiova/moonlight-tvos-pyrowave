@@ -1,6 +1,6 @@
 # Development status
 
-Documentation snapshot: 2026-11-23. This page includes the split decode/conversion scheduling update following
+Documentation snapshot: 2026-11-24. This page includes the split decode/conversion scheduling update following
 `0d68cb8`, with decode committed before drawable acquisition. It distinguishes
 source implementation, automated checks and owner-reported device observations.
 
@@ -9,11 +9,11 @@ source implementation, automated checks and owner-reported device observations.
 | Area | Current implementation |
 | --- | --- |
 | App | Pinned Moonlight project, standard PC/app UI and PIN pairing; installed name Moonlight Pyro |
-| Live PyroWave | Complete-frame 8-bit SDR 4:2:0, exact bitstream identity validation and Metal presentation |
+| Live PyroWave | Complete-frame 8-bit SDR / 10-bit HDR10 in 420/444, exact identity validation, Metal/CV presentation; new profiles await live qualification |
 | Backend | Portable Apple5 for A12; native Apple7-or-later candidate selected through capability/pipeline checks |
 | Frame delivery | Dedicated PyroWave receive worker waits for common-c frames; standard codecs retain display-link polling |
 | Scheduling | Two occupied decoder/texture slots, one latest pending frame and three drawables; decode commits before drawable acquisition; both stages resolve before slot release |
-| Settings | Persistent PyroWave (SDR), manual requests through 1,000 Mbps and per-profile bitrate Auto capped at 500 Mbps for PyroWave |
+| Settings | Persistent PyroWave 4:2:0/4:4:4 and HDR profile toggle, manual requests through 1,000 Mbps and per-profile bitrate Auto capped at 500 Mbps for PyroWave |
 | Timing | GPU-end Ready, isolated decode/conversion and queue timing, retained frame timestamps, device presentation callbacks and separate error/drop counters |
 | Source preparation | One reusable generated client, exact-pin checks, selective patches, recorded file baselines and project merging that preserves signing edits |
 | Reference monitor | Dashboard/transport/policy sources retained; dashboard patch excluded from the standard generated client |
@@ -22,6 +22,19 @@ The split-command-buffer path compiles for the simulator and is covered by
 portable completion-order/abandonment tests and the GPU presenter's split-submission
 fixture. The recorded A12 screenshots below predate this update. Collect physical
 device measurements before attributing a latency improvement to it.
+
+## Color profile implementation
+
+HDR10 and full-resolution chroma are implemented in the single client. A physical
+A12 offscreen diagnostic passed eight complete decoder cases (two dimensions ×
+two chroma layouts × R8/R16 output) and eight PQ/SDR packing cases with 294,912
+exact component comparisons. Exit status was zero and thermal state nominal.
+[Sanitized evidence](../benchmarks/results/2026-11-24-a12-color-profiles.json)
+
+These checks do not test HDR HDMI output, live stream quality or sustained 4K60.
+HDR10+ is not implemented: the inspected host protocol lacks dynamic-metadata
+transport, and the A12 model does not list HDR10+ output support.
+[Profiles, setup and remaining work](video-profiles.md)
 
 ## Apple TV device observations
 

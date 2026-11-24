@@ -81,6 +81,10 @@ jobs:
         run: |
           xcrun clang++ -std=c++17 -fobjc-arc -Wall -Wextra -Werror -I native/apple -I native/client tools/check_presenter_shader.mm -framework Metal -framework Foundation -o build/metal/check-presenter
           build/metal/check-presenter
+      - name: Check 10-bit YUV packing, chroma geometry and HDR sample metadata
+        run: |
+          xcrun clang++ -std=c++17 -fobjc-arc -Wall -Wextra -Werror -I native/apple tools/check_video_profiles.mm -framework Metal -framework Foundation -framework AVFoundation -framework CoreVideo -framework CoreMedia -framework QuartzCore -o build/metal/check-video-profiles
+          build/metal/check-video-profiles
       - name: Run host Metal stage and offscreen decoder testbenches
         run: python3 tools/run_local_benchmarks.py --iterations 8 --warmup 2 --output-dir build/benchmark-metal
       - name: Retain host Metal testbench report and diagnostics

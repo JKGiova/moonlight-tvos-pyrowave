@@ -8,6 +8,8 @@
 - (instancetype)initWithView:(UIView*)view callbacks:(id<ConnectionCallbacks>)callbacks;
 - (int)prepareWidth:(int)width height:(int)height fullRange:(BOOL)fullRange;
 // Copies all bytes before returning; the caller can complete the decode unit.
+- (int)prepareWidth:(int)width height:(int)height fullRange:(BOOL)fullRange videoFormat:(int)format frameRate:(int)rate;
+- (void)setMasteringDisplay:(NSData*)mastering contentLight:(NSData*)light;
 - (int)submitDecodeUnit:(PDECODE_UNIT)unit;
 - (void)stop;
 - (NSDictionary*)statistics;

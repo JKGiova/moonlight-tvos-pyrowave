@@ -12,7 +12,8 @@ and decodes and presents PyroWave using native Metal.
 | `native/client/latest_frame_queue.hpp` | Two occupied processing slots and one replaceable pending frame |
 | `native/apple/PyroWaveVideoRenderer.mm` | Frame ownership, serial worker, Metal command encoding, completion and statistics |
 | Generated PyroWave Metal sources | Portable/native decoder factory, dequantization, inverse wavelet transform and texture allocation |
-| Presenter in the renderer | YUV-to-RGB conversion and CAMetalLayer presentation |
+| 8-bit presenter | YUV-to-RGB conversion and CAMetalLayer presentation |
+| `native/apple/PyroWaveHDRPresenter.h` | 10-bit YUV packing, bounded CoreVideo surfaces, HDR10 metadata and AVFoundation presentation |
 | Reference dashboard sources | Optional host monitor implementation, outside the standard generated UI |
 
 ## Source preparation
@@ -26,8 +27,9 @@ Apple5 patch. Source submodules stay pristine. [Patch list](../integration/READM
 
 The renderer copies a common-c decode unit before common-c releases it. A serial
 worker picks the newest pending frame, validates/parses its packets and commits
-GPU decode. It then acquires a drawable from a three-resource pool and submits
-conversion/presentation on the same Metal command queue. Tracked plane textures
+GPU decode. For 8-bit output it then acquires a drawable from a three-resource pool;
+10-bit output obtains a surface from a three-buffer CoreVideo pool. It submits
+conversion/packing on the same Metal command queue. Tracked plane textures
 carry dependencies between the two command buffers. Slot release requires both
 decode completion and conversion completion or presentation abandonment.
 
@@ -41,7 +43,10 @@ The receive worker is separate from the serial decode worker. [Timing boundaries
 
 ## Current boundaries
 
-The live path is complete-frame, 8-bit SDR 4:2:0. Hardware/profile/host checks gate
+The live path is complete-frame with 8-bit SDR and 10-bit HDR10 profiles in
+4:2:0/4:4:4. The 10-bit path packs R16 decoder output into a bounded CoreVideo
+pool for AVSampleBufferDisplayLayer, preserving PQ codes and static metadata.
+See [color profiles](video-profiles.md) for requirements and qualification limits. Hardware/profile/host checks gate
 manual PyroWave requests; codec Auto remains Moonlight's standard path. There is
 no benchmark store, benchmark-aware Auto selector, automatic session fallback or
 partial-frame recovery in the integrated client.

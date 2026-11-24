@@ -11,6 +11,7 @@ The standard generated client uses these patches in order:
 | `moonlight-common-c.patch` | Baseline common-c | Selective PyroWave negotiation and complete-frame transport |
 | `common-c-cleanup.patch` | Baseline common-c | Guarded control-thread initializations and platform warning cleanup |
 | `common-c-bitrate.patch` | Baseline common-c | Resolve bitrate Auto after codec negotiation |
+| `moonlight-video-profiles.patch` | Patched app and common-c | Explicit 420/444, 8/10-bit profiles, exact-profile enforcement and HDR metadata forwarding |
 
 `tools/prepare_client.py` applies these to a generated copy below `build/client/`.
 `tools/prepare_metal.py` separately applies `pyrowave-metal-apple5.patch` to the
