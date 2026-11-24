@@ -16,8 +16,8 @@ of recorded samples, not the time of every frame.
 | `decode_queue_ms` | Timestamp immediately before decode commit to that command buffer's GPU start |
 | `render_queue_ms` | Timestamp immediately before conversion commit to that command buffer's GPU start |
 | `gpu_decode_ms` | Decode command-buffer GPU start to GPU end |
-| `color_gpu_ms` | Conversion command-buffer GPU start to GPU end |
-| `decode_and_color_gpu_ms` | Sum of the two command-buffer execution durations for a completed frame |
+| `color_gpu_ms` | Conversion command-buffer interval; may overlap decode and include dependency waits |
+| `decode_and_color_gpu_ms` | Raw sum of both command-buffer intervals; overlapping time is counted twice |
 | `gpu_callback_delay_ms` | Conversion GPU end to its completion callback |
 | `client_ready_gpu_end_ms` | Renderer entry to conversion GPU end |
 | `submit_to_presented_ms` | Renderer entry to the drawable's OS-reported presentation time on device builds |
@@ -106,3 +106,11 @@ measurements. It contains no populated Apple TV qualification result.
 - [Metal GPU execution timestamps](https://developer.apple.com/documentation/metal/mtlcommandbuffer/gpuendtime)
 - [CAMetalLayer drawable lifecycle](https://developer.apple.com/documentation/quartzcore/cametallayer)
 - [Renderer implementation](../native/apple/PyroWaveVideoRenderer.mm)
+
+## Command-buffer overlap on A12
+
+[Physical timeline measurements](latency-investigation.md) show that conversion
+command-buffer intervals can overlap most of the decode interval. These are
+buffer boundaries, not exclusive per-shader costs. The Color field and the raw
+summed GPU field must not be interpreted as additional independent work. Ready
+uses its own end-to-end boundary and is unaffected by this addition error.

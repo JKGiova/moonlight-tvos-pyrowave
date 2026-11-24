@@ -169,3 +169,8 @@ qualify automatic codec admission or guarantee sustained live 4K60 presentation.
 [Recorded physical A12 results](../benchmarks/results/2026-11-24-a12-offline-device.json)
 include both baseline and candidate runs, source hashes, thermal states and timing
 variability. The normal Release app is restored after the temporary diagnostic.
+
+For diagnosis, `--timing-breakdown` adds CPU phases, GPU overlap/span and raw
+per-frame boundaries to the temporary device copy. `--isolate-stages` additionally
+waits on decode before conversion submission; it changes scheduling and is only
+a diagnostic control. [Findings](latency-investigation.md).

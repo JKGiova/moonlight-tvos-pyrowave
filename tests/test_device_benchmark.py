@@ -19,6 +19,16 @@ class DeviceDiagnosticTests(unittest.TestCase):
         self.assertIn('production-device-offscreen-split-serial',source)
         self.assertNotIn('value->portable_dequant = true',source)
 
+    def test_timing_breakdown_preserves_normal_scheduling(self):
+        original=(ROOT/'tools/benchmark_client.cpp').read_text()
+        regular=diagnostic.timing_source(diagnostic.device_source(original))
+        isolated=diagnostic.timing_source(diagnostic.device_source(original),True)
+        for metric in ['parse_cpu_ms','push_cpu_ms','encode_cpu_ms','commit_cpu_ms','gpu_overlap_ms','timeline_relative_ms']:
+            self.assertIn(metric,regular)
+        fence='[decode waitUntilCompleted];\n            auto conversion='
+        self.assertNotIn(fence,regular)
+        self.assertIn(fence,isolated)
+
     def test_unknown_benchmark_layout_is_rejected(self):
         with self.assertRaises(ValueError):
             diagnostic.device_source('unrecognized benchmark')
