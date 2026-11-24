@@ -168,3 +168,29 @@ diff --git a/pyrowave_encoder.mm b/pyrowave_encoder.mm
  	if (info->chroma != PYROWAVE_CHROMA_SUBSAMPLING_420 &&
  	    info->chroma != PYROWAVE_CHROMA_SUBSAMPLING_444)
  		return PYROWAVE_ERROR_INVALID_ARGUMENT;
+diff --git a/pyrowave_decoder.mm b/pyrowave_decoder.mm
+--- a/pyrowave_decoder.mm
++++ b/pyrowave_decoder.mm
+@@ -131,7 +131,12 @@
+ 
+ 			[enc setTexture:decoder->wavelet.component_layer_views[component][level] atIndex:0];
+ 
+-			for (int band = (level == DecompositionLevels - 1 ? 0 : 1); band < 4; band++)
++			// Apple5 maps independent frequency bands to grid Z. One dispatch per
++			// component/level avoids repeated setBytes/dispatch calls on the A12 CPU.
++			// The native shader retains its single-band dispatch contract.
++			const int first_band = level == DecompositionLevels - 1 ? 0 : 1;
++			const int band_count = decoder->device->portable_dequant ? 4 - first_band : 1;
++			for (int band = first_band; band < 4; band += band_count)
+ 			{
+ 				DequantPush push = {};
+ 				push.resolution[0] = layout.level_width(level);
+@@ -142,7 +147,7 @@
+ 				[enc setBytes:&push length:sizeof(push) atIndex:1];
+ 
+ 				[enc dispatchThreadgroups:MTLSizeMake((push.resolution[0] + 31) / 32,
+-				                                     (push.resolution[1] + 31) / 32, 1)
++				                                     (push.resolution[1] + 31) / 32, band_count)
+ 				      threadsPerThreadgroup:MTLSizeMake(DequantThreadgroupSize, 1, 1)];
+ 			}
+ 		}

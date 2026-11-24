@@ -19,7 +19,11 @@ thread/shared-memory checks and backend identification. The original Apple7
 device/encoder admission API stays intact. Encoder creation rejects the local
 decoder-only device. `tools/prepare_metal.py` applies this patch to a generated
 copy used by the real tvOS target and offline harness; no submodule is modified.
-The upstream iDWT and precision selection remain unchanged.
+The patch also batches the portable dequant frequency bands along grid Z,
+reducing 4:2:0 dequant dispatches from 42 to 13 per frame. Consecutive bands
+have identical dimensions and contiguous block-offset ranges; each Z group
+writes its own array layer. The native Apple7 dispatch contract, upstream iDWT
+and precision selection remain unchanged.
 
 The renderer/presenter retain GPL-3.0-or-later notices and form part of the
 GPL Moonlight application. This provenance document does not replace the

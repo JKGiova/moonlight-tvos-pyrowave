@@ -4,7 +4,8 @@
 // coefficient order, signs and quantization are unchanged. This local Apple5
 // variant replaces SIMD operations with bounded threadgroup prefix scans.
 // Dispatch contract: exactly 128 threads per 32x32 block. Missing-block return
-// is uniform across the entire threadgroup, before any barrier.
+// is uniform across the entire threadgroup, before any barrier. Grid Z selects
+// consecutive frequency bands with identical dimensions and contiguous offsets.
 #pragma clang diagnostic ignored "-Wmissing-prototypes"
 #pragma clang diagnostic ignored "-Wmissing-braces"
 
@@ -180,7 +181,9 @@ kernel void pyrowave_wavelet_dequant(const device void* spvBufferAliasSet0Bindin
     threadgroup uint tile_byte_costs[16];
     threadgroup uint shared_sign_offset;
     threadgroup spvUnsafeArray<uint, 16> shared_plane_byte_offsets;
-    int block_index_32x32 = int((uint(registers.block_offset_32x32) + (gl_WorkGroupID.y * uint(registers.block_stride_32x32))) + gl_WorkGroupID.x);
+    const uint band_blocks = uint(registers.block_stride_32x32) * ((uint(registers.resolution.y) + 31u) / 32u);
+    const int output_layer = registers.output_layer + int(gl_WorkGroupID.z);
+    int block_index_32x32 = int((uint(registers.block_offset_32x32) + gl_WorkGroupID.z * band_blocks + (gl_WorkGroupID.y * uint(registers.block_stride_32x32))) + gl_WorkGroupID.x);
     uint block_local_index = extract_bits(local_index, uint(0), uint(3));
     uint block_x = extract_bits(local_index, uint(3), uint(2));
     uint block_y = extract_bits(local_index, uint(5), uint(2));
@@ -197,7 +200,7 @@ kernel void pyrowave_wavelet_dequant(const device void* spvBufferAliasSet0Bindin
         {
             for (int i = 0; i < 4; i++)
             {
-                int3 _459 = int3(coord + int2(i, j), registers.output_layer);
+                int3 _459 = int3(coord + int2(i, j), output_layer);
                 uDequantImg.write(float4(0.0), uint2(_459.xy), uint(_459.z));
             }
         }
@@ -293,7 +296,7 @@ kernel void pyrowave_wavelet_dequant(const device void* spvBufferAliasSet0Bindin
     {
         for (int i_3 = 0; i_3 < 4; i_3++)
         {
-            int3 _841 = int3(coord + int2(i_3, j_3), registers.output_layer);
+            int3 _841 = int3(coord + int2(i_3, j_3), output_layer);
             uDequantImg.write(float4(v[j_3][i_3]), uint2(_841.xy), uint(_841.z));
         }
     }

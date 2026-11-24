@@ -33,36 +33,48 @@ static id<MTLComputePipelineState> pipeline(id<MTLDevice> device,id<MTLLibrary> 
     PWTest::require(state.staticThreadgroupMemoryLength<=device.maxThreadgroupMemoryLength,"pipeline shared memory limit");
     return state;
 }
-static double verify(id<MTLDevice> device,id<MTLComputePipelineState> state,const PWTest::DequantFixture& fixture) {
+static double verify(id<MTLDevice> device,id<MTLComputePipelineState> state,const PWTest::DequantFixture& fixture,unsigned bands=1) {
     PyroWave::BitstreamParser parser;PWTest::parseFixture(fixture,parser);
     const auto& words=parser.payload();const auto& offsets=parser.dequant_offsets();
     // Match the pinned decoder's padded upload contract, with deterministic zero padding.
     auto payload=[device newBufferWithLength:words.size()*4+16 options:MTLResourceStorageModeShared];
-    auto lookup=[device newBufferWithBytes:offsets.data() length:offsets.size()*4 options:MTLResourceStorageModeShared];
-    auto readback=[device newBufferWithLength:64*64*sizeof(float) options:MTLResourceStorageModeShared];
+    std::vector<uint32_t> batchedOffsets(fixture.blockOffset+4*bands,UINT32_MAX);
+    for (unsigned band=0;band<bands;++band) for (unsigned block=0;block<4;++block)
+        // Distinct block permutations per band catch incorrect Z addressing;
+        // the last band is absent and must explicitly reconstruct zero.
+        if (bands==1 || band+1<bands)
+            batchedOffsets[fixture.blockOffset+4*band+block]=offsets[fixture.blockOffset+(block+band)%4];
+    auto lookup=[device newBufferWithBytes:batchedOffsets.data() length:batchedOffsets.size()*4 options:MTLResourceStorageModeShared];
+    auto readback=[device newBufferWithLength:bands*64*64*sizeof(float) options:MTLResourceStorageModeShared];
     PWTest::require(payload&&lookup&&readback,"test buffer allocation");
     std::memset(payload.contents,0,payload.length);std::memcpy(payload.contents,words.data(),words.size()*4);
     auto descriptor=[MTLTextureDescriptor new];descriptor.textureType=MTLTextureType2DArray;
-    descriptor.pixelFormat=MTLPixelFormatR32Float;descriptor.width=64;descriptor.height=64;descriptor.arrayLength=2;
+    descriptor.pixelFormat=MTLPixelFormatR32Float;descriptor.width=64;descriptor.height=64;descriptor.arrayLength=4;
     descriptor.storageMode=MTLStorageModePrivate;descriptor.usage=MTLTextureUsageShaderWrite;
     auto output=[device newTextureWithDescriptor:descriptor];auto queue=[device newCommandQueue];
     PWTest::require(output&&queue,"test texture/queue allocation");
     auto command=[queue commandBuffer];auto compute=[command computeCommandEncoder];
     PWTest::require(command&&compute,"test command allocation");
-    struct alignas(8) Registers {int resolution[2];int layer,offset,stride;} registers{{64,64},1,fixture.blockOffset,2};
+    struct alignas(8) Registers {int resolution[2];int layer,offset,stride;} registers{{64,64},int(4-bands),fixture.blockOffset,2};
     [compute setComputePipelineState:state];[compute setBuffer:payload offset:0 atIndex:0];
     [compute setBytes:&registers length:sizeof(registers) atIndex:1];[compute setBuffer:lookup offset:0 atIndex:2];
     [compute setTexture:output atIndex:0];
-    [compute dispatchThreadgroups:MTLSizeMake(2,2,1) threadsPerThreadgroup:MTLSizeMake(128,1,1)];[compute endEncoding];
+    [compute dispatchThreadgroups:MTLSizeMake(2,2,bands) threadsPerThreadgroup:MTLSizeMake(128,1,1)];[compute endEncoding];
     auto blit=[command blitCommandEncoder];PWTest::require(blit!=nil,"test blit allocation");
-    [blit copyFromTexture:output sourceSlice:1 sourceLevel:0 sourceOrigin:MTLOriginMake(0,0,0) sourceSize:MTLSizeMake(64,64,1)
-                toBuffer:readback destinationOffset:0 destinationBytesPerRow:64*sizeof(float) destinationBytesPerImage:64*64*sizeof(float)];
+    for (unsigned band=0;band<bands;++band)
+        [blit copyFromTexture:output sourceSlice:4-bands+band sourceLevel:0 sourceOrigin:MTLOriginMake(0,0,0) sourceSize:MTLSizeMake(64,64,1)
+                toBuffer:readback destinationOffset:band*64*64*sizeof(float) destinationBytesPerRow:64*sizeof(float) destinationBytesPerImage:64*64*sizeof(float)];
     [blit endEncoding];[command commit];[command waitUntilCompleted];
     if (command.status!=MTLCommandBufferStatusCompleted) throw std::runtime_error(command.error.localizedDescription.UTF8String ?: "test GPU command failed");
     const auto values=static_cast<const float*>(readback.contents);double maximum=0;
-    for (size_t i=0;i<fixture.expected.size();++i) {
-        const double delta=std::abs(double(values[i])-fixture.expected[i]);
-        if (!std::isfinite(values[i]) || delta>1e-5*std::abs(double(fixture.expected[i]))+1e-4)
+    for (unsigned band=0;band<bands;++band) for (size_t i=0;i<fixture.expected.size();++i) {
+        const unsigned x=i%64,y=i/64,block=(y/32)*2+x/32;
+        const unsigned sourceBlock=(block+band)%4;
+        const unsigned sourceIndex=((sourceBlock/2)*32+y%32)*64+(sourceBlock%2)*32+x%32;
+        const double expected=(bands>1 && band+1==bands)?0:fixture.expected[sourceIndex];
+        const double actual=values[band*64*64+i];
+        const double delta=std::abs(actual-expected);
+        if (!std::isfinite(actual) || delta>1e-5*std::abs(expected)+1e-4)
             throw std::runtime_error("dequant mismatch at coefficient "+std::to_string(i));
         maximum=std::max(maximum,delta);
     }
@@ -149,11 +161,12 @@ int main() {
         double maxError=0;
         for (unsigned seed=0;seed<8;++seed) {
             PWTest::DequantFixture fixture;PWTest::makeFixture(fixture,seed);
-            maxError=std::max(maxError,verify(device,portable,fixture));
+            for (unsigned bands:{1u,3u,4u})
+                maxError=std::max(maxError,verify(device,portable,fixture,bands));
             if (native) verify(device,native,fixture);
         }
         const unsigned fullProfiles=fullDecoderSmoke(device);
-        std::cout<<"{\"device_available\":true,\"portable_pipeline_compiled\":true,\"idwt_pipelines_compiled\":6,\"gpu_execution_tested\":true,\"fixture_cases\":8,\"coefficients_checked\":32768,\"max_absolute_error\":"<<maxError
+        std::cout<<"{\"device_available\":true,\"portable_pipeline_compiled\":true,\"idwt_pipelines_compiled\":6,\"gpu_execution_tested\":true,\"fixture_cases\":8,\"batched_fixture_cases\":16,\"coefficients_checked\":262144,\"max_absolute_error\":"<<maxError
                  <<",\"native_reference_tested\":"<<(native?"true":"false")<<",\"full_decoder_zero_profiles\":"<<fullProfiles
                  <<",\"full_decoder_backend\":"<<(fullProfiles?"\"metal-portable-apple5\"":"null")<<",\"physical_apple_tv_tested\":false,\"auto_qualified\":false}\n";
         return 0;

@@ -20,7 +20,8 @@ This page records completed implementation work. Runtime behavior is described i
 
 The renderer commits decode before drawable acquisition and submits conversion
 separately on the same command queue. Slot ownership covers both stages, including
-presentation abandonment. The shader pipeline retains its existing implementation.
+presentation abandonment. The Apple5 dequant stage batches independent frequency bands to reduce submission
+overhead; inverse-wavelet math and precision are unchanged.
 Physical A12 timing for this scheduling revision remains to be collected.
 
 The application and protocol pins, local patches and license provenance are in
