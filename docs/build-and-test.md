@@ -74,3 +74,9 @@ The Mac job probes GPU availability and performs a native encode/decode smoke
 test only when supported; otherwise those steps are explicitly skipped. No CI
 job measures physical TV latency or accesses the user's Vibeshine PC. See
 [development status](development-status.md) and [live-test setup](vibeshine-testing.md).
+
+The tvOS CI build matrix uses the official `macos-15-intel` image after hosted
+ARM runner capacity prevented jobs from acquiring a runner. It builds the same
+arm64 device and simulator targets, including the device static analyzer. The
+Metal runtime job remains separate on `macos-latest`; neither runner type
+constitutes Apple TV physical-device qualification.

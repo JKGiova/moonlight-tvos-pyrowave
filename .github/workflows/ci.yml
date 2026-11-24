@@ -119,7 +119,9 @@ jobs:
           python3 tools/encode_test_video.py --backend metal --roundtrip --width 320 --height 180 --fps 30 --frames 12 --output-dir benchmarks/local/mac-gpu-smoke
       # A Mac GPU test is not physical Apple TV qualification.
   tvos-client:
-    runs-on: macos-latest
+    # Compile the same tvOS targets on Intel: hosted arm64 capacity left jobs
+    # unassigned until cancellation. Metal runtime checks remain a separate job.
+    runs-on: macos-15-intel
     strategy:
       fail-fast: false
       matrix:
