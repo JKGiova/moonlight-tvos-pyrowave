@@ -80,7 +80,9 @@ tile byte offsets using sixteen contributors, with four barriers across the
 byte-offset and sign-count phases. The Apple5 decoder batches independent frequency bands along grid Z, reducing
 4:2:0 dequant submissions from 42 to 13 per frame. The inverse wavelet shaders
 retain their previous implementation. [Matched before/after measurements](apple5-decoder.md#batched-band-submission)
-record simulator improvements separately from unmeasured A12 performance. [Local testbenches](local-testbenches.md) cover CPU
+record simulator improvements separately from the later [A12 offline device
+measurements](development-status.md#physical-a12-offline-diagnostic), which do not
+validate a reliable hardware speedup. [Local testbenches](local-testbenches.md) cover CPU
 preparation, dequant and complete offscreen decode/conversion with explicit
 host-GPU scope.
 The [source comparison with Nonary Moonlight and Pyrolight](scheduling-comparison.md)

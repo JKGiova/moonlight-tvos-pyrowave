@@ -129,3 +129,43 @@ Missing or invalid timings fail. A failed gate preserves `report.json` and retur
 a nonzero exit code. This is a synthetic offscreen performance check; it does not
 certify live streaming, sustained 60 FPS presentation or physical Apple TV latency.
 See [the simulator result record](../benchmarks/results/2026-11-23-tvos-simulator.json).
+
+## Offline A12 device diagnostic
+
+When the host PC is unavailable, `tools/build_device_benchmark.py` builds a
+temporary diagnostic in the existing signed `Moonlight TV` project. It restores
+all managed source files in a `finally` block and adds no Xcode target. The
+normal app must be reinstalled after the test; the diagnostic artifact is explicit.
+
+```sh
+python3 tools/build_device_benchmark.py --device-name YOUR_APPLE_TV_NAME --iterations 100 --warmup 20
+```
+
+The printed local directory contains the signed `diagnostic.app`, a copy of the
+previous app artifact, a build log and source hashes. `--baseline` uses the
+pre-batching decoder and Apple5 shader from `15df554`. Each build has a unique
+report prefix, so completed files from an earlier build cannot satisfy a new test.
+
+Install the diagnostic with `devicectl device install app`, then launch the same
+bundle with the argument `-PyroWaveOfflineBenchmark` (use `--` before the bundle
+identifier to separate app arguments from devicectl options). Launch starts the
+worker without requiring a host, pairing, or a stream. Read completion from
+`Library/Caches/<run_id>.status.json` with `devicectl device copy from`, using
+`--domain-type appDataContainer` and the app's bundle identifier. Only an exit
+code of zero plus a complete, parsed metrics report establishes a passed run.
+The adjacent `<run_id>.json` holds measurements and `<run_id>.log` holds errors.
+Confirm the process is still live before treating an absent completion file as
+an in-progress test; never reinstall over a test that is still running.
+
+The diagnostic adapts the same frozen C++ workload to call the normal production
+`pw_decoder_device_create` factory and requires `metal-portable-apple5`. It uses
+the actual device capability, resource and shader checks, with default precision.
+The private host-lab device assembly is removed. GPU and wall timestamps are
+measured on the Apple TV itself. Thermal states are recorded before/after.
+This remains synthetic offscreen decode/conversion: no live transport, drawable,
+compositor, controller or physical-panel latency is tested. These results do not
+qualify automatic codec admission or guarantee sustained live 4K60 presentation.
+
+[Recorded physical A12 results](../benchmarks/results/2026-11-24-a12-offline-device.json)
+include both baseline and candidate runs, source hashes, thermal states and timing
+variability. The normal Release app is restored after the temporary diagnostic.

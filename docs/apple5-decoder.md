@@ -63,8 +63,10 @@ decode and conversion, with no drawable, compositor or network.
 | 1,000 Mbps | 3.977 ms | 3.838 ms | 3.5% |
 
 All 84 repeated full-decoder output checksums match the baseline. These simulator
-percentages cannot be applied to physical Apple TV latency. Physical A12 timing
-and live-presentation effects remain unmeasured for this revision. The very small
+percentages cannot be applied to physical Apple TV latency. A later [physical A12 offline diagnostic](development-status.md#physical-a12-offline-diagnostic)
+records substantial run-to-run variation and does not validate these gains on
+A12; at 500 Mbps its candidate tails are higher in both runs. Live-presentation
+effects remain unmeasured for this revision. The very small
 simulator GPU intervals do not establish a GPU execution speedup.
 [Measurements and source hashes](../benchmarks/results/2026-11-24-apple5-band-batching.json)
 

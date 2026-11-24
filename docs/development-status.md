@@ -61,8 +61,37 @@ population counts, and the portable shader uses four barriers per active group.
 Paired synthetic 4K validation medians fell by approximately 42–51% on this host.
 All 14 full-decoder output checksums matched the reference, and tiled dequant
 coefficient errors were zero. Host GPU timing changes were small. This evidence
-belongs to the host lab workloads. Physical A12 latency for these changes remains
-to be measured. [Running the testbenches](local-testbenches.md)
+belongs to the host lab workloads. Physical A12 live-stream latency for these changes remains
+to be measured; the offline device diagnostic below has its own scope. [Running the testbenches](local-testbenches.md)
+
+## Physical A12 offline diagnostic
+
+The [2026-11-24 device record](../benchmarks/results/2026-11-24-a12-offline-device.json)
+uses an Apple TV 4K second generation (`AppleTV11,1`), Apple A12 GPU, tvOS 27.0
+build 24J361. With the host PC offline, four temporary signed diagnostic launches
+ran candidate/baseline/candidate/baseline through the normal production Apple5
+factory. Each tested 14 complete synthetic profiles, 100 timed frames and 20 warmup
+per profile, plus 24 isolated coefficient workloads. All 56 output checksums
+matched; 364,380,160 coefficient comparisons had maximum error zero. Thermal
+state was nominal at the start and end of all four runs.
+
+Candidate 4K p95 ranges across its two runs:
+
+| Payload budget, 60 FPS equivalent | Decode GPU | Preparation + decode + conversion wall time |
+| --- | --- | --- |
+| 150 Mbps | 15.37–20.95 ms | 20.40–27.04 ms |
+| 300 Mbps | 19.93–22.85 ms | 27.28–32.49 ms |
+| 500 Mbps | 22.55–25.33 ms | 31.09–36.20 ms |
+| 1,000 Mbps | 25.45–26.55 ms | 36.81–44.56 ms |
+
+These ranges describe two observed p95 values, not confidence intervals. The
+before/after results do not establish a reliable physical speedup. At 500 Mbps,
+both candidate runs have higher decode and wall p95 than both baseline runs.
+The simulator's percentage gains must not be presented as Apple TV gains.
+No live transport, drawable, compositor, controller/panel latency or sustained
+4K60 presentation was tested. Auto qualification remains unchanged. The temporary
+harness is removed from the normal signed app after testing; normal sources are
+restored even on build failure. [Reproduction](local-testbenches.md#offline-a12-device-diagnostic)
 
 ## Automated evidence
 

@@ -1,0 +1,2800 @@
+{
+  "kind": "physical-a12-offline-production-decoder",
+  "date": "2026-11-24",
+  "model": "Apple TV 4K (2nd generation)",
+  "product_type": "AppleTV11,1",
+  "gpu": "Apple A12 GPU",
+  "tvos_version": "27.0",
+  "tvos_build": "24J361",
+  "backend": "metal-portable-apple5",
+  "factory": "pw_decoder_device_create, force_portable=false; normal admission required",
+  "profile": "8-bit SDR 4:2:0, default precision; synthetic 60 FPS equivalent payload budgets",
+  "physical_apple_tv_tested": true,
+  "live_stream_tested": false,
+  "drawable_compositor_or_panel_tested": false,
+  "validated_physical_speedup_percent": null,
+  "method": "candidate / baseline / candidate / baseline; 100 samples plus 20 warmup per case in each run; serialized offscreen decode and conversion; no host PC",
+  "interpretation": "Correctness passed on the physical A12. Substantial between-run timing variability prevents a reliable speedup claim. At 500 Mbps both candidate runs have higher decode and total-wall p95 than both baseline runs. Simulator percentage gains are not validated as A12 gains.",
+  "runs": {
+    "candidate": [
+      {
+        "run_id": "pyrowave-offline-20261124T095618296220Z",
+        "source_revision": "4a21d2e058be7000657a4e03ac0750f6d1916142",
+        "diagnostic_source_sha256": "cbaa70c91bac0529b38f5251f12e0553bf05e09e6ad62cf4c4080221f9afb4d4",
+        "decoder_source_sha256": "f5d3c6952b8593b9cdef1129fb452dea2fcd8b7824c196446d5e095570f952c2",
+        "shader_header_sha256": "a1238f936efc2c06a95b290b7f34530f9236af4fa7585bcc735ee081f9509d35",
+        "thermal_before": 0,
+        "thermal_after": 0,
+        "exit_code": 0,
+        "coefficient_checks": 91095040,
+        "full_decoder_cases": [
+          {
+            "width": 128,
+            "height": 128,
+            "budget_mbps": 0,
+            "zero_frame": true,
+            "output_hash": "10115652052320166693",
+            "prepare_ms": {
+              "samples": 100,
+              "mean": 0.0653467,
+              "p50": 0.049,
+              "p95": 0.152959,
+              "p99": 0.196208
+            },
+            "decode_gpu_ms": {
+              "samples": 100,
+              "mean": 0.273998347,
+              "p50": 0.268457923,
+              "p95": 0.295000151,
+              "p99": 0.300874934
+            },
+            "color_gpu_ms": {
+              "samples": 100,
+              "mean": 0.433439603,
+              "p50": 0.354125164,
+              "p95": 0.403624959,
+              "p99": 4.33525024
+            },
+            "ready_gpu_end_ms": {
+              "samples": 100,
+              "mean": 0.776131004,
+              "p50": 0.679332763,
+              "p95": 0.826166011,
+              "p99": 4.5436658
+            },
+            "ready_wall_ms": {
+              "samples": 100,
+              "mean": 0.9978517,
+              "p50": 0.851333,
+              "p95": 1.038959,
+              "p99": 4.847042
+            }
+          },
+          {
+            "width": 320,
+            "height": 180,
+            "budget_mbps": 0,
+            "zero_frame": true,
+            "output_hash": "4744532814122669349",
+            "prepare_ms": {
+              "samples": 100,
+              "mean": 0.07550581,
+              "p50": 0.048709,
+              "p95": 0.141042,
+              "p99": 0.172917
+            },
+            "decode_gpu_ms": {
+              "samples": 100,
+              "mean": 0.387548753,
+              "p50": 0.352874864,
+              "p95": 0.371125061,
+              "p99": 0.375125092
+            },
+            "color_gpu_ms": {
+              "samples": 100,
+              "mean": 0.522735026,
+              "p50": 0.449291896,
+              "p95": 0.49433345,
+              "p99": 4.28354135
+            },
+            "ready_gpu_end_ms": {
+              "samples": 100,
+              "mean": 0.876471042,
+              "p50": 0.77324966,
+              "p95": 0.920416322,
+              "p99": 4.46674926
+            },
+            "ready_wall_ms": {
+              "samples": 100,
+              "mean": 1.06690994,
+              "p50": 0.92875,
+              "p95": 1.080667,
+              "p99": 4.949875
+            }
+          },
+          {
+            "width": 1280,
+            "height": 720,
+            "budget_mbps": 150,
+            "zero_frame": false,
+            "output_hash": "16365266812332337004",
+            "prepare_ms": {
+              "samples": 100,
+              "mean": 1.06055413,
+              "p50": 0.916875,
+              "p95": 2.475167,
+              "p99": 6.914958
+            },
+            "decode_gpu_ms": {
+              "samples": 100,
+              "mean": 3.16922876,
+              "p50": 2.89683323,
+              "p95": 6.80637499,
+              "p99": 7.11237499
+            },
+            "color_gpu_ms": {
+              "samples": 100,
+              "mean": 3.56421327,
+              "p50": 3.2573333,
+              "p95": 6.98337471,
+              "p99": 7.49908295
+            },
+            "ready_gpu_end_ms": {
+              "samples": 100,
+              "mean": 5.0149389,
+              "p50": 4.58258251,
+              "p95": 8.03624932,
+              "p99": 10.6713329
+            },
+            "ready_wall_ms": {
+              "samples": 100,
+              "mean": 5.32674417,
+              "p50": 4.772083,
+              "p95": 9.281167,
+              "p99": 10.856083
+            }
+          },
+          {
+            "width": 1280,
+            "height": 720,
+            "budget_mbps": 300,
+            "zero_frame": false,
+            "output_hash": "3206367878406253152",
+            "prepare_ms": {
+              "samples": 100,
+              "mean": 1.68463747,
+              "p50": 1.322833,
+              "p95": 5.914917,
+              "p99": 7.682166
+            },
+            "decode_gpu_ms": {
+              "samples": 100,
+              "mean": 3.6987358,
+              "p50": 3.44337476,
+              "p95": 6.9876248,
+              "p99": 7.64187519
+            },
+            "color_gpu_ms": {
+              "samples": 100,
+              "mean": 4.101375,
+              "p50": 3.80241685,
+              "p95": 7.33874971,
+              "p99": 8.06475012
+            },
+            "ready_gpu_end_ms": {
+              "samples": 100,
+              "mean": 6.18845645,
+              "p50": 5.90587407,
+              "p95": 11.4202909,
+              "p99": 12.1041243
+            },
+            "ready_wall_ms": {
+              "samples": 100,
+              "mean": 6.47326416,
+              "p50": 6.094334,
+              "p95": 11.557625,
+              "p99": 12.271542
+            }
+          },
+          {
+            "width": 1280,
+            "height": 720,
+            "budget_mbps": 500,
+            "zero_frame": false,
+            "output_hash": "11934355077285741747",
+            "prepare_ms": {
+              "samples": 100,
+              "mean": 2.2911171,
+              "p50": 2.482458,
+              "p95": 4.784917,
+              "p99": 7.637042
+            },
+            "decode_gpu_ms": {
+              "samples": 100,
+              "mean": 4.44009503,
+              "p50": 4.02695872,
+              "p95": 8.07316694,
+              "p99": 8.13574996
+            },
+            "color_gpu_ms": {
+              "samples": 100,
+              "mean": 4.79270751,
+              "p50": 4.38812515,
+              "p95": 8.37774994,
+              "p99": 8.51762528
+            },
+            "ready_gpu_end_ms": {
+              "samples": 100,
+              "mean": 7.52272768,
+              "p50": 7.39337411,
+              "p95": 11.404708,
+              "p99": 12.5406659
+            },
+            "ready_wall_ms": {
+              "samples": 100,
+              "mean": 7.96169705,
+              "p50": 7.598875,
+              "p95": 12.381375,
+              "p99": 12.750125
+            }
+          },
+          {
+            "width": 1280,
+            "height": 720,
+            "budget_mbps": 1000,
+            "zero_frame": false,
+            "output_hash": "11934355077285741747",
+            "prepare_ms": {
+              "samples": 100,
+              "mean": 2.3863726,
+              "p50": 2.522125,
+              "p95": 4.227292,
+              "p99": 5.22375
+            },
+            "decode_gpu_ms": {
+              "samples": 100,
+              "mean": 4.4620783,
+              "p50": 4.02674964,
+              "p95": 8.053625,
+              "p99": 8.23612511
+            },
+            "color_gpu_ms": {
+              "samples": 100,
+              "mean": 4.81436461,
+              "p50": 4.38449997,
+              "p95": 8.40029167,
+              "p99": 8.59475043
+            },
+            "ready_gpu_end_ms": {
+              "samples": 100,
+              "mean": 7.66348314,
+              "p50": 7.40212435,
+              "p95": 11.2127494,
+              "p99": 13.0546242
+            },
+            "ready_wall_ms": {
+              "samples": 100,
+              "mean": 8.10695085,
+              "p50": 7.616833,
+              "p95": 11.392166,
+              "p99": 13.223417
+            }
+          },
+          {
+            "width": 1920,
+            "height": 1080,
+            "budget_mbps": 150,
+            "zero_frame": false,
+            "output_hash": "7002421816585535465",
+            "prepare_ms": {
+              "samples": 100,
+              "mean": 0.99657329,
+              "p50": 0.910583,
+              "p95": 1.745875,
+              "p99": 3.662375
+            },
+            "decode_gpu_ms": {
+              "samples": 100,
+              "mean": 5.90130504,
+              "p50": 5.48195839,
+              "p95": 9.49550001,
+              "p99": 9.67200007
+            },
+            "color_gpu_ms": {
+              "samples": 100,
+              "mean": 6.55688499,
+              "p50": 6.1824997,
+              "p95": 10.1075,
+              "p99": 10.3884586
+            },
+            "ready_gpu_end_ms": {
+              "samples": 100,
+              "mean": 8.03557393,
+              "p50": 7.51274917,
+              "p95": 11.6399159,
+              "p99": 12.0232077
+            },
+            "ready_wall_ms": {
+              "samples": 100,
+              "mean": 8.4055425,
+              "p50": 7.714,
+              "p95": 11.816417,
+              "p99": 12.203792
+            }
+          },
+          {
+            "width": 1920,
+            "height": 1080,
+            "budget_mbps": 300,
+            "zero_frame": false,
+            "output_hash": "12084149283362720156",
+            "prepare_ms": {
+              "samples": 100,
+              "mean": 1.82917172,
+              "p50": 1.684417,
+              "p95": 4.496875,
+              "p99": 7.613583
+            },
+            "decode_gpu_ms": {
+              "samples": 100,
+              "mean": 6.35701999,
+              "p50": 6.0205413,
+              "p95": 10.0877499,
+              "p99": 10.21
+            },
+            "color_gpu_ms": {
+              "samples": 100,
+              "mean": 7.14208794,
+              "p50": 6.72329171,
+              "p95": 10.8495834,
+              "p99": 10.9198336
+            },
+            "ready_gpu_end_ms": {
+              "samples": 100,
+              "mean": 9.42044481,
+              "p50": 8.89716577,
+              "p95": 14.1596664,
+              "p99": 15.6624992
+            },
+            "ready_wall_ms": {
+              "samples": 100,
+              "mean": 9.86251877,
+              "p50": 9.130792,
+              "p95": 14.596542,
+              "p99": 15.8805
+            }
+          },
+          {
+            "width": 1920,
+            "height": 1080,
+            "budget_mbps": 500,
+            "zero_frame": false,
+            "output_hash": "8157399767250242167",
+            "prepare_ms": {
+              "samples": 100,
+              "mean": 2.9944854,
+              "p50": 2.72925,
+              "p95": 6.067709,
+              "p99": 8.960792
+            },
+            "decode_gpu_ms": {
+              "samples": 100,
+              "mean": 7.42885667,
+              "p50": 6.7460835,
+              "p95": 10.9191248,
+              "p99": 10.9328334
+            },
+            "color_gpu_ms": {
+              "samples": 100,
+              "mean": 8.20523917,
+              "p50": 7.45162508,
+              "p95": 11.6258753,
+              "p99": 11.6994167
+            },
+            "ready_gpu_end_ms": {
+              "samples": 100,
+              "mean": 11.6750402,
+              "p50": 10.6821661,
+              "p95": 16.7944995,
+              "p99": 17.6969161
+            },
+            "ready_wall_ms": {
+              "samples": 100,
+              "mean": 12.1205837,
+              "p50": 10.926041,
+              "p95": 16.955708,
+              "p99": 17.874542
+            }
+          },
+          {
+            "width": 1920,
+            "height": 1080,
+            "budget_mbps": 1000,
+            "zero_frame": false,
+            "output_hash": "9911083576783137946",
+            "prepare_ms": {
+              "samples": 100,
+              "mean": 5.23031086,
+              "p50": 5.304875,
+              "p95": 10.484875,
+              "p99": 11.346
+            },
+            "decode_gpu_ms": {
+              "samples": 100,
+              "mean": 9.32835041,
+              "p50": 8.53333343,
+              "p95": 12.6114166,
+              "p99": 12.6969581
+            },
+            "color_gpu_ms": {
+              "samples": 100,
+              "mean": 10.0243179,
+              "p50": 9.23495833,
+              "p95": 13.3111668,
+              "p99": 13.3943749
+            },
+            "ready_gpu_end_ms": {
+              "samples": 100,
+              "mean": 15.7343615,
+              "p50": 15.1954577,
+              "p95": 20.8790409,
+              "p99": 22.2764164
+            },
+            "ready_wall_ms": {
+              "samples": 100,
+              "mean": 16.1874371,
+              "p50": 15.39975,
+              "p95": 21.167417,
+              "p99": 22.428083
+            }
+          },
+          {
+            "width": 3840,
+            "height": 2160,
+            "budget_mbps": 150,
+            "zero_frame": false,
+            "output_hash": "14664847426593926465",
+            "prepare_ms": {
+              "samples": 100,
+              "mean": 1.12815839,
+              "p50": 0.944917,
+              "p95": 2.683,
+              "p99": 3.819041
+            },
+            "decode_gpu_ms": {
+              "samples": 100,
+              "mean": 12.1682225,
+              "p50": 11.7334998,
+              "p95": 15.3714586,
+              "p99": 18.2771669
+            },
+            "color_gpu_ms": {
+              "samples": 100,
+              "mean": 13.8331233,
+              "p50": 13.3775002,
+              "p95": 18.5088753,
+              "p99": 20.06
+            },
+            "ready_gpu_end_ms": {
+              "samples": 100,
+              "mean": 15.4274656,
+              "p50": 14.8444576,
+              "p95": 19.6385826,
+              "p99": 21.069624
+            },
+            "ready_wall_ms": {
+              "samples": 100,
+              "mean": 15.9304859,
+              "p50": 15.278292,
+              "p95": 20.404459,
+              "p99": 21.259917
+            }
+          },
+          {
+            "width": 3840,
+            "height": 2160,
+            "budget_mbps": 300,
+            "zero_frame": false,
+            "output_hash": "11843734189414006217",
+            "prepare_ms": {
+              "samples": 100,
+              "mean": 1.99474836,
+              "p50": 1.703417,
+              "p95": 4.331834,
+              "p99": 7.431083
+            },
+            "decode_gpu_ms": {
+              "samples": 100,
+              "mean": 15.2500308,
+              "p50": 14.7845,
+              "p95": 19.9276246,
+              "p99": 22.8595836
+            },
+            "color_gpu_ms": {
+              "samples": 100,
+              "mean": 17.31891,
+              "p50": 17.0168751,
+              "p95": 22.36075,
+              "p99": 24.8531667
+            },
+            "ready_gpu_end_ms": {
+              "samples": 100,
+              "mean": 19.7999302,
+              "p50": 19.2216244,
+              "p95": 27.0637912,
+              "p99": 30.2839163
+            },
+            "ready_wall_ms": {
+              "samples": 100,
+              "mean": 20.31879,
+              "p50": 19.850875,
+              "p95": 27.277042,
+              "p99": 30.454958
+            }
+          },
+          {
+            "width": 3840,
+            "height": 2160,
+            "budget_mbps": 500,
+            "zero_frame": false,
+            "output_hash": "14461297524978002549",
+            "prepare_ms": {
+              "samples": 100,
+              "mean": 3.15585663,
+              "p50": 2.758959,
+              "p95": 7.181917,
+              "p99": 8.467625
+            },
+            "decode_gpu_ms": {
+              "samples": 100,
+              "mean": 17.8857612,
+              "p50": 17.5715415,
+              "p95": 22.5470001,
+              "p99": 23.7460835
+            },
+            "color_gpu_ms": {
+              "samples": 100,
+              "mean": 19.9796571,
+              "p50": 19.5999169,
+              "p95": 24.7416254,
+              "p99": 25.8511663
+            },
+            "ready_gpu_end_ms": {
+              "samples": 100,
+              "mean": 23.6631943,
+              "p50": 23.3400827,
+              "p95": 30.8969989,
+              "p99": 32.0731243
+            },
+            "ready_wall_ms": {
+              "samples": 100,
+              "mean": 24.079425,
+              "p50": 23.779292,
+              "p95": 31.088333,
+              "p99": 32.385166
+            }
+          },
+          {
+            "width": 3840,
+            "height": 2160,
+            "budget_mbps": 1000,
+            "zero_frame": false,
+            "output_hash": "14456277953950807474",
+            "prepare_ms": {
+              "samples": 100,
+              "mean": 6.21321748,
+              "p50": 5.488375,
+              "p95": 10.614833,
+              "p99": 11.343625
+            },
+            "decode_gpu_ms": {
+              "samples": 100,
+              "mean": 18.6939975,
+              "p50": 18.5156665,
+              "p95": 25.4542502,
+              "p99": 26.2281247
+            },
+            "color_gpu_ms": {
+              "samples": 100,
+              "mean": 20.7623567,
+              "p50": 20.7643746,
+              "p95": 27.3802499,
+              "p99": 28.2082502
+            },
+            "ready_gpu_end_ms": {
+              "samples": 100,
+              "mean": 27.5156673,
+              "p50": 27.042666,
+              "p95": 36.5508324,
+              "p99": 38.9799993
+            },
+            "ready_wall_ms": {
+              "samples": 100,
+              "mean": 27.8876317,
+              "p50": 27.284708,
+              "p95": 36.812875,
+              "p99": 39.233167
+            }
+          }
+        ]
+      },
+      {
+        "run_id": "pyrowave-offline-20261124T100250612544Z",
+        "source_revision": "4a21d2e058be7000657a4e03ac0750f6d1916142",
+        "diagnostic_source_sha256": "cbaa70c91bac0529b38f5251f12e0553bf05e09e6ad62cf4c4080221f9afb4d4",
+        "decoder_source_sha256": "f5d3c6952b8593b9cdef1129fb452dea2fcd8b7824c196446d5e095570f952c2",
+        "shader_header_sha256": "a1238f936efc2c06a95b290b7f34530f9236af4fa7585bcc735ee081f9509d35",
+        "thermal_before": 0,
+        "thermal_after": 0,
+        "exit_code": 0,
+        "coefficient_checks": 91095040,
+        "full_decoder_cases": [
+          {
+            "width": 128,
+            "height": 128,
+            "budget_mbps": 0,
+            "zero_frame": true,
+            "output_hash": "10115652052320166693",
+            "prepare_ms": {
+              "samples": 100,
+              "mean": 0.06933126,
+              "p50": 0.038417,
+              "p95": 0.165,
+              "p99": 0.186375
+            },
+            "decode_gpu_ms": {
+              "samples": 100,
+              "mean": 0.298275007,
+              "p50": 0.298083294,
+              "p95": 0.308624934,
+              "p99": 0.312041491
+            },
+            "color_gpu_ms": {
+              "samples": 100,
+              "mean": 0.391887086,
+              "p50": 0.392875168,
+              "p95": 0.40758308,
+              "p99": 0.410375185
+            },
+            "ready_gpu_end_ms": {
+              "samples": 100,
+              "mean": 0.784257287,
+              "p50": 0.755457673,
+              "p95": 0.900207553,
+              "p99": 0.920582563
+            },
+            "ready_wall_ms": {
+              "samples": 100,
+              "mean": 0.97283584,
+              "p50": 0.93875,
+              "p95": 1.100708,
+              "p99": 1.124292
+            }
+          },
+          {
+            "width": 320,
+            "height": 180,
+            "budget_mbps": 0,
+            "zero_frame": true,
+            "output_hash": "4744532814122669349",
+            "prepare_ms": {
+              "samples": 100,
+              "mean": 0.19781836,
+              "p50": 0.197833,
+              "p95": 0.238917,
+              "p99": 0.245916
+            },
+            "decode_gpu_ms": {
+              "samples": 100,
+              "mean": 0.379867498,
+              "p50": 0.379291829,
+              "p95": 0.391291454,
+              "p99": 0.393916387
+            },
+            "color_gpu_ms": {
+              "samples": 100,
+              "mean": 0.419063331,
+              "p50": 0.398333184,
+              "p95": 0.485416967,
+              "p99": 0.491250306
+            },
+            "ready_gpu_end_ms": {
+              "samples": 100,
+              "mean": 1.02330391,
+              "p50": 1.02070766,
+              "p95": 1.0699993,
+              "p99": 1.08429091
+            },
+            "ready_wall_ms": {
+              "samples": 100,
+              "mean": 1.25281667,
+              "p50": 1.259166,
+              "p95": 1.320917,
+              "p99": 1.348083
+            }
+          },
+          {
+            "width": 1280,
+            "height": 720,
+            "budget_mbps": 150,
+            "zero_frame": false,
+            "output_hash": "16365266812332337004",
+            "prepare_ms": {
+              "samples": 100,
+              "mean": 2.6006908,
+              "p50": 2.595208,
+              "p95": 2.718916,
+              "p99": 3.203417
+            },
+            "decode_gpu_ms": {
+              "samples": 100,
+              "mean": 2.98449959,
+              "p50": 2.98300013,
+              "p95": 3.01429164,
+              "p99": 3.02537484
+            },
+            "color_gpu_ms": {
+              "samples": 100,
+              "mean": 3.21797462,
+              "p50": 3.20858322,
+              "p95": 3.2755835,
+              "p99": 3.28987511
+            },
+            "ready_gpu_end_ms": {
+              "samples": 100,
+              "mean": 6.51913229,
+              "p50": 6.50541624,
+              "p95": 6.68287417,
+              "p99": 7.09449966
+            },
+            "ready_wall_ms": {
+              "samples": 100,
+              "mean": 6.8137534,
+              "p50": 6.798666,
+              "p95": 6.976583,
+              "p99": 7.420583
+            }
+          },
+          {
+            "width": 1280,
+            "height": 720,
+            "budget_mbps": 300,
+            "zero_frame": false,
+            "output_hash": "3206367878406253152",
+            "prepare_ms": {
+              "samples": 100,
+              "mean": 3.74260375,
+              "p50": 3.330708,
+              "p95": 4.836458,
+              "p99": 4.901292
+            },
+            "decode_gpu_ms": {
+              "samples": 100,
+              "mean": 3.45140626,
+              "p50": 3.45045794,
+              "p95": 3.4706248,
+              "p99": 3.48816672
+            },
+            "color_gpu_ms": {
+              "samples": 100,
+              "mean": 3.76522414,
+              "p50": 3.79275018,
+              "p95": 3.82049987,
+              "p99": 3.83662479
+            },
+            "ready_gpu_end_ms": {
+              "samples": 100,
+              "mean": 8.12294396,
+              "p50": 7.71612395,
+              "p95": 9.287416,
+              "p99": 9.31299897
+            },
+            "ready_wall_ms": {
+              "samples": 100,
+              "mean": 8.37271504,
+              "p50": 7.981333,
+              "p95": 9.570292,
+              "p99": 9.727292
+            }
+          },
+          {
+            "width": 1280,
+            "height": 720,
+            "budget_mbps": 500,
+            "zero_frame": false,
+            "output_hash": "11934355077285741747",
+            "prepare_ms": {
+              "samples": 100,
+              "mean": 4.82698416,
+              "p50": 4.74925,
+              "p95": 7.581292,
+              "p99": 7.81525
+            },
+            "decode_gpu_ms": {
+              "samples": 100,
+              "mean": 4.97015376,
+              "p50": 4.03408334,
+              "p95": 8.78725015,
+              "p99": 9.66349989
+            },
+            "color_gpu_ms": {
+              "samples": 100,
+              "mean": 5.69077626,
+              "p50": 4.38300008,
+              "p95": 9.39374976,
+              "p99": 12.1461251
+            },
+            "ready_gpu_end_ms": {
+              "samples": 100,
+              "mean": 11.1498968,
+              "p50": 10.2607077,
+              "p95": 16.8083743,
+              "p99": 18.3798745
+            },
+            "ready_wall_ms": {
+              "samples": 100,
+              "mean": 11.4378679,
+              "p50": 10.517667,
+              "p95": 17.202417,
+              "p99": 18.715083
+            }
+          },
+          {
+            "width": 1280,
+            "height": 720,
+            "budget_mbps": 1000,
+            "zero_frame": false,
+            "output_hash": "11934355077285741747",
+            "prepare_ms": {
+              "samples": 100,
+              "mean": 5.18065164,
+              "p50": 4.866625,
+              "p95": 7.09825,
+              "p99": 7.499583
+            },
+            "decode_gpu_ms": {
+              "samples": 100,
+              "mean": 4.88757958,
+              "p50": 4.03887499,
+              "p95": 8.75912514,
+              "p99": 8.81887507
+            },
+            "color_gpu_ms": {
+              "samples": 100,
+              "mean": 5.25560667,
+              "p50": 4.39112494,
+              "p95": 9.107708,
+              "p99": 9.21541685
+            },
+            "ready_gpu_end_ms": {
+              "samples": 100,
+              "mean": 11.0129727,
+              "p50": 11.1261657,
+              "p95": 14.6398745,
+              "p99": 17.0125831
+            },
+            "ready_wall_ms": {
+              "samples": 100,
+              "mean": 11.2618229,
+              "p50": 11.419583,
+              "p95": 14.858583,
+              "p99": 17.221042
+            }
+          },
+          {
+            "width": 1920,
+            "height": 1080,
+            "budget_mbps": 150,
+            "zero_frame": false,
+            "output_hash": "7002421816585535465",
+            "prepare_ms": {
+              "samples": 100,
+              "mean": 2.42203919,
+              "p50": 2.584583,
+              "p95": 3.167417,
+              "p99": 3.496083
+            },
+            "decode_gpu_ms": {
+              "samples": 100,
+              "mean": 6.41870332,
+              "p50": 5.49237523,
+              "p95": 10.3236251,
+              "p99": 10.3852917
+            },
+            "color_gpu_ms": {
+              "samples": 100,
+              "mean": 7.01428166,
+              "p50": 6.09437469,
+              "p95": 10.9447497,
+              "p99": 11.0512082
+            },
+            "ready_gpu_end_ms": {
+              "samples": 100,
+              "mean": 10.1259089,
+              "p50": 9.427791,
+              "p95": 14.1387493,
+              "p99": 14.2679163
+            },
+            "ready_wall_ms": {
+              "samples": 100,
+              "mean": 10.4654092,
+              "p50": 9.762375,
+              "p95": 14.521042,
+              "p99": 14.647166
+            }
+          },
+          {
+            "width": 1920,
+            "height": 1080,
+            "budget_mbps": 300,
+            "zero_frame": false,
+            "output_hash": "12084149283362720156",
+            "prepare_ms": {
+              "samples": 100,
+              "mean": 4.92066546,
+              "p50": 4.898041,
+              "p95": 5.949792,
+              "p99": 6.439042
+            },
+            "decode_gpu_ms": {
+              "samples": 100,
+              "mean": 7.13520249,
+              "p50": 6.03937497,
+              "p95": 10.9208333,
+              "p99": 10.9292087
+            },
+            "color_gpu_ms": {
+              "samples": 100,
+              "mean": 7.64345501,
+              "p50": 6.6246246,
+              "p95": 11.4656249,
+              "p99": 11.5177087
+            },
+            "ready_gpu_end_ms": {
+              "samples": 100,
+              "mean": 13.316046,
+              "p50": 12.4247493,
+              "p95": 17.0898326,
+              "p99": 17.1818328
+            },
+            "ready_wall_ms": {
+              "samples": 100,
+              "mean": 13.6784767,
+              "p50": 12.789542,
+              "p95": 17.46,
+              "p99": 17.757042
+            }
+          },
+          {
+            "width": 1920,
+            "height": 1080,
+            "budget_mbps": 500,
+            "zero_frame": false,
+            "output_hash": "8157399767250242167",
+            "prepare_ms": {
+              "samples": 100,
+              "mean": 5.93426418,
+              "p50": 6.297958,
+              "p95": 7.873291,
+              "p99": 8.569125
+            },
+            "decode_gpu_ms": {
+              "samples": 100,
+              "mean": 8.21754331,
+              "p50": 6.74399966,
+              "p95": 11.5954583,
+              "p99": 11.6067915
+            },
+            "color_gpu_ms": {
+              "samples": 100,
+              "mean": 8.93205582,
+              "p50": 7.44387507,
+              "p95": 12.3035833,
+              "p99": 12.4149164
+            },
+            "ready_gpu_end_ms": {
+              "samples": 100,
+              "mean": 15.4760939,
+              "p50": 14.6138328,
+              "p95": 20.3344994,
+              "p99": 20.8627079
+            },
+            "ready_wall_ms": {
+              "samples": 100,
+              "mean": 15.8098087,
+              "p50": 14.964708,
+              "p95": 20.64625,
+              "p99": 21.040083
+            }
+          },
+          {
+            "width": 1920,
+            "height": 1080,
+            "budget_mbps": 1000,
+            "zero_frame": false,
+            "output_hash": "9911083576783137946",
+            "prepare_ms": {
+              "samples": 100,
+              "mean": 8.09134375,
+              "p50": 7.753625,
+              "p95": 10.511625,
+              "p99": 13.471291
+            },
+            "decode_gpu_ms": {
+              "samples": 100,
+              "mean": 9.76446209,
+              "p50": 8.54424993,
+              "p95": 13.4271248,
+              "p99": 13.4412497
+            },
+            "color_gpu_ms": {
+              "samples": 100,
+              "mean": 10.5734479,
+              "p50": 9.25133331,
+              "p95": 14.1356667,
+              "p99": 14.1872917
+            },
+            "ready_gpu_end_ms": {
+              "samples": 100,
+              "mean": 19.2350843,
+              "p50": 18.7041657,
+              "p95": 23.4747077,
+              "p99": 26.4095827
+            },
+            "ready_wall_ms": {
+              "samples": 100,
+              "mean": 19.4856075,
+              "p50": 18.930166,
+              "p95": 23.76775,
+              "p99": 26.679292
+            }
+          },
+          {
+            "width": 3840,
+            "height": 2160,
+            "budget_mbps": 150,
+            "zero_frame": false,
+            "output_hash": "14664847426593926465",
+            "prepare_ms": {
+              "samples": 100,
+              "mean": 2.74496001,
+              "p50": 2.672166,
+              "p95": 3.068083,
+              "p99": 3.969
+            },
+            "decode_gpu_ms": {
+              "samples": 100,
+              "mean": 15.7963821,
+              "p50": 15.5608747,
+              "p95": 20.9461665,
+              "p99": 24.2275419
+            },
+            "color_gpu_ms": {
+              "samples": 100,
+              "mean": 17.7818679,
+              "p50": 17.4836251,
+              "p95": 23.1953752,
+              "p99": 26.7131249
+            },
+            "ready_gpu_end_ms": {
+              "samples": 100,
+              "mean": 21.2556556,
+              "p50": 20.9985408,
+              "p95": 26.5704161,
+              "p99": 30.0944163
+            },
+            "ready_wall_ms": {
+              "samples": 100,
+              "mean": 21.6649046,
+              "p50": 21.393792,
+              "p95": 27.042084,
+              "p99": 30.478167
+            }
+          },
+          {
+            "width": 3840,
+            "height": 2160,
+            "budget_mbps": 300,
+            "zero_frame": false,
+            "output_hash": "11843734189414006217",
+            "prepare_ms": {
+              "samples": 100,
+              "mean": 4.77404285,
+              "p50": 4.866709,
+              "p95": 5.912209,
+              "p99": 6.17025
+            },
+            "decode_gpu_ms": {
+              "samples": 100,
+              "mean": 17.9922484,
+              "p50": 18.542625,
+              "p95": 22.8472501,
+              "p99": 24.6355003
+            },
+            "color_gpu_ms": {
+              "samples": 100,
+              "mean": 20.2605346,
+              "p50": 20.4419168,
+              "p95": 25.3425413,
+              "p99": 27.2493749
+            },
+            "ready_gpu_end_ms": {
+              "samples": 100,
+              "mean": 25.7560139,
+              "p50": 26.0064574,
+              "p95": 32.116374,
+              "p99": 32.8511661
+            },
+            "ready_wall_ms": {
+              "samples": 100,
+              "mean": 26.1700837,
+              "p50": 26.529875,
+              "p95": 32.486916,
+              "p99": 33.201666
+            }
+          },
+          {
+            "width": 3840,
+            "height": 2160,
+            "budget_mbps": 500,
+            "zero_frame": false,
+            "output_hash": "14461297524978002549",
+            "prepare_ms": {
+              "samples": 100,
+              "mean": 7.37189164,
+              "p50": 7.666,
+              "p95": 8.453708,
+              "p99": 9.63175
+            },
+            "decode_gpu_ms": {
+              "samples": 100,
+              "mean": 19.1927008,
+              "p50": 18.4272085,
+              "p95": 25.3299996,
+              "p99": 25.3735832
+            },
+            "color_gpu_ms": {
+              "samples": 100,
+              "mean": 21.6995175,
+              "p50": 21.6575,
+              "p95": 27.2026248,
+              "p99": 27.8900834
+            },
+            "ready_gpu_end_ms": {
+              "samples": 100,
+              "mean": 29.744536,
+              "p50": 29.9744993,
+              "p95": 35.7107497,
+              "p99": 36.3292908
+            },
+            "ready_wall_ms": {
+              "samples": 100,
+              "mean": 30.12373,
+              "p50": 30.339958,
+              "p95": 36.195583,
+              "p99": 36.674792
+            }
+          },
+          {
+            "width": 3840,
+            "height": 2160,
+            "budget_mbps": 1000,
+            "zero_frame": false,
+            "output_hash": "14456277953950807474",
+            "prepare_ms": {
+              "samples": 100,
+              "mean": 13.5750354,
+              "p50": 14.409417,
+              "p95": 16.15225,
+              "p99": 16.848667
+            },
+            "decode_gpu_ms": {
+              "samples": 100,
+              "mean": 23.5977062,
+              "p50": 24.0450832,
+              "p95": 26.5463749,
+              "p99": 27.075625
+            },
+            "color_gpu_ms": {
+              "samples": 100,
+              "mean": 25.6107879,
+              "p50": 26.004375,
+              "p95": 28.9378748,
+              "p99": 29.5383749
+            },
+            "ready_gpu_end_ms": {
+              "samples": 100,
+              "mean": 39.811069,
+              "p50": 40.7194993,
+              "p95": 44.1539991,
+              "p99": 45.1659574
+            },
+            "ready_wall_ms": {
+              "samples": 100,
+              "mean": 40.1853459,
+              "p50": 41.108084,
+              "p95": 44.562916,
+              "p99": 45.536
+            }
+          }
+        ]
+      }
+    ],
+    "baseline": [
+      {
+        "run_id": "pyrowave-offline-20261124T100125211110Z",
+        "source_revision": "4a21d2e058be7000657a4e03ac0750f6d1916142",
+        "diagnostic_source_sha256": "cbaa70c91bac0529b38f5251f12e0553bf05e09e6ad62cf4c4080221f9afb4d4",
+        "decoder_source_sha256": "6c84fedeb1e2a81ff57ccd4de80a67834e92862fa18f8c194814f352cbad2ef8",
+        "shader_header_sha256": "530e71988091085e895c0ec73b80d6d5b2fe8e830244f33ce2b2beb48543ed91",
+        "thermal_before": 0,
+        "thermal_after": 0,
+        "exit_code": 0,
+        "coefficient_checks": 91095040,
+        "full_decoder_cases": [
+          {
+            "width": 128,
+            "height": 128,
+            "budget_mbps": 0,
+            "zero_frame": true,
+            "output_hash": "10115652052320166693",
+            "prepare_ms": {
+              "samples": 100,
+              "mean": 0.09344665,
+              "p50": 0.046084,
+              "p95": 0.214167,
+              "p99": 0.227875
+            },
+            "decode_gpu_ms": {
+              "samples": 100,
+              "mean": 0.302191246,
+              "p50": 0.302416738,
+              "p95": 0.314500183,
+              "p99": 0.315374695
+            },
+            "color_gpu_ms": {
+              "samples": 100,
+              "mean": 0.388284144,
+              "p50": 0.398374628,
+              "p95": 0.414791517,
+              "p99": 0.417875126
+            },
+            "ready_gpu_end_ms": {
+              "samples": 100,
+              "mean": 0.820845203,
+              "p50": 0.775374472,
+              "p95": 0.954124145,
+              "p99": 0.988916028
+            },
+            "ready_wall_ms": {
+              "samples": 100,
+              "mean": 1.0249346,
+              "p50": 0.953834,
+              "p95": 1.269709,
+              "p99": 1.318416
+            }
+          },
+          {
+            "width": 320,
+            "height": 180,
+            "budget_mbps": 0,
+            "zero_frame": true,
+            "output_hash": "4744532814122669349",
+            "prepare_ms": {
+              "samples": 100,
+              "mean": 0.21454583,
+              "p50": 0.19225,
+              "p95": 0.369583,
+              "p99": 0.714083
+            },
+            "decode_gpu_ms": {
+              "samples": 100,
+              "mean": 0.374765396,
+              "p50": 0.374000054,
+              "p95": 0.38974965,
+              "p99": 0.393124763
+            },
+            "color_gpu_ms": {
+              "samples": 100,
+              "mean": 0.418528309,
+              "p50": 0.456041656,
+              "p95": 0.487374607,
+              "p99": 0.490125269
+            },
+            "ready_gpu_end_ms": {
+              "samples": 100,
+              "mean": 1.05256722,
+              "p50": 1.0219994,
+              "p95": 1.17116608,
+              "p99": 1.88566605
+            },
+            "ready_wall_ms": {
+              "samples": 100,
+              "mean": 1.3037413,
+              "p50": 1.243792,
+              "p95": 1.562458,
+              "p99": 2.165917
+            }
+          },
+          {
+            "width": 1280,
+            "height": 720,
+            "budget_mbps": 150,
+            "zero_frame": false,
+            "output_hash": "16365266812332337004",
+            "prepare_ms": {
+              "samples": 100,
+              "mean": 2.48951465,
+              "p50": 2.585958,
+              "p95": 2.772042,
+              "p99": 3.049417
+            },
+            "decode_gpu_ms": {
+              "samples": 100,
+              "mean": 3.00600997,
+              "p50": 3.00741661,
+              "p95": 3.04174982,
+              "p99": 3.04695824
+            },
+            "color_gpu_ms": {
+              "samples": 100,
+              "mean": 3.26210041,
+              "p50": 3.27083329,
+              "p95": 3.36695835,
+              "p99": 3.37624969
+            },
+            "ready_gpu_end_ms": {
+              "samples": 100,
+              "mean": 6.39766934,
+              "p50": 6.49341615,
+              "p95": 6.64495723,
+              "p99": 6.99399924
+            },
+            "ready_wall_ms": {
+              "samples": 100,
+              "mean": 6.68584799,
+              "p50": 6.781542,
+              "p95": 6.994625,
+              "p99": 7.289875
+            }
+          },
+          {
+            "width": 1280,
+            "height": 720,
+            "budget_mbps": 300,
+            "zero_frame": false,
+            "output_hash": "3206367878406253152",
+            "prepare_ms": {
+              "samples": 100,
+              "mean": 3.49190292,
+              "p50": 3.247333,
+              "p95": 5.328292,
+              "p99": 5.480834
+            },
+            "decode_gpu_ms": {
+              "samples": 100,
+              "mean": 4.3378621,
+              "p50": 3.49137513,
+              "p95": 8.92408332,
+              "p99": 10.317042
+            },
+            "color_gpu_ms": {
+              "samples": 100,
+              "mean": 4.74327417,
+              "p50": 3.85287497,
+              "p95": 9.61541664,
+              "p99": 10.441625
+            },
+            "ready_gpu_end_ms": {
+              "samples": 100,
+              "mean": 8.82069931,
+              "p50": 8.00154079,
+              "p95": 13.8447494,
+              "p99": 16.2592079
+            },
+            "ready_wall_ms": {
+              "samples": 100,
+              "mean": 9.08265501,
+              "p50": 8.234958,
+              "p95": 14.138375,
+              "p99": 16.491541
+            }
+          },
+          {
+            "width": 1280,
+            "height": 720,
+            "budget_mbps": 500,
+            "zero_frame": false,
+            "output_hash": "11934355077285741747",
+            "prepare_ms": {
+              "samples": 100,
+              "mean": 2.28798964,
+              "p50": 2.428375,
+              "p95": 4.78425,
+              "p99": 9.17675
+            },
+            "decode_gpu_ms": {
+              "samples": 100,
+              "mean": 4.38658417,
+              "p50": 4.0606251,
+              "p95": 7.88162509,
+              "p99": 8.22912483
+            },
+            "color_gpu_ms": {
+              "samples": 100,
+              "mean": 4.73156002,
+              "p50": 4.42241644,
+              "p95": 8.23112531,
+              "p99": 8.59041652
+            },
+            "ready_gpu_end_ms": {
+              "samples": 100,
+              "mean": 7.52677021,
+              "p50": 7.41508277,
+              "p95": 11.4310412,
+              "p99": 14.2660411
+            },
+            "ready_wall_ms": {
+              "samples": 100,
+              "mean": 7.86077796,
+              "p50": 7.615708,
+              "p95": 11.764917,
+              "p99": 14.471375
+            }
+          },
+          {
+            "width": 1280,
+            "height": 720,
+            "budget_mbps": 1000,
+            "zero_frame": false,
+            "output_hash": "11934355077285741747",
+            "prepare_ms": {
+              "samples": 100,
+              "mean": 2.4565029,
+              "p50": 2.462333,
+              "p95": 7.214416,
+              "p99": 9.1315
+            },
+            "decode_gpu_ms": {
+              "samples": 100,
+              "mean": 4.49176752,
+              "p50": 4.06225026,
+              "p95": 8.13862495,
+              "p99": 8.30775034
+            },
+            "color_gpu_ms": {
+              "samples": 100,
+              "mean": 4.88211998,
+              "p50": 4.41233302,
+              "p95": 8.5090003,
+              "p99": 8.72362498
+            },
+            "ready_gpu_end_ms": {
+              "samples": 100,
+              "mean": 7.79011186,
+              "p50": 7.41712423,
+              "p95": 12.1595412,
+              "p99": 14.1919991
+            },
+            "ready_wall_ms": {
+              "samples": 100,
+              "mean": 8.16595131,
+              "p50": 7.626625,
+              "p95": 12.340916,
+              "p99": 14.478917
+            }
+          },
+          {
+            "width": 1920,
+            "height": 1080,
+            "budget_mbps": 150,
+            "zero_frame": false,
+            "output_hash": "7002421816585535465",
+            "prepare_ms": {
+              "samples": 100,
+              "mean": 1.10949037,
+              "p50": 0.950125,
+              "p95": 1.694791,
+              "p99": 3.101708
+            },
+            "decode_gpu_ms": {
+              "samples": 100,
+              "mean": 5.88105164,
+              "p50": 5.49533311,
+              "p95": 9.29125026,
+              "p99": 9.63175017
+            },
+            "color_gpu_ms": {
+              "samples": 100,
+              "mean": 6.59694791,
+              "p50": 6.19224971,
+              "p95": 9.99445841,
+              "p99": 10.3303748
+            },
+            "ready_gpu_end_ms": {
+              "samples": 100,
+              "mean": 8.13775144,
+              "p50": 7.57691637,
+              "p95": 11.5262074,
+              "p99": 12.7570825
+            },
+            "ready_wall_ms": {
+              "samples": 100,
+              "mean": 8.47515414,
+              "p50": 7.800625,
+              "p95": 11.760667,
+              "p99": 12.958459
+            }
+          },
+          {
+            "width": 1920,
+            "height": 1080,
+            "budget_mbps": 300,
+            "zero_frame": false,
+            "output_hash": "12084149283362720156",
+            "prepare_ms": {
+              "samples": 100,
+              "mean": 1.68469047,
+              "p50": 1.699792,
+              "p95": 2.086833,
+              "p99": 6.050459
+            },
+            "decode_gpu_ms": {
+              "samples": 100,
+              "mean": 6.44521541,
+              "p50": 6.04312494,
+              "p95": 10.2266246,
+              "p99": 10.2832499
+            },
+            "color_gpu_ms": {
+              "samples": 100,
+              "mean": 7.25374168,
+              "p50": 6.74495846,
+              "p95": 10.9498748,
+              "p99": 10.9818331
+            },
+            "ready_gpu_end_ms": {
+              "samples": 100,
+              "mean": 9.39101106,
+              "p50": 8.96866573,
+              "p95": 13.1590827,
+              "p99": 13.7687908
+            },
+            "ready_wall_ms": {
+              "samples": 100,
+              "mean": 9.84689129,
+              "p50": 9.175958,
+              "p95": 13.798709,
+              "p99": 14.574083
+            }
+          },
+          {
+            "width": 1920,
+            "height": 1080,
+            "budget_mbps": 500,
+            "zero_frame": false,
+            "output_hash": "8157399767250242167",
+            "prepare_ms": {
+              "samples": 100,
+              "mean": 2.97506668,
+              "p50": 2.765041,
+              "p95": 5.503791,
+              "p99": 8.948833
+            },
+            "decode_gpu_ms": {
+              "samples": 100,
+              "mean": 7.37092208,
+              "p50": 6.78170798,
+              "p95": 10.9575,
+              "p99": 10.991625
+            },
+            "color_gpu_ms": {
+              "samples": 100,
+              "mean": 8.05378253,
+              "p50": 7.48316664,
+              "p95": 11.6662085,
+              "p99": 11.6870832
+            },
+            "ready_gpu_end_ms": {
+              "samples": 100,
+              "mean": 11.5019823,
+              "p50": 10.7799158,
+              "p95": 15.5531242,
+              "p99": 16.9179575
+            },
+            "ready_wall_ms": {
+              "samples": 100,
+              "mean": 11.8921888,
+              "p50": 11.035625,
+              "p95": 15.695875,
+              "p99": 17.084541
+            }
+          },
+          {
+            "width": 1920,
+            "height": 1080,
+            "budget_mbps": 1000,
+            "zero_frame": false,
+            "output_hash": "9911083576783137946",
+            "prepare_ms": {
+              "samples": 100,
+              "mean": 5.12041081,
+              "p50": 5.347458,
+              "p95": 10.241,
+              "p99": 10.902167
+            },
+            "decode_gpu_ms": {
+              "samples": 100,
+              "mean": 9.29899625,
+              "p50": 8.58362485,
+              "p95": 12.6833334,
+              "p99": 12.7842501
+            },
+            "color_gpu_ms": {
+              "samples": 100,
+              "mean": 9.99308126,
+              "p50": 9.28579178,
+              "p95": 13.361,
+              "p99": 13.4916669
+            },
+            "ready_gpu_end_ms": {
+              "samples": 100,
+              "mean": 15.5914764,
+              "p50": 15.2051244,
+              "p95": 20.0288747,
+              "p99": 20.7164576
+            },
+            "ready_wall_ms": {
+              "samples": 100,
+              "mean": 15.9922437,
+              "p50": 15.465375,
+              "p95": 20.22975,
+              "p99": 21.247541
+            }
+          },
+          {
+            "width": 3840,
+            "height": 2160,
+            "budget_mbps": 150,
+            "zero_frame": false,
+            "output_hash": "14664847426593926465",
+            "prepare_ms": {
+              "samples": 100,
+              "mean": 1.23449621,
+              "p50": 0.959625,
+              "p95": 2.777875,
+              "p99": 7.2695
+            },
+            "decode_gpu_ms": {
+              "samples": 100,
+              "mean": 14.0823633,
+              "p50": 13.3994999,
+              "p95": 18.7597084,
+              "p99": 23.3119996
+            },
+            "color_gpu_ms": {
+              "samples": 100,
+              "mean": 15.9222809,
+              "p50": 15.2860833,
+              "p95": 21.3812501,
+              "p99": 25.8947918
+            },
+            "ready_gpu_end_ms": {
+              "samples": 100,
+              "mean": 17.6548627,
+              "p50": 16.7974993,
+              "p95": 26.0218326,
+              "p99": 29.9108326
+            },
+            "ready_wall_ms": {
+              "samples": 100,
+              "mean": 18.0536616,
+              "p50": 16.989333,
+              "p95": 26.233083,
+              "p99": 30.095417
+            }
+          },
+          {
+            "width": 3840,
+            "height": 2160,
+            "budget_mbps": 300,
+            "zero_frame": false,
+            "output_hash": "11843734189414006217",
+            "prepare_ms": {
+              "samples": 100,
+              "mean": 2.02837333,
+              "p50": 1.746208,
+              "p95": 4.260541,
+              "p99": 7.388667
+            },
+            "decode_gpu_ms": {
+              "samples": 100,
+              "mean": 15.9643692,
+              "p50": 15.3804999,
+              "p95": 20.694375,
+              "p99": 22.2198754
+            },
+            "color_gpu_ms": {
+              "samples": 100,
+              "mean": 18.0875904,
+              "p50": 17.4482916,
+              "p95": 22.6185001,
+              "p99": 24.7065835
+            },
+            "ready_gpu_end_ms": {
+              "samples": 100,
+              "mean": 20.6195593,
+              "p50": 19.6057078,
+              "p95": 26.9918744,
+              "p99": 28.7532494
+            },
+            "ready_wall_ms": {
+              "samples": 100,
+              "mean": 21.1695104,
+              "p50": 20.5405,
+              "p95": 27.223959,
+              "p99": 28.933625
+            }
+          },
+          {
+            "width": 3840,
+            "height": 2160,
+            "budget_mbps": 500,
+            "zero_frame": false,
+            "output_hash": "14461297524978002549",
+            "prepare_ms": {
+              "samples": 100,
+              "mean": 3.16787248,
+              "p50": 2.777375,
+              "p95": 6.676167,
+              "p99": 7.847583
+            },
+            "decode_gpu_ms": {
+              "samples": 100,
+              "mean": 16.7167408,
+              "p50": 16.7365419,
+              "p95": 21.4485833,
+              "p99": 23.5932916
+            },
+            "color_gpu_ms": {
+              "samples": 100,
+              "mean": 18.7097737,
+              "p50": 18.5031667,
+              "p95": 23.8787085,
+              "p99": 26.1789169
+            },
+            "ready_gpu_end_ms": {
+              "samples": 100,
+              "mean": 22.4038377,
+              "p50": 22.0747078,
+              "p95": 29.9901664,
+              "p99": 31.6901663
+            },
+            "ready_wall_ms": {
+              "samples": 100,
+              "mean": 22.7551975,
+              "p50": 22.376167,
+              "p95": 30.233541,
+              "p99": 31.881041
+            }
+          },
+          {
+            "width": 3840,
+            "height": 2160,
+            "budget_mbps": 1000,
+            "zero_frame": false,
+            "output_hash": "14456277953950807474",
+            "prepare_ms": {
+              "samples": 100,
+              "mean": 5.92930302,
+              "p50": 5.407167,
+              "p95": 11.235583,
+              "p99": 11.719292
+            },
+            "decode_gpu_ms": {
+              "samples": 100,
+              "mean": 19.025725,
+              "p50": 18.3455003,
+              "p95": 26.0617081,
+              "p99": 26.4764996
+            },
+            "color_gpu_ms": {
+              "samples": 100,
+              "mean": 21.0776488,
+              "p50": 20.5553751,
+              "p95": 28.497125,
+              "p99": 29.0572084
+            },
+            "ready_gpu_end_ms": {
+              "samples": 100,
+              "mean": 27.519901,
+              "p50": 26.6552074,
+              "p95": 36.8684158,
+              "p99": 40.3799573
+            },
+            "ready_wall_ms": {
+              "samples": 100,
+              "mean": 28.1516167,
+              "p50": 27.677209,
+              "p95": 37.060917,
+              "p99": 40.658042
+            }
+          }
+        ]
+      },
+      {
+        "run_id": "pyrowave-offline-20261124T100523000163Z",
+        "source_revision": "4a21d2e058be7000657a4e03ac0750f6d1916142",
+        "diagnostic_source_sha256": "cbaa70c91bac0529b38f5251f12e0553bf05e09e6ad62cf4c4080221f9afb4d4",
+        "decoder_source_sha256": "6c84fedeb1e2a81ff57ccd4de80a67834e92862fa18f8c194814f352cbad2ef8",
+        "shader_header_sha256": "530e71988091085e895c0ec73b80d6d5b2fe8e830244f33ce2b2beb48543ed91",
+        "thermal_before": 0,
+        "thermal_after": 0,
+        "exit_code": 0,
+        "coefficient_checks": 91095040,
+        "full_decoder_cases": [
+          {
+            "width": 128,
+            "height": 128,
+            "budget_mbps": 0,
+            "zero_frame": true,
+            "output_hash": "10115652052320166693",
+            "prepare_ms": {
+              "samples": 100,
+              "mean": 0.08108169,
+              "p50": 0.045667,
+              "p95": 0.173833,
+              "p99": 0.192
+            },
+            "decode_gpu_ms": {
+              "samples": 100,
+              "mean": 0.305980006,
+              "p50": 0.307083596,
+              "p95": 0.314500183,
+              "p99": 0.318875071
+            },
+            "color_gpu_ms": {
+              "samples": 100,
+              "mean": 0.400755843,
+              "p50": 0.401875004,
+              "p95": 0.417750329,
+              "p99": 0.420249999
+            },
+            "ready_gpu_end_ms": {
+              "samples": 100,
+              "mean": 0.805072705,
+              "p50": 0.771582592,
+              "p95": 0.916707795,
+              "p99": 0.952415634
+            },
+            "ready_wall_ms": {
+              "samples": 100,
+              "mean": 0.98521748,
+              "p50": 0.950459,
+              "p95": 1.102416,
+              "p99": 1.133583
+            }
+          },
+          {
+            "width": 320,
+            "height": 180,
+            "budget_mbps": 0,
+            "zero_frame": true,
+            "output_hash": "4744532814122669349",
+            "prepare_ms": {
+              "samples": 100,
+              "mean": 0.22927828,
+              "p50": 0.231833,
+              "p95": 0.276875,
+              "p99": 0.286333
+            },
+            "decode_gpu_ms": {
+              "samples": 100,
+              "mean": 0.381641691,
+              "p50": 0.380333513,
+              "p95": 0.394249801,
+              "p99": 0.395750161
+            },
+            "color_gpu_ms": {
+              "samples": 100,
+              "mean": 0.409300397,
+              "p50": 0.397666357,
+              "p95": 0.491457991,
+              "p99": 0.494416803
+            },
+            "ready_gpu_end_ms": {
+              "samples": 100,
+              "mean": 1.06271476,
+              "p50": 1.06012402,
+              "p95": 1.13229128,
+              "p99": 1.16583286
+            },
+            "ready_wall_ms": {
+              "samples": 100,
+              "mean": 1.30321245,
+              "p50": 1.292625,
+              "p95": 1.459,
+              "p99": 1.493666
+            }
+          },
+          {
+            "width": 1280,
+            "height": 720,
+            "budget_mbps": 150,
+            "zero_frame": false,
+            "output_hash": "16365266812332337004",
+            "prepare_ms": {
+              "samples": 100,
+              "mean": 2.42478006,
+              "p50": 2.605667,
+              "p95": 2.6845,
+              "p99": 2.763959
+            },
+            "decode_gpu_ms": {
+              "samples": 100,
+              "mean": 3.02487169,
+              "p50": 3.02487472,
+              "p95": 3.05391708,
+              "p99": 3.06158327
+            },
+            "color_gpu_ms": {
+              "samples": 100,
+              "mean": 3.2950608,
+              "p50": 3.28329159,
+              "p95": 3.3975835,
+              "p99": 3.40737496
+            },
+            "ready_gpu_end_ms": {
+              "samples": 100,
+              "mean": 6.36194474,
+              "p50": 6.5587908,
+              "p95": 6.67487411,
+              "p99": 6.77395798
+            },
+            "ready_wall_ms": {
+              "samples": 100,
+              "mean": 6.64702175,
+              "p50": 6.845041,
+              "p95": 6.979875,
+              "p99": 7.252875
+            }
+          },
+          {
+            "width": 1280,
+            "height": 720,
+            "budget_mbps": 300,
+            "zero_frame": false,
+            "output_hash": "3206367878406253152",
+            "prepare_ms": {
+              "samples": 100,
+              "mean": 3.61323748,
+              "p50": 3.295417,
+              "p95": 4.883667,
+              "p99": 5.589
+            },
+            "decode_gpu_ms": {
+              "samples": 100,
+              "mean": 3.57132873,
+              "p50": 3.48162511,
+              "p95": 4.50554211,
+              "p99": 5.52537479
+            },
+            "color_gpu_ms": {
+              "samples": 100,
+              "mean": 3.89281497,
+              "p50": 3.83675005,
+              "p95": 4.3665003,
+              "p99": 6.21925015
+            },
+            "ready_gpu_end_ms": {
+              "samples": 100,
+              "mean": 8.11734514,
+              "p50": 7.68266618,
+              "p95": 9.81599931,
+              "p99": 11.2812496
+            },
+            "ready_wall_ms": {
+              "samples": 100,
+              "mean": 8.38647962,
+              "p50": 7.947,
+              "p95": 10.064083,
+              "p99": 11.749458
+            }
+          },
+          {
+            "width": 1280,
+            "height": 720,
+            "budget_mbps": 500,
+            "zero_frame": false,
+            "output_hash": "11934355077285741747",
+            "prepare_ms": {
+              "samples": 100,
+              "mean": 3.07538548,
+              "p50": 2.60625,
+              "p95": 6.113875,
+              "p99": 8.474875
+            },
+            "decode_gpu_ms": {
+              "samples": 100,
+              "mean": 4.36099628,
+              "p50": 4.05550003,
+              "p95": 8.24283343,
+              "p99": 9.17212479
+            },
+            "color_gpu_ms": {
+              "samples": 100,
+              "mean": 4.76828251,
+              "p50": 4.40387474,
+              "p95": 8.43724981,
+              "p99": 9.21820849
+            },
+            "ready_gpu_end_ms": {
+              "samples": 100,
+              "mean": 8.34263603,
+              "p50": 7.59637449,
+              "p95": 13.2346661,
+              "p99": 14.7374994
+            },
+            "ready_wall_ms": {
+              "samples": 100,
+              "mean": 8.68372297,
+              "p50": 7.819875,
+              "p95": 13.5625,
+              "p99": 14.951542
+            }
+          },
+          {
+            "width": 1280,
+            "height": 720,
+            "budget_mbps": 1000,
+            "zero_frame": false,
+            "output_hash": "11934355077285741747",
+            "prepare_ms": {
+              "samples": 100,
+              "mean": 2.40283372,
+              "p50": 2.523833,
+              "p95": 5.761125,
+              "p99": 8.509416
+            },
+            "decode_gpu_ms": {
+              "samples": 100,
+              "mean": 4.51238002,
+              "p50": 4.05741669,
+              "p95": 8.19983333,
+              "p99": 8.31079204
+            },
+            "color_gpu_ms": {
+              "samples": 100,
+              "mean": 4.85680208,
+              "p50": 4.41200007,
+              "p95": 8.53174971,
+              "p99": 8.66024988
+            },
+            "ready_gpu_end_ms": {
+              "samples": 100,
+              "mean": 7.71537853,
+              "p50": 7.48612452,
+              "p95": 11.5438327,
+              "p99": 13.409791
+            },
+            "ready_wall_ms": {
+              "samples": 100,
+              "mean": 8.25594036,
+              "p50": 7.748958,
+              "p95": 12.319375,
+              "p99": 13.605083
+            }
+          },
+          {
+            "width": 1920,
+            "height": 1080,
+            "budget_mbps": 150,
+            "zero_frame": false,
+            "output_hash": "7002421816585535465",
+            "prepare_ms": {
+              "samples": 100,
+              "mean": 0.90836503,
+              "p50": 0.931208,
+              "p95": 1.096791,
+              "p99": 1.329875
+            },
+            "decode_gpu_ms": {
+              "samples": 100,
+              "mean": 5.92878875,
+              "p50": 5.49675012,
+              "p95": 9.63770831,
+              "p99": 9.7515001
+            },
+            "color_gpu_ms": {
+              "samples": 100,
+              "mean": 6.71019878,
+              "p50": 6.19825022,
+              "p95": 10.4256249,
+              "p99": 10.517125
+            },
+            "ready_gpu_end_ms": {
+              "samples": 100,
+              "mean": 8.03612936,
+              "p50": 7.57641578,
+              "p95": 11.4661241,
+              "p99": 11.9255828
+            },
+            "ready_wall_ms": {
+              "samples": 100,
+              "mean": 8.62720287,
+              "p50": 7.821167,
+              "p95": 12.131458,
+              "p99": 13.041709
+            }
+          },
+          {
+            "width": 1920,
+            "height": 1080,
+            "budget_mbps": 300,
+            "zero_frame": false,
+            "output_hash": "12084149283362720156",
+            "prepare_ms": {
+              "samples": 100,
+              "mean": 1.81525588,
+              "p50": 1.709667,
+              "p95": 3.278292,
+              "p99": 4.055
+            },
+            "decode_gpu_ms": {
+              "samples": 100,
+              "mean": 6.56642293,
+              "p50": 6.04724977,
+              "p95": 10.2460836,
+              "p99": 10.3307501
+            },
+            "color_gpu_ms": {
+              "samples": 100,
+              "mean": 7.26515543,
+              "p50": 6.74462505,
+              "p95": 10.9965834,
+              "p99": 11.02725
+            },
+            "ready_gpu_end_ms": {
+              "samples": 100,
+              "mean": 9.60784686,
+              "p50": 8.96712439,
+              "p95": 13.5693327,
+              "p99": 15.3089161
+            },
+            "ready_wall_ms": {
+              "samples": 100,
+              "mean": 10.016742,
+              "p50": 9.193541,
+              "p95": 14.019917,
+              "p99": 15.466583
+            }
+          },
+          {
+            "width": 1920,
+            "height": 1080,
+            "budget_mbps": 500,
+            "zero_frame": false,
+            "output_hash": "8157399767250242167",
+            "prepare_ms": {
+              "samples": 100,
+              "mean": 2.7935209,
+              "p50": 2.691416,
+              "p95": 5.109459,
+              "p99": 7.861834
+            },
+            "decode_gpu_ms": {
+              "samples": 100,
+              "mean": 7.43773667,
+              "p50": 6.77904161,
+              "p95": 10.9688747,
+              "p99": 10.9950001
+            },
+            "color_gpu_ms": {
+              "samples": 100,
+              "mean": 8.12686875,
+              "p50": 7.47950003,
+              "p95": 11.6691249,
+              "p99": 11.7048747
+            },
+            "ready_gpu_end_ms": {
+              "samples": 100,
+              "mean": 11.405501,
+              "p50": 10.7360827,
+              "p95": 15.8390827,
+              "p99": 16.6383744
+            },
+            "ready_wall_ms": {
+              "samples": 100,
+              "mean": 11.9648846,
+              "p50": 11.024583,
+              "p95": 16.315084,
+              "p99": 16.7995
+            }
+          },
+          {
+            "width": 1920,
+            "height": 1080,
+            "budget_mbps": 1000,
+            "zero_frame": false,
+            "output_hash": "9911083576783137946",
+            "prepare_ms": {
+              "samples": 100,
+              "mean": 5.32657789,
+              "p50": 5.33025,
+              "p95": 8.943292,
+              "p99": 11.070917
+            },
+            "decode_gpu_ms": {
+              "samples": 100,
+              "mean": 9.19432457,
+              "p50": 8.58295849,
+              "p95": 12.7070416,
+              "p99": 12.844
+            },
+            "color_gpu_ms": {
+              "samples": 100,
+              "mean": 9.85887127,
+              "p50": 9.28562507,
+              "p95": 13.4512503,
+              "p99": 13.5564581
+            },
+            "ready_gpu_end_ms": {
+              "samples": 100,
+              "mean": 15.7361419,
+              "p50": 15.2049158,
+              "p95": 19.3741242,
+              "p99": 20.802083
+            },
+            "ready_wall_ms": {
+              "samples": 100,
+              "mean": 16.1153308,
+              "p50": 15.42375,
+              "p95": 19.908666,
+              "p99": 21.024
+            }
+          },
+          {
+            "width": 3840,
+            "height": 2160,
+            "budget_mbps": 150,
+            "zero_frame": false,
+            "output_hash": "14664847426593926465",
+            "prepare_ms": {
+              "samples": 100,
+              "mean": 1.16890425,
+              "p50": 0.954208,
+              "p95": 1.756875,
+              "p99": 7.277667
+            },
+            "decode_gpu_ms": {
+              "samples": 100,
+              "mean": 12.6785046,
+              "p50": 12.3032918,
+              "p95": 17.4643332,
+              "p99": 19.100375
+            },
+            "color_gpu_ms": {
+              "samples": 100,
+              "mean": 14.4553016,
+              "p50": 13.883125,
+              "p95": 19.274625,
+              "p99": 21.3307501
+            },
+            "ready_gpu_end_ms": {
+              "samples": 100,
+              "mean": 16.0976664,
+              "p50": 15.2051658,
+              "p95": 21.6524159,
+              "p99": 24.729541
+            },
+            "ready_wall_ms": {
+              "samples": 100,
+              "mean": 16.5360297,
+              "p50": 15.945792,
+              "p95": 22.401584,
+              "p99": 24.897375
+            }
+          },
+          {
+            "width": 3840,
+            "height": 2160,
+            "budget_mbps": 300,
+            "zero_frame": false,
+            "output_hash": "11843734189414006217",
+            "prepare_ms": {
+              "samples": 100,
+              "mean": 1.8860996,
+              "p50": 1.74575,
+              "p95": 3.181375,
+              "p99": 4.713041
+            },
+            "decode_gpu_ms": {
+              "samples": 100,
+              "mean": 15.4370212,
+              "p50": 15.0562497,
+              "p95": 19.535,
+              "p99": 20.7068748
+            },
+            "color_gpu_ms": {
+              "samples": 100,
+              "mean": 17.3904108,
+              "p50": 17.2162498,
+              "p95": 21.4654999,
+              "p99": 23.120583
+            },
+            "ready_gpu_end_ms": {
+              "samples": 100,
+              "mean": 19.8456135,
+              "p50": 19.5528325,
+              "p95": 24.3153744,
+              "p99": 27.1827076
+            },
+            "ready_wall_ms": {
+              "samples": 100,
+              "mean": 20.3527309,
+              "p50": 20.4495,
+              "p95": 24.898042,
+              "p99": 27.544125
+            }
+          },
+          {
+            "width": 3840,
+            "height": 2160,
+            "budget_mbps": 500,
+            "zero_frame": false,
+            "output_hash": "14461297524978002549",
+            "prepare_ms": {
+              "samples": 100,
+              "mean": 2.76161452,
+              "p50": 2.717083,
+              "p95": 3.7675,
+              "p99": 6.094625
+            },
+            "decode_gpu_ms": {
+              "samples": 100,
+              "mean": 17.1673462,
+              "p50": 16.8058332,
+              "p95": 22.0189998,
+              "p99": 23.4850002
+            },
+            "color_gpu_ms": {
+              "samples": 100,
+              "mean": 19.1219629,
+              "p50": 18.6186251,
+              "p95": 24.25075,
+              "p99": 25.8970833
+            },
+            "ready_gpu_end_ms": {
+              "samples": 100,
+              "mean": 22.4720831,
+              "p50": 21.7849161,
+              "p95": 28.1745829,
+              "p99": 30.2360412
+            },
+            "ready_wall_ms": {
+              "samples": 100,
+              "mean": 22.9893675,
+              "p50": 22.196167,
+              "p95": 28.596083,
+              "p99": 30.997167
+            }
+          },
+          {
+            "width": 3840,
+            "height": 2160,
+            "budget_mbps": 1000,
+            "zero_frame": false,
+            "output_hash": "14456277953950807474",
+            "prepare_ms": {
+              "samples": 100,
+              "mean": 5.91946668,
+              "p50": 5.450291,
+              "p95": 10.396291,
+              "p99": 12.4135
+            },
+            "decode_gpu_ms": {
+              "samples": 100,
+              "mean": 20.2581571,
+              "p50": 20.007458,
+              "p95": 26.570667,
+              "p99": 26.6201668
+            },
+            "color_gpu_ms": {
+              "samples": 100,
+              "mean": 22.3926413,
+              "p50": 22.1220832,
+              "p95": 29.0076248,
+              "p99": 29.2295003
+            },
+            "ready_gpu_end_ms": {
+              "samples": 100,
+              "mean": 28.8366102,
+              "p50": 28.6245411,
+              "p95": 38.0473328,
+              "p99": 39.4781241
+            },
+            "ready_wall_ms": {
+              "samples": 100,
+              "mean": 29.3775525,
+              "p50": 29.02225,
+              "p95": 38.288791,
+              "p99": 39.702959
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "cases": [
+    {
+      "width": 128,
+      "height": 128,
+      "budget_mbps": 0,
+      "zero_frame": true,
+      "decode_gpu_ms": {
+        "baseline": [
+          0.314500183,
+          0.314500183
+        ],
+        "candidate": [
+          0.295000151,
+          0.308624934
+        ]
+      },
+      "ready_wall_ms": {
+        "baseline": [
+          1.269709,
+          1.102416
+        ],
+        "candidate": [
+          1.038959,
+          1.100708
+        ]
+      }
+    },
+    {
+      "width": 320,
+      "height": 180,
+      "budget_mbps": 0,
+      "zero_frame": true,
+      "decode_gpu_ms": {
+        "baseline": [
+          0.38974965,
+          0.394249801
+        ],
+        "candidate": [
+          0.371125061,
+          0.391291454
+        ]
+      },
+      "ready_wall_ms": {
+        "baseline": [
+          1.562458,
+          1.459
+        ],
+        "candidate": [
+          1.080667,
+          1.320917
+        ]
+      }
+    },
+    {
+      "width": 1280,
+      "height": 720,
+      "budget_mbps": 150,
+      "zero_frame": false,
+      "decode_gpu_ms": {
+        "baseline": [
+          3.04174982,
+          3.05391708
+        ],
+        "candidate": [
+          6.80637499,
+          3.01429164
+        ]
+      },
+      "ready_wall_ms": {
+        "baseline": [
+          6.994625,
+          6.979875
+        ],
+        "candidate": [
+          9.281167,
+          6.976583
+        ]
+      }
+    },
+    {
+      "width": 1280,
+      "height": 720,
+      "budget_mbps": 300,
+      "zero_frame": false,
+      "decode_gpu_ms": {
+        "baseline": [
+          8.92408332,
+          4.50554211
+        ],
+        "candidate": [
+          6.9876248,
+          3.4706248
+        ]
+      },
+      "ready_wall_ms": {
+        "baseline": [
+          14.138375,
+          10.064083
+        ],
+        "candidate": [
+          11.557625,
+          9.570292
+        ]
+      }
+    },
+    {
+      "width": 1280,
+      "height": 720,
+      "budget_mbps": 500,
+      "zero_frame": false,
+      "decode_gpu_ms": {
+        "baseline": [
+          7.88162509,
+          8.24283343
+        ],
+        "candidate": [
+          8.07316694,
+          8.78725015
+        ]
+      },
+      "ready_wall_ms": {
+        "baseline": [
+          11.764917,
+          13.5625
+        ],
+        "candidate": [
+          12.381375,
+          17.202417
+        ]
+      }
+    },
+    {
+      "width": 1280,
+      "height": 720,
+      "budget_mbps": 1000,
+      "zero_frame": false,
+      "decode_gpu_ms": {
+        "baseline": [
+          8.13862495,
+          8.19983333
+        ],
+        "candidate": [
+          8.053625,
+          8.75912514
+        ]
+      },
+      "ready_wall_ms": {
+        "baseline": [
+          12.340916,
+          12.319375
+        ],
+        "candidate": [
+          11.392166,
+          14.858583
+        ]
+      }
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "budget_mbps": 150,
+      "zero_frame": false,
+      "decode_gpu_ms": {
+        "baseline": [
+          9.29125026,
+          9.63770831
+        ],
+        "candidate": [
+          9.49550001,
+          10.3236251
+        ]
+      },
+      "ready_wall_ms": {
+        "baseline": [
+          11.760667,
+          12.131458
+        ],
+        "candidate": [
+          11.816417,
+          14.521042
+        ]
+      }
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "budget_mbps": 300,
+      "zero_frame": false,
+      "decode_gpu_ms": {
+        "baseline": [
+          10.2266246,
+          10.2460836
+        ],
+        "candidate": [
+          10.0877499,
+          10.9208333
+        ]
+      },
+      "ready_wall_ms": {
+        "baseline": [
+          13.798709,
+          14.019917
+        ],
+        "candidate": [
+          14.596542,
+          17.46
+        ]
+      }
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "budget_mbps": 500,
+      "zero_frame": false,
+      "decode_gpu_ms": {
+        "baseline": [
+          10.9575,
+          10.9688747
+        ],
+        "candidate": [
+          10.9191248,
+          11.5954583
+        ]
+      },
+      "ready_wall_ms": {
+        "baseline": [
+          15.695875,
+          16.315084
+        ],
+        "candidate": [
+          16.955708,
+          20.64625
+        ]
+      }
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "budget_mbps": 1000,
+      "zero_frame": false,
+      "decode_gpu_ms": {
+        "baseline": [
+          12.6833334,
+          12.7070416
+        ],
+        "candidate": [
+          12.6114166,
+          13.4271248
+        ]
+      },
+      "ready_wall_ms": {
+        "baseline": [
+          20.22975,
+          19.908666
+        ],
+        "candidate": [
+          21.167417,
+          23.76775
+        ]
+      }
+    },
+    {
+      "width": 3840,
+      "height": 2160,
+      "budget_mbps": 150,
+      "zero_frame": false,
+      "decode_gpu_ms": {
+        "baseline": [
+          18.7597084,
+          17.4643332
+        ],
+        "candidate": [
+          15.3714586,
+          20.9461665
+        ]
+      },
+      "ready_wall_ms": {
+        "baseline": [
+          26.233083,
+          22.401584
+        ],
+        "candidate": [
+          20.404459,
+          27.042084
+        ]
+      }
+    },
+    {
+      "width": 3840,
+      "height": 2160,
+      "budget_mbps": 300,
+      "zero_frame": false,
+      "decode_gpu_ms": {
+        "baseline": [
+          20.694375,
+          19.535
+        ],
+        "candidate": [
+          19.9276246,
+          22.8472501
+        ]
+      },
+      "ready_wall_ms": {
+        "baseline": [
+          27.223959,
+          24.898042
+        ],
+        "candidate": [
+          27.277042,
+          32.486916
+        ]
+      }
+    },
+    {
+      "width": 3840,
+      "height": 2160,
+      "budget_mbps": 500,
+      "zero_frame": false,
+      "decode_gpu_ms": {
+        "baseline": [
+          21.4485833,
+          22.0189998
+        ],
+        "candidate": [
+          22.5470001,
+          25.3299996
+        ]
+      },
+      "ready_wall_ms": {
+        "baseline": [
+          30.233541,
+          28.596083
+        ],
+        "candidate": [
+          31.088333,
+          36.195583
+        ]
+      }
+    },
+    {
+      "width": 3840,
+      "height": 2160,
+      "budget_mbps": 1000,
+      "zero_frame": false,
+      "decode_gpu_ms": {
+        "baseline": [
+          26.0617081,
+          26.570667
+        ],
+        "candidate": [
+          25.4542502,
+          26.5463749
+        ]
+      },
+      "ready_wall_ms": {
+        "baseline": [
+          37.060917,
+          38.288791
+        ],
+        "candidate": [
+          36.812875,
+          44.562916
+        ]
+      }
+    }
+  ],
+  "correctness": {
+    "full_decoder_checksums_matched": 56,
+    "coefficient_comparisons": 364380160,
+    "maximum_coefficient_error": 0,
+    "production_factory_used": true
+  }
+}
