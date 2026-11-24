@@ -2796,5 +2796,10 @@
     "coefficient_comparisons": 364380160,
     "maximum_coefficient_error": 0,
     "production_factory_used": true
-  }
+  },
+  "control_limits": [
+    "Device GPU clocks and other system GPU activity were not fixed.",
+    "The first candidate worker was triggered through the app delegate using LLDB after an inactive launch, then the debugger was detached; subsequent workers started from the launch callback.",
+    "These startup differences and between-run variance prevent a causal percentage-speedup claim."
+  ]
 }

@@ -84,7 +84,10 @@ Candidate 4K p95 ranges across its two runs:
 | 500 Mbps | 22.55–25.33 ms | 31.09–36.20 ms |
 | 1,000 Mbps | 25.45–26.55 ms | 36.81–44.56 ms |
 
-These ranges describe two observed p95 values, not confidence intervals. The
+These ranges describe two observed p95 values, not confidence intervals. Device
+GPU clocks/system rendering were not fixed. The first worker needed a debugger
+trigger after an inactive launch; the debugger was then detached. Subsequent
+workers started automatically at launch. The
 before/after results do not establish a reliable physical speedup. At 500 Mbps,
 both candidate runs have higher decode and wall p95 than both baseline runs.
 The simulator's percentage gains must not be presented as Apple TV gains.
