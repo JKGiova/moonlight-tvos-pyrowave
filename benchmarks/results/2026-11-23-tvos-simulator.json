@@ -1,0 +1,335 @@
+{
+  "schema_version": 1,
+  "iterations": 200,
+  "warmup": 40,
+  "synthetic_workload": true,
+  "physical_apple_tv_tested": false,
+  "system": "tvOS Simulator",
+  "architecture": "x86_64",
+  "simulator": {
+    "runtime": "com.apple.CoreSimulator.SimRuntime.tvOS-26-5",
+    "device_type": "com.apple.CoreSimulator.SimDeviceType.Apple-TV-4K-2nd-generation-4K",
+    "name": "Apple TV 4K (2nd generation)",
+    "hardware_emulation": false
+  },
+  "shader_sha256": "9cd995fb01319b5f7f41ed1801d9e68513f9f10a5b8dc8f8ac56b007a8fd341c",
+  "framing_sha256": "599ae37655f0ad63e3c6286b82c334d250a4446e7822457397737d9ce7f18845",
+  "benchmark_sha256": "62b81ea0209c311b180e4b78f4db1f1015deee7e61b861a9af5ab3c20cc1b39e",
+  "latency_gate": {
+    "passed": true,
+    "threshold_ms": 50.0,
+    "percentile": "p95",
+    "metrics": [
+      "decode_gpu_ms",
+      "ready_wall_ms"
+    ],
+    "reasons": [],
+    "scope": "synthetic offscreen; no drawable, transport or physical A12 qualification"
+  },
+  "gpu_name": "Apple tvOS simulator GPU",
+  "method": "host-lab-offscreen-split-serial",
+  "profile": "8-bit SDR 4:2:0; 60 FPS equivalent payload budgets; serialized offscreen execution",
+  "output_hashes_matched": 14,
+  "dequant_cases_checked": 24,
+  "maximum_coefficient_error": 0,
+  "cases": [
+    {
+      "width": 128,
+      "height": 128,
+      "budget_mbps": 0,
+      "zero_frame": true,
+      "decode_gpu_ms": {
+        "samples": 200,
+        "mean": 0.021268185,
+        "p50": 0.0155459993,
+        "p95": 0.0622629996,
+        "p99": 0.0724179999
+      },
+      "ready_wall_ms": {
+        "samples": 200,
+        "mean": 0.5880614,
+        "p50": 0.572438,
+        "p95": 0.741497,
+        "p99": 0.828597
+      },
+      "output_hash": "10115652052320166693"
+    },
+    {
+      "width": 320,
+      "height": 180,
+      "budget_mbps": 0,
+      "zero_frame": true,
+      "decode_gpu_ms": {
+        "samples": 200,
+        "mean": 0.02149202,
+        "p50": 0.0164559997,
+        "p95": 0.0612859994,
+        "p99": 0.0718920001
+      },
+      "ready_wall_ms": {
+        "samples": 200,
+        "mean": 0.576506755,
+        "p50": 0.564506,
+        "p95": 0.696099,
+        "p99": 0.749333
+      },
+      "output_hash": "4744532814122669349"
+    },
+    {
+      "width": 1280,
+      "height": 720,
+      "budget_mbps": 150,
+      "zero_frame": false,
+      "decode_gpu_ms": {
+        "samples": 200,
+        "mean": 0.02330443,
+        "p50": 0.0178630007,
+        "p95": 0.0606129997,
+        "p99": 0.067557
+      },
+      "ready_wall_ms": {
+        "samples": 200,
+        "mean": 1.05369442,
+        "p50": 1.079638,
+        "p95": 1.319311,
+        "p99": 1.392442
+      },
+      "output_hash": "5554221087168168324"
+    },
+    {
+      "width": 1280,
+      "height": 720,
+      "budget_mbps": 300,
+      "zero_frame": false,
+      "decode_gpu_ms": {
+        "samples": 200,
+        "mean": 0.02567029,
+        "p50": 0.0195050006,
+        "p95": 0.0655980002,
+        "p99": 0.0731489999
+      },
+      "ready_wall_ms": {
+        "samples": 200,
+        "mean": 1.43829697,
+        "p50": 1.575236,
+        "p95": 1.816102,
+        "p99": 1.92697
+      },
+      "output_hash": "3638260992054395619"
+    },
+    {
+      "width": 1280,
+      "height": 720,
+      "budget_mbps": 500,
+      "zero_frame": false,
+      "decode_gpu_ms": {
+        "samples": 200,
+        "mean": 0.032334315,
+        "p50": 0.026576,
+        "p95": 0.0744990002,
+        "p99": 0.0794570005
+      },
+      "ready_wall_ms": {
+        "samples": 200,
+        "mean": 1.73490369,
+        "p50": 1.669261,
+        "p95": 2.334842,
+        "p99": 2.663557
+      },
+      "output_hash": "16394295718738846790"
+    },
+    {
+      "width": 1280,
+      "height": 720,
+      "budget_mbps": 1000,
+      "zero_frame": false,
+      "decode_gpu_ms": {
+        "samples": 200,
+        "mean": 0.028004425,
+        "p50": 0.0262860003,
+        "p95": 0.0718269994,
+        "p99": 0.076581
+      },
+      "ready_wall_ms": {
+        "samples": 200,
+        "mean": 1.6124546,
+        "p50": 1.36672,
+        "p95": 2.349173,
+        "p99": 2.650028
+      },
+      "output_hash": "16394295718738846790"
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "budget_mbps": 150,
+      "zero_frame": false,
+      "decode_gpu_ms": {
+        "samples": 200,
+        "mean": 0.025961285,
+        "p50": 0.0185829995,
+        "p95": 0.0692670001,
+        "p99": 0.0723630001
+      },
+      "ready_wall_ms": {
+        "samples": 200,
+        "mean": 1.05303284,
+        "p50": 1.091558,
+        "p95": 1.32318,
+        "p99": 1.454354
+      },
+      "output_hash": "4019896918327611730"
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "budget_mbps": 300,
+      "zero_frame": false,
+      "decode_gpu_ms": {
+        "samples": 200,
+        "mean": 0.02806221,
+        "p50": 0.0195120001,
+        "p95": 0.0704109998,
+        "p99": 0.0753269996
+      },
+      "ready_wall_ms": {
+        "samples": 200,
+        "mean": 1.52039229,
+        "p50": 1.593751,
+        "p95": 1.812204,
+        "p99": 1.958647
+      },
+      "output_hash": "6564878773641080262"
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "budget_mbps": 500,
+      "zero_frame": false,
+      "decode_gpu_ms": {
+        "samples": 200,
+        "mean": 0.0272946249,
+        "p50": 0.0214270003,
+        "p95": 0.0710579998,
+        "p99": 0.0736689999
+      },
+      "ready_wall_ms": {
+        "samples": 200,
+        "mean": 1.7730653,
+        "p50": 2.018539,
+        "p95": 2.33663,
+        "p99": 2.472261
+      },
+      "output_hash": "12950576727093581921"
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "budget_mbps": 1000,
+      "zero_frame": false,
+      "decode_gpu_ms": {
+        "samples": 200,
+        "mean": 0.02735924,
+        "p50": 0.0222549997,
+        "p95": 0.0729330004,
+        "p99": 0.0757039998
+      },
+      "ready_wall_ms": {
+        "samples": 200,
+        "mean": 2.7646656,
+        "p50": 2.114667,
+        "p95": 3.93901,
+        "p99": 4.073951
+      },
+      "output_hash": "16501116741979231331"
+    },
+    {
+      "width": 3840,
+      "height": 2160,
+      "budget_mbps": 150,
+      "zero_frame": false,
+      "decode_gpu_ms": {
+        "samples": 200,
+        "mean": 0.023180425,
+        "p50": 0.0176899994,
+        "p95": 0.0651760001,
+        "p99": 0.0727289998
+      },
+      "ready_wall_ms": {
+        "samples": 200,
+        "mean": 1.14992206,
+        "p50": 1.184738,
+        "p95": 1.399185,
+        "p99": 1.541014
+      },
+      "output_hash": "2878400007718470497"
+    },
+    {
+      "width": 3840,
+      "height": 2160,
+      "budget_mbps": 300,
+      "zero_frame": false,
+      "decode_gpu_ms": {
+        "samples": 200,
+        "mean": 0.02461089,
+        "p50": 0.0190340006,
+        "p95": 0.0664809995,
+        "p99": 0.0736689999
+      },
+      "ready_wall_ms": {
+        "samples": 200,
+        "mean": 1.50572162,
+        "p50": 1.646318,
+        "p95": 1.891763,
+        "p99": 1.93716
+      },
+      "output_hash": "12399661891580730347"
+    },
+    {
+      "width": 3840,
+      "height": 2160,
+      "budget_mbps": 500,
+      "zero_frame": false,
+      "decode_gpu_ms": {
+        "samples": 200,
+        "mean": 0.026438795,
+        "p50": 0.0195479997,
+        "p95": 0.0701629997,
+        "p99": 0.0742639995
+      },
+      "ready_wall_ms": {
+        "samples": 200,
+        "mean": 1.88215627,
+        "p50": 2.165341,
+        "p95": 2.495154,
+        "p99": 2.714297
+      },
+      "output_hash": "14097794394983522062"
+    },
+    {
+      "width": 3840,
+      "height": 2160,
+      "budget_mbps": 1000,
+      "zero_frame": false,
+      "decode_gpu_ms": {
+        "samples": 200,
+        "mean": 0.02633435,
+        "p50": 0.0213239991,
+        "p95": 0.0661490003,
+        "p99": 0.0756259997
+      },
+      "ready_wall_ms": {
+        "samples": 200,
+        "mean": 2.7437318,
+        "p50": 1.978167,
+        "p95": 3.937473,
+        "p99": 4.117489
+      },
+      "output_hash": "7070721469484825717"
+    }
+  ],
+  "physical_a12_latency_ms": null,
+  "base_revision": "97ca80d02eb96a937a1be7b7b17a6c9ee0752314",
+  "measurement_worktree_dirty": true,
+  "runner_sha256": "61810c35f22f2a2becd5cebc2921d033bb51f58a9dc0df4512686653afa76836"
+}

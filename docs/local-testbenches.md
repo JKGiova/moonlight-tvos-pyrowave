@@ -100,3 +100,32 @@ CI runs short correctness-focused CPU and host Metal benchmark samples and retai
 JSON reports and diagnostic logs as artifacts. Timing values are recorded with
 their hardware and sample counts. Physical A12/A15 performance qualification
 requires matched device measurements. [Timing definitions](decoding-performance.md)
+
+## tvOS Simulator latency check
+
+Compile the same testbench against the tvOS Simulator SDK and run it inside an
+already booted Apple TV simulator. Get its UDID with `xcrun simctl list devices booted`.
+
+```sh
+python3 tools/run_local_benchmarks.py --simulator YOUR_SIMULATOR_UDID --iterations 200 --warmup 40 --max-decode-p95-ms 50
+```
+
+The runner signs the standalone executable locally and invokes `simctl spawn`.
+It reuses the portable decoder lab assembly, shaders, fixtures and output checks;
+it does not change the app's production backend admission or generated Xcode project.
+The report records the simulator device type, runtime and GPU name. The simulated
+Apple TV model does not emulate A12 hardware performance.
+
+`ready_wall_ms` measures steady-clock elapsed time from before framing validation
+until both decode and conversion command buffers have completed. It includes CPU
+preparation, submission, GPU waits and conversion. It excludes fixture generation,
+readback, drawable acquisition, compositor and transport. This provides a separate
+check on the simulator's very small GPU timestamp intervals.
+
+The optional latency gate requires all twelve resolution/bitrate profiles, at least
+100 measured samples per profile, complete GPU and wall-time sample counts, and
+strictly sub-limit p95 values for both `decode_gpu_ms` and `ready_wall_ms`.
+Missing or invalid timings fail. A failed gate preserves `report.json` and returns
+a nonzero exit code. This is a synthetic offscreen performance check; it does not
+certify live streaming, sustained 60 FPS presentation or physical Apple TV latency.
+See [the simulator result record](../benchmarks/results/2026-11-23-tvos-simulator.json).

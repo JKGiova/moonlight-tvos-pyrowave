@@ -253,7 +253,7 @@ void fullDecoderBenchmark(id<MTLDevice> metal,id<MTLComputePipelineState> dequan
         PWTest::require(output!=nil,"host benchmark presentation target");
         PyroWaveFraming::Frame framed;
         std::string framingError;
-        std::vector<double> decodeTimes,colorTimes,readyTimes,prepareTimes;
+        std::vector<double> decodeTimes,colorTimes,readyTimes,prepareTimes,wallTimes;
         for (unsigned sample=0;sample<warmup+iterations;++sample) { @autoreleasepool {
             const double received=CACurrentMediaTime();
             const auto begin=Clock::now();
@@ -287,6 +287,7 @@ void fullDecoderBenchmark(id<MTLDevice> metal,id<MTLComputePipelineState> dequan
             PWTest::require(decode.status==MTLCommandBufferStatusCompleted &&
                 conversion.status==MTLCommandBufferStatusCompleted,"host benchmark GPU execution");
             if (sample<warmup) continue;
+            wallTimes.push_back(milliseconds(begin,Clock::now()));
             prepareTimes.push_back(milliseconds(begin,submitted));
             if (decode.GPUStartTime>0 && decode.GPUEndTime>decode.GPUStartTime)
                 decodeTimes.push_back((decode.GPUEndTime-decode.GPUStartTime)*1000);
@@ -325,6 +326,7 @@ void fullDecoderBenchmark(id<MTLDevice> metal,id<MTLComputePipelineState> dequan
         std::cout << ",\"decode_gpu_ms\":"; statistics(decodeTimes);
         std::cout << ",\"color_gpu_ms\":"; statistics(colorTimes);
         std::cout << ",\"ready_gpu_end_ms\":"; statistics(readyTimes);
+        std::cout << ",\"ready_wall_ms\":"; statistics(wallTimes);
         std::cout << "}";
     }}
     std::cout << "]}";

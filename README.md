@@ -110,6 +110,7 @@ upstream maintainers and does not claim release qualification.
 ## Development
 
 - [Build and test](docs/build-and-test.md)
+- [Local and tvOS Simulator latency testbenches](docs/local-testbenches.md)
 - [Architecture](docs/architecture.md) and [integration patches](integration/README.md)
 - [Apple5 decoder](docs/apple5-decoder.md)
 - [Implementation record](docs/PLAN.md)
