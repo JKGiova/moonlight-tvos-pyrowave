@@ -1,0 +1,145 @@
+{
+  "date": "2026-11-24",
+  "kind": "plain-language-practical-checks",
+  "base_revision": "a46a20b1cb8b6984efc7ba2e8793bb1f5128cfc7",
+  "test_sources_uncommitted_when_run": true,
+  "application_runtime_changed": false,
+  "source_sha256": {
+    "tools/check_video_profiles.mm": "3fdc4ac67084bded5b337e34fd3a707b8324320dc0006ce2f08c0eb3282984d8",
+    "tests/client_runtime_tests.cpp": "490fb3f798299a08f2ec61a6ac35a76dac2b01d566e1935a0b66dc058619c38a",
+    "native/apple/PyroWaveHDRPresenter.h": "7b8a1975fd667398c7c36ff9dbcc4811297eb416af4b5194a9f773d2f987c3e1",
+    "native/client/latest_frame_queue.hpp": "2b425a3c19300fac44670852a5dd84f9be55bf45730233cc02829ebb1843b6d1",
+    "native/client/pyrowave_profiles.h": "b9de64163d4ce17130a81233c17c7fe95aed5f0bbc4b17e8687b35f46d7527e9"
+  },
+  "new_local_checks": {
+    "system": "Darwin",
+    "architecture": "x86_64",
+    "video_profiles": {
+      "gpu_available": true,
+      "gpu_name": "AMD Radeon HD GFX10 Family Unknown Prototype",
+      "samples_checked": 8,
+      "packed_samples_checked": 294912,
+      "preserved_10bit_levels_per_case": 1024,
+      "ramp_cases": 8,
+      "single_pixel_444_cases": 4,
+      "pool_limit_verified": true,
+      "pool_recovery_verified": true,
+      "static_hdr_metadata_verified": true,
+      "physical_hdr_display_tested": false
+    },
+    "portable_suite_passed": true,
+    "queue": {
+      "extra_arrivals_while_two_slots_busy": 100000,
+      "max_processing_slots": 2,
+      "max_pending_frames": 1,
+      "pending_replacements": 99999,
+      "next_frame": 100001,
+      "expected_newest_frame": 100001
+    },
+    "profile_helper": {
+      "matches_accepted": 4,
+      "mismatches_refused": 12
+    }
+  },
+  "physical_attempt": {
+    "ran": false,
+    "reason": "Apple TV asleep; tvOS refused launch, including --no-activate. No current physical performance result."
+  },
+  "earlier_physical_evidence": {
+    "source": "2026-11-24-a12-offline-device.json",
+    "scope": "Earlier physical A12 runs, synthetic 8-bit SDR 420, serialized offscreen work; not live HDR/444 or input-to-display latency. Ranges are the observed endpoints of two candidate runs, not confidence intervals.",
+    "four_k_summary": [
+      {
+        "synthetic_budget_mbps": 150,
+        "resolution": "3840x2160",
+        "samples_per_run": 100,
+        "warmup_per_run": 20,
+        "run_count": 2,
+        "wall_ms_ranges": {
+          "p50": [
+            15.278292,
+            21.393792
+          ],
+          "p95": [
+            20.404459,
+            27.042084
+          ],
+          "p99": [
+            21.259917,
+            30.478167
+          ]
+        }
+      },
+      {
+        "synthetic_budget_mbps": 300,
+        "resolution": "3840x2160",
+        "samples_per_run": 100,
+        "warmup_per_run": 20,
+        "run_count": 2,
+        "wall_ms_ranges": {
+          "p50": [
+            19.850875,
+            26.529875
+          ],
+          "p95": [
+            27.277042,
+            32.486916
+          ],
+          "p99": [
+            30.454958,
+            33.201666
+          ]
+        }
+      },
+      {
+        "synthetic_budget_mbps": 500,
+        "resolution": "3840x2160",
+        "samples_per_run": 100,
+        "warmup_per_run": 20,
+        "run_count": 2,
+        "wall_ms_ranges": {
+          "p50": [
+            23.779292,
+            30.339958
+          ],
+          "p95": [
+            31.088333,
+            36.195583
+          ],
+          "p99": [
+            32.385166,
+            36.674792
+          ]
+        }
+      },
+      {
+        "synthetic_budget_mbps": 1000,
+        "resolution": "3840x2160",
+        "samples_per_run": 100,
+        "warmup_per_run": 20,
+        "run_count": 2,
+        "wall_ms_ranges": {
+          "p50": [
+            27.284708,
+            41.108084
+          ],
+          "p95": [
+            36.812875,
+            44.562916
+          ],
+          "p99": [
+            39.233167,
+            45.536
+          ]
+        }
+      }
+    ]
+  },
+  "not_tested": [
+    "Live network streaming in this update",
+    "HDR HDMI output / HDR10+",
+    "Visible text quality after host encoding and TV processing",
+    "Sustained 4K60 presentation",
+    "Matched HEVC comparison or controller-to-screen latency"
+  ]
+}

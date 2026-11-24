@@ -96,9 +96,11 @@ HDR10+ selection.
 
 ## Verification and limits
 
+The [plain-language practical tests](practical-tests.md) explain the results and their limits.
 `tools/check_video_profiles.mm` executes the actual pack kernel and checks 294,912
 component samples across full/limited-range, 4:2:0/4:4:4 and PQ/SDR cases. It checks
-exact 10-bit codes, pixel format, static metadata, pool backpressure/recovery and
+all 1,024 distinct Y code levels, alternating one-pixel 4:4:4 chroma, pixel format,
+static metadata, pool backpressure/recovery and
 sample construction. CI compiles it with warnings as errors.
 `tools/check_apple5_decoder.mm` exercises complete zero-coefficient frames in both
 chroma geometries and R8/R16 outputs at 128×128 and 320×180 when the available GPU

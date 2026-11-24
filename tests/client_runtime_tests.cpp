@@ -34,6 +34,8 @@ int main() {
     for(int i=2;i<100002;++i) require(stress.submit(i) && stress.inFlight()==2 && !stress.take());
     require(stress.pendingReplacements==99999); require(stress.complete(a->slot));
     require(stress.take()->frame==100001); require(stress.complete(b->slot));
+    std::cout<<"Overload check: 100000 extra frames, 2 occupied slots + 1 pending maximum; "
+                "next frame 100001 (newest), 99999 pending replacements\n";
     // Stopping releases pending ownership, while work already taken retains
     // its payload until the GPU owner releases it after completion.
     PWClient::LatestFrameQueue<std::shared_ptr<int>> lifetime;
@@ -99,6 +101,7 @@ int main() {
     require(pw_select_profile(PW_FORMAT_MASK,0)==0);
     require(pw_select_profile(PW_FORMAT_MASK,0x07800000)==PW_FORMAT_444_10);
     require(!pw_profile_valid(PW_FORMAT_MASK));
+    std::cout<<"Profile check: 4 matching profiles accepted, 12 mismatches refused; no unrequested downgrade\n";
     bool rejected=false; try { PWClient::colorConversion(3,false); } catch(const std::invalid_argument&) { rejected=true; }
     require(rejected);
     std::cout<<checks<<" client runtime checks passed (queue overload, strict identity, color conversion, profile selection; no GPU)\n";

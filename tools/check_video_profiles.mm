@@ -5,13 +5,21 @@
 #include <array>
 #include <iostream>
 #include <stdexcept>
+#include <string>
 #include <vector>
 static void check(bool value,const char* message) { if (!value) throw std::runtime_error(message); }
 int main() { @autoreleasepool { try {
     auto device=MTLCreateSystemDefaultDevice();
     if (!device) { std::cout<<"{\"gpu_available\":false}\n";return 0; }
+    NSData* nameData=[NSJSONSerialization dataWithJSONObject:device.name options:NSJSONWritingFragmentsAllowed error:nil];
+    const std::string gpuName(static_cast<const char*>(nameData.bytes),nameData.length);
     auto queue=[device newCommandQueue];unsigned samples=0;size_t pixels=0;
-    const std::array<unsigned,8> codes={0,1,64,128,512,940,960,1023};
+    // A complete 10-bit ramp plus alternating single-pixel chroma columns.
+    // These are source code values, not a claim about the connected display.
+    auto codeAt=[](unsigned x,unsigned y,unsigned component) {
+        return component ? (((x+component)&1)?64u:960u) : (x+128*y)%1024;
+    };
+    unsigned rampCases=0,singlePixelCases=0;
     for (bool full:{false,true}) for (bool c444:{false,true}) {
         PWClient::HDRPresenter presenter;
         check(presenter.prepare(device,128,128,full,c444),"pixel buffer pool / packing pipeline");
@@ -28,7 +36,7 @@ int main() { @autoreleasepool { try {
                 check(buffer!=nil,"input upload");
                 auto values=static_cast<uint16_t*>(buffer.contents);
                 for (unsigned y=0;y<size;++y) for (unsigned x=0;x<size;++x)
-                    values[y*(row/2)+x]=uint16_t((codes[(x+y+p)%codes.size()]*65535u+511u)/1023u);
+                    values[y*(row/2)+x]=uint16_t((codeAt(x,y,p)*65535u+511u)/1023u);
                 [blit copyFromBuffer:buffer sourceOffset:0 sourceBytesPerRow:row sourceBytesPerImage:row*size
                     sourceSize:MTLSizeMake(size,size,1) toTexture:planes[p] destinationSlice:0 destinationLevel:0 destinationOrigin:MTLOriginMake(0,0,0)];
             }
@@ -41,6 +49,7 @@ int main() { @autoreleasepool { try {
             [command commit];[command waitUntilCompleted];
             check(command.status==MTLCommandBufferStatusCompleted,"GPU packing execution");
             check(CVPixelBufferLockBaseAddress(surface->image,kCVPixelBufferLock_ReadOnly)==kCVReturnSuccess,"readback lock");
+            std::array<bool,1024> levels{};
             for (unsigned p=0;p<2;++p) {
                 unsigned width=unsigned(CVPixelBufferGetWidthOfPlane(surface->image,p));
                 unsigned height=unsigned(CVPixelBufferGetHeightOfPlane(surface->image,p));
@@ -49,10 +58,16 @@ int main() { @autoreleasepool { try {
                 for (unsigned y=0;y<height;++y) for (unsigned x=0;x<width;++x) for (unsigned c=0;c<(p?2:1);++c) {
                     const auto values=reinterpret_cast<const uint16_t*>(base+y*row);
                     unsigned component=p?c+1:0;
-                    check(values[x*(p?2:1)+c]==codes[(x+y+component)%codes.size()]*64u,"10-bit packing or chroma geometry mismatch");++pixels;
+                    const unsigned value=values[x*(p?2:1)+c];
+                    check(value==codeAt(x,y,component)*64u,"10-bit ramp or single-pixel chroma mismatch");
+                    if (!p) levels[value>>6]=true;
+                    ++pixels;
                 }
             }
             CVPixelBufferUnlockBaseAddress(surface->image,kCVPixelBufferLock_ReadOnly);
+            for (bool present:levels) check(present,"10-bit ramp lost a level");
+            ++rampCases;
+            if (c444) ++singlePixelCases;
             check(presenter.makeSample(surface),"sample format construction");
             check(!presenter.makeSample(surface),"duplicate sample must fail");
             auto transfer=CVBufferCopyAttachment(surface->image,kCVImageBufferTransferFunctionKey,nullptr);
@@ -87,6 +102,6 @@ int main() { @autoreleasepool { try {
             ++samples;
         }}
     }
-    std::cout<<"{\"gpu_available\":true,\"samples_checked\":"<<samples<<",\"packed_samples_checked\":"<<pixels<<",\"physical_hdr_display_tested\":false}\n";
+    std::cout<<"{\"gpu_available\":true,\"gpu_name\":"<<gpuName<<",\"samples_checked\":"<<samples<<",\"packed_samples_checked\":"<<pixels<<",\"preserved_10bit_levels_per_case\":1024,\"ramp_cases\":"<<rampCases<<",\"single_pixel_444_cases\":"<<singlePixelCases<<",\"pool_limit_verified\":true,\"pool_recovery_verified\":true,\"static_hdr_metadata_verified\":true,\"physical_hdr_display_tested\":false}\n";
     return 0;
 } catch(const std::exception& e) { std::cerr<<e.what()<<"\n";return 1; } }}

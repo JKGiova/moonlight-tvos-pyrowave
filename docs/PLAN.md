@@ -2,7 +2,8 @@
 
 This page records completed implementation work. Runtime behavior is described in
 [the Apple TV guide](experimental-client.md); test evidence is recorded in
-[development status](development-status.md).
+[development status](development-status.md). The forward-looking plan is in
+[the roadmap](ROADMAP.md); plain-language checks are in [practical tests](practical-tests.md).
 
 | Area | Implemented |
 | --- | --- |

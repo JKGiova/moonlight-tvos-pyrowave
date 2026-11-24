@@ -23,6 +23,14 @@ portable completion-order/abandonment tests and the GPU presenter's split-submis
 fixture. The recorded A12 screenshots below predate this update. Collect physical
 device measurements before attributing a latency improvement to it.
 
+## Practical checks and next steps
+
+[Plain-language tests](practical-tests.md) explain the new Mac checks of all 1,024
+10-bit levels, one-pixel 4:4:4 chroma, bounded queues, pool recovery and strict
+profile selection. They distinguish these checks from the earlier physical A12
+timings. The new device attempt was refused while the Apple TV was asleep; no new
+device measurement is claimed. [Roadmap and completion criteria](ROADMAP.md)
+
 ## Color profile implementation
 
 HDR10 and full-resolution chroma are implemented in the single client. A physical

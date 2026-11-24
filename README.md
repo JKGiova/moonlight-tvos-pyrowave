@@ -115,6 +115,26 @@ partial-frame recovery, automatic session retry or benchmark-aware PyroWave code
 selection. No physical A15 result is recorded. This project is independent of
 upstream maintainers and does not claim release qualification.
 
+## Practical checks
+
+New Mac checks preserved **all 1,024 ten-bit levels** and the tested one-pixel
+4:4:4 color pattern. Under 100,000 extra arrivals, the client queue kept at most
+**two processing frames and one waiting**, then chose the newest frame.
+
+Earlier physical A12 offscreen tests measured 4K processing p95 of **20.40–27.04 ms
+at a synthetic 150 Mbps budget**, and **36.81–44.56 ms at 1,000 Mbps** across two
+runs. These are not controller-to-screen latency, live 4K60 or HEVC comparison
+results. [Plain-language test results, scope and reproduction](docs/practical-tests.md)
+
+## Roadmap
+
+1. Validate HDR10 and 4:4:4 with a real host and TV.
+2. Measure latency, stability and a fair HEVC comparison; optimize measured bottlenecks.
+3. Qualify more Apple TV models before changing codec Auto.
+4. Extend the host/client protocol for genuine HDR10+ metadata.
+
+[Detailed roadmap and completion criteria](docs/ROADMAP.md)
+
 ## Development
 
 - [Build and test](docs/build-and-test.md)
