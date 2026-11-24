@@ -38,7 +38,8 @@ conversion of HDR to SDR.
 
 The 10-bit presentation path requires tvOS 17 or newer and successful creation of
 the requested CoreVideo/Metal surfaces. The host must advertise its base PyroWave
-capability as well as the specific 10-bit/4:4:4 capability. Decoder family admission
+capability as well as the specific 10-bit/4:4:4 capability. 4:4:4 refers to the negotiated stream and client surfaces; HDMI chroma output
+is controlled by tvOS and the display. Decoder family admission
 remains separate from color-format support and real-time performance.
 
 Explicit 4:4:4 or HDR requests **fail rather than downgrade** if the exact profile
@@ -63,7 +64,9 @@ BT.709 and BT.2020 matrix coefficients; HDR on an 8-bit profile is rejected.
 
 Decode still uses two processing slots and one latest pending frame. The new
 presentation pool has a hard allocation threshold of three buffers. AVFoundation
-readiness applies backpressure; it does not grow an unbounded queue. No CPU image
+readiness applies backpressure; it does not grow an unbounded queue. A failed
+AVFoundation renderer or sample construction terminates the session instead of
+repeatedly flushing a black display layer. No CPU image
 readback is used during streaming. Decode and packing use the same Metal queue;
 slot textures remain owned until both GPU stages resolve.
 

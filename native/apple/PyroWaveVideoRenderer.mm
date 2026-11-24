@@ -351,8 +351,17 @@ id distribution(std::vector<double> values) {
                     [self->_lock unlock];
                     if (progress->rendered) dispatch_async(dispatch_get_main_queue(), ^{
                         [self->_lock lock]; const bool stopped=self->_mailbox.stopped(); [self->_lock unlock];
-                        if (!stopped && !presentation->enqueue(surface)) {
-                            [self->_lock lock]; ++self->_presentFailed; [self->_lock unlock];
+                        if (!stopped) {
+                            const auto result=presentation->enqueue(surface);
+                            if (result!=PWClient::VideoEnqueueResult::Enqueued) {
+                                [self->_lock lock];
+                                if (result==PWClient::VideoEnqueueResult::Backpressure) ++self->_drawableDropped;
+                                else ++self->_presentFailed;
+                                [self->_lock unlock];
+                                // Unsupported AVFoundation formats must fail the session,
+                                // rather than endlessly flushing a black display layer.
+                                if (result==PWClient::VideoEnqueueResult::Failed) [self failSession];
+                            }
                         }
                     });
                     else [self failSession];

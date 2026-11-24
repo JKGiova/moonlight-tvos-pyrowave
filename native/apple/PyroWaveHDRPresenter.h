@@ -25,6 +25,7 @@ struct VideoSurface {
         if (image) CFRelease(image);
     }
 };
+enum class VideoEnqueueResult { Enqueued, Backpressure, Failed };
 class HDRPresenter {
     CVPixelBufferPoolRef pool=nullptr;
     CVMetalTextureCacheRef cache=nullptr;
@@ -138,15 +139,13 @@ kernel void pw_pack10(texture2d<float,access::read> y [[texture(0)]],
         CFDictionarySetValue((CFMutableDictionaryRef)CFArrayGetValueAtIndex(attachments,0),kCMSampleAttachmentKey_DisplayImmediately,kCFBooleanTrue);
         return true;
     }
-    bool enqueue(const std::shared_ptr<VideoSurface>& surface) {
+    VideoEnqueueResult enqueue(const std::shared_ptr<VideoSurface>& surface) {
         // Main thread only; readiness and the pool threshold bound backpressure.
         if (@available(tvOS 17.0,macOS 14.0,iOS 17.0,*)) {
             auto renderer=layer.sampleBufferRenderer;
-            if (renderer.status==AVQueuedSampleBufferRenderingStatusFailed) {
-                [renderer flushWithRemovalOfDisplayedImage:NO completionHandler:nil];
-                return false;
-            }
-            if (!renderer.readyForMoreMediaData || !makeSample(surface)) return false;
+            if (renderer.status==AVQueuedSampleBufferRenderingStatusFailed) return VideoEnqueueResult::Failed;
+            if (!renderer.readyForMoreMediaData) return VideoEnqueueResult::Backpressure;
+            if (!makeSample(surface)) return VideoEnqueueResult::Failed;
 #if TARGET_OS_TV
             auto transfer=CVBufferCopyAttachment(surface->image,kCVImageBufferTransferFunctionKey,nullptr);
             auto primary=CVBufferCopyAttachment(surface->image,kCVImageBufferColorPrimariesKey,nullptr);
@@ -162,9 +161,9 @@ kernel void pw_pack10(texture2d<float,access::read> y [[texture(0)]],
             }
 #endif
             [renderer enqueueSampleBuffer:surface->sample];
-            return renderer.status!=AVQueuedSampleBufferRenderingStatusFailed;
+            return renderer.status==AVQueuedSampleBufferRenderingStatusFailed ? VideoEnqueueResult::Failed : VideoEnqueueResult::Enqueued;
         }
-        return false;
+        return VideoEnqueueResult::Failed;
     }
 };
 }
